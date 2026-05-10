@@ -45,8 +45,8 @@
     href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"
   >
   <link rel="stylesheet" href="./styles/app.css">
-  <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.10.5">
-  <link rel="stylesheet" href="./styles/client.css?v=2026.05.10.5">
+  <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.10.6">
+  <link rel="stylesheet" href="./styles/client.css?v=2026.05.10.6">
 </head>
 <body data-client-view="home">
   <div class="app-shell">
@@ -273,6 +273,17 @@
 
         <div id="clientRadarMap" class="radar-map" aria-label="Prestadores cercanos"></div>
         <div id="clientMap" class="map-surface" aria-label="Mapa real del servicio"></div>
+        <div class="client-live-navigation" id="clientLiveNavigation" hidden>
+          <div>
+            <span id="clientLiveStatus">Prestador en camino</span>
+            <strong id="clientLiveEta">--</strong>
+          </div>
+          <div>
+            <span>Distancia</span>
+            <strong id="clientLiveDistance">--</strong>
+          </div>
+          <p id="clientLiveHint">Vas a ver la ubicacion del prestador en tiempo real.</p>
+        </div>
       </section>
 
       <section class="nearby-section" data-client-screen="providers" aria-labelledby="nearbyTitle">
@@ -486,6 +497,6 @@
   <script src="./env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <script type="module" src="./src/main-client.js?v=2026.05.10.5"></script>
+  <script type="module" src="./src/main-client.js?v=2026.05.10.6"></script>
 </body>
 </html>

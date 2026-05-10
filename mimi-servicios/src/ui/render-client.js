@@ -1260,6 +1260,66 @@ function renderMapStatus(state) {
     : "Mapa en tiempo real";
 }
 
+function liveDistanceMeters(a, b) {
+  const lat1 = Number(a?.lat);
+  const lng1 = Number(a?.lng);
+  const lat2 = Number(b?.lat);
+  const lng2 = Number(b?.lng);
+  if (![lat1, lng1, lat2, lng2].every(Number.isFinite)) return null;
+  const toRad = (value) => (value * Math.PI) / 180;
+  const earth = 6371000;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * earth * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+function liveDistanceLabel(meters) {
+  const value = Number(meters);
+  if (!Number.isFinite(value)) return "--";
+  if (value < 1000) return `${Math.max(50, Math.round(value / 10) * 10)} m`;
+  return `${(value / 1000).toFixed(value < 10000 ? 1 : 0)} km`;
+}
+
+function renderClientLiveNavigation(state) {
+  const hud = document.getElementById("clientLiveNavigation");
+  if (!hud) return;
+
+  const request = state.client.activeRequest;
+  const provider = state.tracking.providerPosition;
+  const service = state.tracking.clientPosition;
+  const activeStatuses = ["ACCEPTED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "IN_PROGRESS"];
+  const isVisible = Boolean(request && activeStatuses.includes(String(request.status || "").toUpperCase()));
+
+  hud.hidden = !isVisible;
+  if (!isVisible) return;
+
+  const distance = liveDistanceMeters(provider, service);
+  const eta = Number.isFinite(distance)
+    ? `${Math.max(1, Math.ceil((distance / 1000 / 28) * 60))} min`
+    : "--";
+
+  const status = document.getElementById("clientLiveStatus");
+  const etaEl = document.getElementById("clientLiveEta");
+  const distanceEl = document.getElementById("clientLiveDistance");
+  const hint = document.getElementById("clientLiveHint");
+
+  if (status) status.textContent = stateLabels[request.status] ?? "Servicio activo";
+  if (etaEl) etaEl.textContent = eta;
+  if (distanceEl) distanceEl.textContent = liveDistanceLabel(distance);
+  if (hint) {
+    const hints = {
+      ACCEPTED: "El prestador confirmo la solicitud. Cuando salga, vas a ver el trayecto.",
+      PROVIDER_EN_ROUTE: "Seguimos al prestador en tiempo real hasta tu domicilio.",
+      PROVIDER_ARRIVED: "El prestador llego. Coordina el inicio desde el chat.",
+      IN_PROGRESS: "Servicio en curso. El seguimiento queda guardado en la solicitud."
+    };
+    hint.textContent = hints[request.status] || "Seguimiento en tiempo real activo.";
+  }
+}
+
 function renderRequestControls(state) {
   const selectedCategory = appConfig.categories.find((category) => category.id === state.ui.selectedCategoryId);
   const needsHours = isHourlyCategory(selectedCategory);
@@ -1308,5 +1368,6 @@ export function renderClientScreen(state) {
   renderNotifications(state);
   renderChat(state);
   renderMapStatus(state);
+  renderClientLiveNavigation(state);
   renderRequestControls(state);
 }

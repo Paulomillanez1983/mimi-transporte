@@ -96,6 +96,43 @@ export function updateRouteLine(map, positions = [], options = {}) {
   return true;
 }
 
+export function updateRouteCoordinates(map, coordinates = [], options = {}) {
+  const sourceId = options.sourceId || "mimi-route";
+
+  if (!map) return false;
+
+  if (!map.isStyleLoaded?.()) {
+    map.once("load", () => updateRouteCoordinates(map, coordinates, options));
+    return false;
+  }
+
+  ensureRouteLayers(map, options);
+
+  const source = map.getSource(sourceId);
+  if (!source) return false;
+
+  const safe = Array.isArray(coordinates)
+    ? coordinates
+        .map((coord) => [Number(coord?.[0]), Number(coord?.[1])])
+        .filter(([lng, lat]) => Number.isFinite(lng) && Number.isFinite(lat))
+    : [];
+
+  const feature =
+    safe.length >= 2
+      ? {
+          type: "Feature",
+          geometry: {
+            type: "LineString",
+            coordinates: safe
+          },
+          properties: {}
+        }
+      : emptyRouteFeature();
+
+  source.setData(feature);
+  return true;
+}
+
 export function distanceMeters(from, to) {
   if (!isValidLngLat(from) || !isValidLngLat(to)) return null;
   const earthRadius = 6371000;

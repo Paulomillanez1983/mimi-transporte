@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.10.5";
+const MIMI_PROVIDER_BUILD = "2026.05.10.6";
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -87,6 +87,8 @@ class MimiProviderApp {
     this.lastRoadRouteKey = null;
     this.lastRoadRouteAt = 0;
     this.lastRoadRouteData = null;
+    this.navigationMode = false;
+    this.navigationCameraFollowing = true;
     
     // DOM Elements cache
     this.elements = {};
@@ -288,6 +290,10 @@ verificationResultList: document.getElementById("verificationResultList"),
       serviceEta: document.getElementById('serviceEta'),
       serviceDistance: document.getElementById('serviceDistance'),
       serviceNextStep: document.getElementById('serviceNextStep'),
+      serviceStepList: document.getElementById('serviceStepList'),
+      toggleInAppNavigation: document.getElementById('toggleInAppNavigation'),
+      recenterNavigation: document.getElementById('recenterNavigation'),
+      serviceNavModeLabel: document.getElementById('serviceNavModeLabel'),
       openExternalNavigation: document.getElementById('openExternalNavigation'),
       serviceActionBtn: document.getElementById('serviceActionBtn'),
       
@@ -917,6 +923,136 @@ setTimeout(() => {
     return `${labels[type] || "Segui la indicacion"}${street}.`;
   }
 
+  routeStepItems(route) {
+    const steps = route?.legs?.[0]?.steps ?? [];
+    return steps
+      .filter((step) => step?.maneuver?.type && step.maneuver.type !== "depart")
+      .slice(0, 4)
+      .map((step, index) => ({
+        id: `${step?.maneuver?.type || "step"}-${index}`,
+        instruction: this.routeInstructionText({ legs: [{ steps: [step] }] }),
+        distance: this.formatRouteDistance(step?.distance),
+        duration: this.formatRouteEta(step?.duration)
+      }));
+  }
+
+  renderProviderStepList(route) {
+    const list = this.elements.serviceStepList;
+    if (!list) return;
+
+    const items = this.routeStepItems(route ?? this.lastRoadRouteData);
+    if (!items.length) {
+      list.innerHTML = `
+        <div class="service-step-item is-current">
+          <b>1</b>
+          <span>Segui la ruta verde hasta el domicilio del cliente.</span>
+          <small>Guia activa</small>
+        </div>
+      `;
+      return;
+    }
+
+    list.innerHTML = items
+      .map((item, index) => `
+        <div class="service-step-item ${index === 0 ? "is-current" : ""}">
+          <b>${index + 1}</b>
+          <span>${this.escapeHtml(item.instruction)}</span>
+          <small>${this.escapeHtml(item.distance)} - ${this.escapeHtml(item.duration)}</small>
+        </div>
+      `)
+      .join("");
+  }
+
+  bearingBetween(a, b) {
+    if (!this.isValidLatLng(a) || !this.isValidLatLng(b)) return 0;
+    const toRad = (value) => (Number(value) * Math.PI) / 180;
+    const toDeg = (value) => (value * 180) / Math.PI;
+    const lat1 = toRad(a.lat);
+    const lat2 = toRad(b.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const y = Math.sin(dLng) * Math.cos(lat2);
+    const x =
+      Math.cos(lat1) * Math.sin(lat2) -
+      Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+    return (toDeg(Math.atan2(y, x)) + 360) % 360;
+  }
+
+  nextRoutePoint(providerPosition, route = null) {
+    const coords = route?.geometry?.coordinates ?? this.lastRoadRouteData?.geometry?.coordinates ?? [];
+    if (!Array.isArray(coords) || coords.length < 2) return null;
+
+    let bestIndex = 0;
+    let bestDistance = Infinity;
+    coords.forEach((coord, index) => {
+      const candidate = { lng: coord?.[0], lat: coord?.[1] };
+      const distance = this.distanceMetersBetween(providerPosition, candidate);
+      if (Number.isFinite(distance) && distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = index;
+      }
+    });
+
+    const ahead = coords[Math.min(coords.length - 1, bestIndex + 6)] ?? coords[bestIndex + 1];
+    return ahead ? { lng: ahead[0], lat: ahead[1] } : null;
+  }
+
+  followProviderNavigationCamera({ providerPosition, servicePosition, route = null, force = false }) {
+    if (!this.map || (!this.navigationMode && !force) || !this.isValidLatLng(providerPosition)) return;
+
+    const nextPoint = this.nextRoutePoint(providerPosition, route) || servicePosition;
+    const bearing = this.isValidLatLng(nextPoint)
+      ? this.bearingBetween(providerPosition, nextPoint)
+      : this.map.getBearing?.() || 0;
+
+    const now = Date.now();
+    if (!force && now - (this.lastNavigationCameraAt || 0) < 2500) return;
+    this.lastNavigationCameraAt = now;
+
+    try {
+      this.map.easeTo({
+        center: [Number(providerPosition.lng), Number(providerPosition.lat)],
+        zoom: Math.max(this.map.getZoom?.() || 0, 16.2),
+        pitch: 48,
+        bearing,
+        padding: { top: 128, right: 36, bottom: 320, left: 36 },
+        duration: force ? 520 : 850,
+        easing: (t) => t * (2 - t)
+      });
+    } catch (error) {
+      console.warn("[MIMI][provider-nav] camera follow failed:", error?.message || error);
+    }
+  }
+
+  toggleInAppNavigation() {
+    this.navigationMode = !this.navigationMode;
+    this.navigationCameraFollowing = this.navigationMode;
+    document.body.classList.toggle("provider-navigation-active", this.navigationMode);
+    this.updateProviderNavigationPanel({
+      providerPosition: this.state?.location?.current,
+      servicePosition: this.servicePositionFromState(),
+      route: this.lastRoadRouteData
+    });
+
+    if (this.navigationMode) {
+      this.setBottomSheetState("collapsed");
+      this.recenterNavigationCamera();
+      this.showToast("Guia in-app activada", "success");
+    } else {
+      this.showToast("Guia in-app pausada", "info");
+    }
+  }
+
+  recenterNavigationCamera() {
+    const providerPosition = this.state?.location?.current;
+    const servicePosition = this.servicePositionFromState();
+    this.followProviderNavigationCamera({
+      providerPosition,
+      servicePosition,
+      route: this.lastRoadRouteData,
+      force: true
+    });
+  }
+
   updateProviderRoadRoute({ providerPosition, servicePosition }) {
     if (!this.isValidLatLng(providerPosition) || !this.isValidLatLng(servicePosition)) return;
 
@@ -947,6 +1083,7 @@ setTimeout(() => {
         if (!Array.isArray(coordinates) || coordinates.length < 2) return;
         this.lastRoadRouteData = route;
         this.drawProviderRouteCoordinates(coordinates);
+        this.renderProviderStepList(route);
         this.updateProviderNavigationPanel({ providerPosition, servicePosition, route });
       })
       .catch((error) => {
@@ -982,6 +1119,23 @@ setTimeout(() => {
         IN_PROGRESS: "Servicio en curso. Finalizalo cuando termines el trabajo."
       };
       this.elements.serviceNextStep.textContent = statusHints[status] || "Ruta activa hacia el cliente.";
+    }
+
+    this.renderProviderStepList(route ?? this.lastRoadRouteData);
+
+    if (this.elements.toggleInAppNavigation) {
+      this.elements.toggleInAppNavigation.textContent = this.navigationMode ? "Pausar guia" : "Seguir en app";
+      this.elements.toggleInAppNavigation.classList.toggle("is-active", this.navigationMode);
+    }
+
+    if (this.elements.serviceNavModeLabel) {
+      this.elements.serviceNavModeLabel.textContent = this.navigationMode
+        ? "Camara siguiendo tu ubicacion en tiempo real"
+        : "Activa Seguir en app para navegar sin salir de MIMI";
+    }
+
+    if (this.navigationMode) {
+      this.followProviderNavigationCamera({ providerPosition, servicePosition, route });
     }
   }
 
@@ -1874,6 +2028,14 @@ this.elements.tabButtons.forEach((btn) => {
 
     this.elements.openExternalNavigation?.addEventListener('click', () => {
       this.openExternalNavigation();
+    });
+
+    this.elements.toggleInAppNavigation?.addEventListener('click', () => {
+      this.toggleInAppNavigation();
+    });
+
+    this.elements.recenterNavigation?.addEventListener('click', () => {
+      this.recenterNavigationCamera();
     });
 
     // Offer actions

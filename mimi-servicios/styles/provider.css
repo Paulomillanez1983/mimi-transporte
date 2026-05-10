@@ -12299,10 +12299,77 @@ body.provider-auth-required .notification-container {
   line-height: 1.35;
 }
 
+.service-step-list {
+  display: grid;
+  gap: 7px;
+  max-height: min(24vh, 150px);
+  overflow-y: auto;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(32,212,99,.55) transparent;
+}
+
+.service-step-item {
+  display: grid;
+  grid-template-columns: 25px 1fr;
+  gap: 8px 10px;
+  align-items: start;
+  padding: 8px 9px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 13px;
+  background: rgba(255,255,255,.055);
+}
+
+.service-step-item b {
+  display: inline-grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255,255,255,.12);
+  color: var(--text-primary);
+  font-size: .72rem;
+  line-height: 1;
+}
+
+.service-step-item span,
+.service-step-item small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.service-step-item span {
+  color: var(--text-primary);
+  font-size: .78rem;
+  font-weight: 750;
+  line-height: 1.28;
+}
+
+.service-step-item small {
+  grid-column: 2;
+  color: var(--text-tertiary);
+  font-size: .68rem;
+  font-weight: 800;
+}
+
+.service-step-item.is-current {
+  border-color: rgba(32,212,99,.34);
+  background: rgba(32,212,99,.11);
+}
+
+.service-step-item.is-current b {
+  background: var(--accent-primary);
+  color: #06110a;
+}
+
 .service-nav-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+.service-nav-actions--secondary {
+  margin-top: -2px;
 }
 
 .service-nav-btn {
@@ -12320,6 +12387,29 @@ body.provider-auth-required .notification-container {
   background: rgba(255,255,255,.1);
   color: var(--text-primary);
   border: 1px solid rgba(255,255,255,.12);
+}
+
+.service-nav-btn.nav-follow {
+  background: rgba(32,212,99,.14);
+  color: var(--text-primary);
+  border: 1px solid rgba(32,212,99,.28);
+}
+
+.service-nav-btn.nav-follow.is-active {
+  background: var(--accent-primary);
+  color: #06110a;
+  box-shadow: 0 12px 28px rgba(32,212,99,.28);
+}
+
+.service-nav-mode {
+  color: var(--text-tertiary);
+  font-size: .7rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+body.provider-navigation-active .bottom-sheet {
+  transform: translateY(calc(100% - 148px));
 }
 
 .provider-support-live-card {

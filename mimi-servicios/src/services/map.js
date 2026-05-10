@@ -8,13 +8,15 @@ import {
   waitForMapLibre
 } from "../../../js/mimi-maps/map-core.js";
 import { createOrMoveMarker, removeMarker } from "../../../js/mimi-maps/map-markers.js";
-import { etaMinutes, updateRouteLine } from "../../../js/mimi-maps/map-routing.js";
+import { etaMinutes, updateRouteCoordinates, updateRouteLine } from "../../../js/mimi-maps/map-routing.js";
 
 let map = null;
 let providerMarker = null;
 let clientMarker = null;
 let lastFitKey = "";
 let lastCameraMoveAt = 0;
+let lastRoadRouteKey = "";
+let lastRoadRouteAt = 0;
 
 const SERVICE_ROUTE_SOURCE = "mimi-services-tracking-route";
 const LIGHT_MAP_STYLE =
@@ -39,6 +41,47 @@ function shouldMoveCamera(nextKey) {
   return true;
 }
 
+function roadRouteKey(service, provider) {
+  if (!isValidLngLat(service) || !isValidLngLat(provider)) return "";
+  return [
+    provider.lat.toFixed(4),
+    provider.lng.toFixed(4),
+    service.lat.toFixed(4),
+    service.lng.toFixed(4)
+  ].join(":");
+}
+
+function fetchRoadRoute({ service, provider }) {
+  if (!map || !isValidLngLat(service) || !isValidLngLat(provider)) return;
+
+  const key = roadRouteKey(service, provider);
+  const now = Date.now();
+  if (!key || (key === lastRoadRouteKey && now - lastRoadRouteAt < 15000)) return;
+
+  lastRoadRouteKey = key;
+  lastRoadRouteAt = now;
+
+  const url =
+    "https://router.project-osrm.org/route/v1/driving/" +
+    `${provider.lng},${provider.lat};${service.lng},${service.lat}` +
+    "?overview=full&geometries=geojson&steps=false";
+
+  fetch(url)
+    .then((response) => (response.ok ? response.json() : null))
+    .then((data) => {
+      const coordinates = data?.routes?.[0]?.geometry?.coordinates;
+      if (!Array.isArray(coordinates) || coordinates.length < 2) return;
+      updateRouteCoordinates(map, coordinates, {
+        sourceId: SERVICE_ROUTE_SOURCE,
+        lineColor: "#10b981",
+        glowColor: "#0f766e"
+      });
+    })
+    .catch((error) => {
+      console.warn("[MIMI Maps] road route fallback:", error?.message || error);
+    });
+}
+
 function removeMap() {
   try {
     map?.remove?.();
@@ -49,6 +92,8 @@ function removeMap() {
   providerMarker = null;
   clientMarker = null;
   lastFitKey = "";
+  lastRoadRouteKey = "";
+  lastRoadRouteAt = 0;
 }
 
 export async function initMap(containerId, initialCenter, zoom) {
@@ -136,6 +181,10 @@ function updateServiceMap({ servicePosition, providerPosition, fitPadding = null
     lineColor: "#10b981",
     glowColor: "#0f766e"
   });
+
+  if (provider && service) {
+    fetchRoadRoute({ service, provider });
+  }
 
   const nextKey = cameraKey(positions);
   if (positions.length && shouldMoveCamera(nextKey)) {

@@ -51,8 +51,8 @@
 
   <!-- Styles -->
   <link rel="stylesheet" href="./styles/app.css">
-  <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.10.5">
-  <link rel="stylesheet" href="./styles/provider.css?v=2026.05.10.5">
+  <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.10.6">
+  <link rel="stylesheet" href="./styles/provider.css?v=2026.05.10.6">
 
   <!-- Provider map theme: light, clean, professional -->
   <script>
@@ -207,10 +207,16 @@
             </div>
           </div>
           <div class="service-next-step" id="serviceNextStep">Calculando la mejor ruta al cliente...</div>
+          <div class="service-step-list" id="serviceStepList"></div>
           <div class="service-nav-actions">
             <button class="service-nav-btn" id="openExternalNavigation" type="button">Abrir mapa</button>
             <button class="service-nav-btn secondary" type="button" data-provider-flow="chat">Chat cliente</button>
           </div>
+          <div class="service-nav-actions service-nav-actions--secondary">
+            <button class="service-nav-btn nav-follow" id="toggleInAppNavigation" type="button">Seguir en app</button>
+            <button class="service-nav-btn secondary" id="recenterNavigation" type="button">Recentrar</button>
+          </div>
+          <div class="service-nav-mode" id="serviceNavModeLabel">Guia in-app lista</div>
         </div>
         <button class="service-action-btn" id="serviceActionBtn" type="button">
           Llegué al domicilio
@@ -651,6 +657,6 @@
   <script src="./env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Push notifications are initialized from src/services/push.js. -->
-  <script type="module" src="./src/main-provider.js?v=2026.05.10.5"></script>
+  <script type="module" src="./src/main-provider.js?v=2026.05.10.6"></script>
 </body>
 </html>
