@@ -1111,10 +1111,6 @@ export function renderRequestSummary(state) {
           <strong>${currency(request.total_price ?? request.total_price_snapshot)}</strong>
         </div>
         <div class="metric">
-          <span>Servicio</span>
-          <strong>${currency(request.provider_price ?? request.provider_price_snapshot ?? state.client.selectedProvider?.provider_price ?? 0)}</strong>
-        </div>
-        <div class="metric">
           <span>Tipo</span>
           <strong>${escapeHtml(request.requestType ?? request.request_type ?? "IMMEDIATE")}</strong>
         </div>
@@ -1167,8 +1163,6 @@ function renderFinancialPanel(state) {
   }
 
   const total = payment?.total_amount ?? request.total_price ?? request.total_price_snapshot ?? 0;
-  const platformFee = payment?.platform_fee ?? request.platform_fee ?? request.platform_fee_snapshot ?? 0;
-  const providerAmount = payment?.provider_amount ?? request.provider_price ?? request.provider_price_snapshot ?? 0;
   const paymentStatus = payment?.status ?? "PENDING";
 
   container.innerHTML = `
@@ -1181,13 +1175,11 @@ function renderFinancialPanel(state) {
         <b>${currency(total)}</b>
       </summary>
       <div class="summary-metrics payment-metrics">
-        <div class="metric"><span>Servicio</span><strong>${currency(providerAmount)}</strong></div>
-        <div class="metric"><span>Comision MIMI GO</span><strong>${currency(platformFee)}</strong></div>
         <div class="metric"><span>Total a pagar</span><strong>${currency(total)}</strong></div>
         <div class="metric"><span>Moneda</span><strong>${escapeHtml(request.currency ?? payment?.currency ?? escrow?.currency ?? "ARS")}</strong></div>
         <div class="metric"><span>Estado</span><strong>${escapeHtml(paymentStatus)}</strong></div>
       </div>
-      <p class="muted payment-note">El total incluye la comision de plataforma MIMI GO. El servicio lo presta un proveedor independiente.</p>
+      <p class="muted payment-note">Este es el total estimado para tu solicitud. El servicio lo presta un proveedor independiente.</p>
       <div class="chip-row">
         <span class="inline-chip">${escapeHtml(paymentStatus)}</span>
         ${payment?.checkout_url ? `<button class="btn-primary" type="button" data-payment-action="checkout">Abrir checkout mock</button>` : ""}

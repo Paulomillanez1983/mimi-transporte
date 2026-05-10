@@ -1307,10 +1307,7 @@ body.services-login-mode .headlight {
 }
 
 body.services-login-mode .transport-card {
-  opacity:0;
-  transform:scale(.94) translateX(-18px);
-  pointer-events:none;
-  filter:blur(8px);
+  display:none;
 }
 
 body.services-login-mode .cards {

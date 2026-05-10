@@ -137,15 +137,11 @@ function offerDetailRows(offer = {}) {
   const unitName = details.unit_name || "";
   const unitPrice = Number(details.unit_price || 0);
   const providerAmount = Number(details.provider_price ?? request.provider_price_snapshot ?? offer.provider_price_snapshot ?? 0);
-  const platformFee = Number(details.platform_fee ?? request.platform_fee_snapshot ?? offer.platform_fee_snapshot ?? 0);
-  const total = Number(details.total_price ?? request.total_price_snapshot ?? offer.total_price_snapshot ?? 0);
   const currencyCode = details.currency || request.currency || "ARS";
 
   if (quantity > 0 && unitName) rows.push(["Cantidad", `${quantity.toLocaleString("es-AR")} ${unitName}`]);
   if (unitPrice > 0 && unitName) rows.push(["Precio publicado", `${currency(unitPrice, currencyCode)} / ${unitName}`]);
-  if (providerAmount > 0) rows.push(["Tu precio", currency(providerAmount, currencyCode)]);
-  if (platformFee > 0) rows.push(["Comision MIMI GO", `+${currency(platformFee, currencyCode)}`]);
-  rows.push(["Total cliente", total > 0 ? currency(total, currencyCode) : "A coordinar"]);
+  rows.push(["Tu precio", providerAmount > 0 ? currency(providerAmount, currencyCode) : "A coordinar"]);
 
   const notes = String(details.client_notes || request.notes || "").trim();
   if (notes) rows.push(["Detalle", notes.split("\n")[0]]);
@@ -362,8 +358,7 @@ export function renderOffersList(state) {
           const detailRows = offerDetailRows(offer);
           const serviceName = details.category_name ?? offer.title ?? request.svc_categories?.name ?? "Nueva solicitud";
           const providerAmount = Number(details.provider_price ?? offer.provider_price_snapshot ?? request.provider_price_snapshot ?? 0);
-          const total = Number(details.total_price ?? offer.total_price_snapshot ?? request.total_price_snapshot ?? 0);
-          const displayAmount = providerAmount > 0 ? providerAmount : total;
+          const displayAmount = providerAmount;
 
           return `
             <article class="offer-card">
@@ -476,7 +471,7 @@ export function renderProviderDashboard(state) {
               .map(
                 (item) => {
                   const details = offerServiceDetails(item);
-                  const providerAmount = Number(details.provider_price ?? item.provider_price_snapshot ?? item.provider_amount ?? item.total_price_snapshot ?? 0);
+                  const providerAmount = Number(details.provider_price ?? item.provider_price_snapshot ?? item.provider_amount ?? 0);
                   return `
                   <div class="history-item">
                     <span>${escapeHtml(item.address_text ?? "Servicio")}</span>
@@ -499,15 +494,15 @@ export function renderProviderActiveService(state) {
 
   const activeService = state.provider.activeService;
   const activeDetails = activeService?.details ?? offerServiceDetails(activeService ?? {});
+  const activeQuantity = Number(activeDetails.unit_quantity || 0);
+  const activeUnitName = activeDetails.unit_name || "";
   const activeProviderAmount = Number(
-    activeDetails.provider_price ??
+      activeDetails.provider_price ??
       activeService?.provider_price_snapshot ??
       activeService?.provider_amount ??
       activeService?.price ??
-      activeService?.total_price_snapshot ??
       0
   );
-  const activeClientTotal = Number(activeDetails.total_price ?? activeService?.total_price_snapshot ?? activeService?.total_price ?? 0);
 
   providerActiveService.innerHTML = activeService
     ? `
@@ -530,13 +525,15 @@ export function renderProviderActiveService(state) {
             <span>Duración</span>
             <strong>${escapeHtml(String(activeService.requested_hours ?? 2))} hs</strong>
           </div>
+          ${activeQuantity > 0 && activeUnitName ? `
+            <div class="metric">
+              <span>Cantidad</span>
+              <strong>${escapeHtml(`${activeQuantity.toLocaleString("es-AR")} ${activeUnitName}`)}</strong>
+            </div>
+          ` : ""}
           <div class="metric">
             <span>Tu precio</span>
             <strong>${currency(activeProviderAmount)}</strong>
-          </div>
-          <div class="metric">
-            <span>Total cliente</span>
-            <strong>${currency(activeClientTotal)}</strong>
           </div>
           <div class="metric">
             <span>Tracking</span>
@@ -1130,7 +1127,7 @@ function renderOfferingEditorV2(offering = null, index = 0, categories = []) {
 
       <div class="provider-price-helper">
         <strong>Tu precio</strong>
-        <span>Este es el importe que cobras vos. MIMI GO suma 30% de comision al total visible para el cliente.</span>
+        <span>Cargá el importe que querés cobrar por este servicio. MIMI GO gestiona la plataforma según sus términos y condiciones.</span>
       </div>
 
       <div class="provider-inline-fields">

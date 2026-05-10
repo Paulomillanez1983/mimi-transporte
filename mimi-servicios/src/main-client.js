@@ -434,7 +434,7 @@ function upsertConfirmQuantityField(overlay, provider, pricing, onQuantityChange
 
 async function pricingForProviderSelection(provider, requestedHours) {
   // Preview local, source of truth server-side in svc-create-request.
-  // This avoids legacy RPC pricing and keeps the visible 30% commission consistent.
+  // This avoids legacy RPC pricing while keeping the local final total aligned with backend pricing.
   return buildLocalPricing(provider, { requestedHours, quantity: 1 });
 }
 
@@ -475,8 +475,6 @@ function openRequestConfirmation(provider, initialPricing) {
   }
 
   const totalEl = document.getElementById("confirmTotalPrice");
-  const serviceAmountEl = document.getElementById("confirmServiceAmount");
-  const platformFeeEl = document.getElementById("confirmPlatformFee");
   const refreshTotal = (nextQuantity = pricing.unit_quantity || 1) => {
     pricing = buildLocalPricing(provider, {
       requestedHours: requestedHoursForCurrentCategory(),
@@ -484,17 +482,9 @@ function openRequestConfirmation(provider, initialPricing) {
       basePricing: pricing
     });
     if (totalEl) totalEl.textContent = formatPricingTotal(pricing);
-    if (serviceAmountEl) serviceAmountEl.textContent = formatCurrency(pricing.provider_price, pricing.currency);
-    if (platformFeeEl) {
-      platformFeeEl.textContent = `${formatCurrency(pricing.platform_fee, pricing.currency)} (${pricing.platform_fee_percent}%)`;
-    }
   };
 
   if (totalEl) totalEl.textContent = formatPricingTotal(pricing);
-  if (serviceAmountEl) serviceAmountEl.textContent = formatCurrency(pricing.provider_price, pricing.currency);
-  if (platformFeeEl) {
-    platformFeeEl.textContent = `${formatCurrency(pricing.platform_fee, pricing.currency)} (${pricing.platform_fee_percent ?? MIMI_PLATFORM_FEE_PERCENT}%)`;
-  }
   upsertConfirmQuantityField(overlay, provider, pricing, refreshTotal);
 
   overlay.hidden = false;

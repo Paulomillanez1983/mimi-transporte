@@ -9,9 +9,9 @@ Se aplico una release focalizada para dejar la experiencia publica centrada en M
 Resultado tecnico:
 
 - MIMI Transporte / Chofer queda hibernado publicamente: rutas visibles redirigen a Servicios y no se promociona desde la UX principal.
-- El backend de Servicios calcula la comision MIMI GO del 30% como fuente de verdad al crear la solicitud.
-- El cliente ve el total con comision incluida.
-- El prestador ve su precio propio como "Tu precio" y el total cliente como referencia separada.
+- El backend de Servicios calcula la comision MIMI GO del 30% como fuente de verdad al crear la solicitud y pagos.
+- El cliente ve solo el total estimado final, sin desglose ni mencion visible de comision.
+- El prestador ve solo su precio propio como "Tu precio", con cantidad/unidad cuando aplica, sin ver comision ni total cliente.
 - Pagos mock/payment-intent usa los snapshots de la solicitud, no recalcula incorrectamente desde el total.
 
 ## Hallazgos sobre comision actual
@@ -33,11 +33,12 @@ Modelo aplicado:
 - `platform_fee_amount = provider_amount * 0.30`
 - `client_total_amount = provider_amount + platform_fee_amount`
 
-Ejemplo validado:
+Ejemplo interno validado:
 
 - Prestador: `$5.000`
-- Comision MIMI GO 30%: `$1.500`
-- Cliente: `$6.500`
+- Comision MIMI GO 30%: `$1.500` interna, no visible en UI cliente/prestador
+- Cliente: `$6.500` como total estimado final
+- Prestador: `$5.000` como su precio/ingreso visible
 
 ## Backend corregido
 
@@ -53,7 +54,8 @@ Archivos:
 Cambios:
 
 - Helper centralizado para pricing de Servicios con 30%.
-- `svc-create-request` guarda snapshots correctos: provider, platform fee y total cliente.
+- `svc-create-request` guarda snapshots correctos: provider, platform fee y total cliente para pagos/auditoria.
+- La notificacion push al prestador usa `provider_price`, cantidad y unidad, sin mandar el total cliente como dato visible.
 - `svc-search-providers` devuelve provider price, fee y total final al cliente.
 - `create-payment-intent` usa snapshots de `svc_requests` para `SERVICE_REQUEST`.
 - Migracion idempotente ajusta `commission_rules.DEFAULT` a 30%, sin minimo, sin fijo, rounding `round`.
@@ -89,10 +91,15 @@ Archivos:
 
 Cambios:
 
-- La confirmacion muestra desglose compacto: Servicio, Comision MIMI GO y total estimado.
+- La confirmacion muestra solo el total estimado final.
 - El preview local usa 30% solo como fallback visual; la solicitud real se recalcula en backend.
 - Se evita depender del RPC legacy `svc_prepare_request_pricing` para no mezclar reglas antiguas.
-- El panel de pagos usa copy entendible: "Comision MIMI GO" y aclara intermediacion.
+- El panel de pagos usa copy simple y no muestra desglose de comision; el detalle comercial queda cubierto por terminos y condiciones.
+
+Ajuste posterior:
+
+- Se retiro tambien el desglose visible de comision de la modal de confirmacion y del panel de pagos.
+- La UI cliente no menciona comision ni porcentaje; solo presenta el total estimado.
 
 ## Frontend prestador
 
@@ -106,10 +113,16 @@ Archivos:
 Cambios:
 
 - La card flotante de solicitud prioriza `Tu precio`.
-- Se muestra por separado `Comision MIMI GO` y `Total cliente`.
+- Se elimina de la UI del prestador cualquier referencia a `Comision MIMI GO` y `Total cliente`.
+- La solicitud muestra lo que el cliente pidio: cantidad, unidad, precio publicado, precio final del prestador y detalle del cliente.
 - Dashboard e historial del prestador priorizan el ingreso propio del prestador.
 - Card flotante mas compacta: menor alto, menor tipografia y mas mapa visible.
-- Editor de servicios aclara que el prestador define su precio y MIMI GO suma 30% al cliente.
+- Editor de servicios aclara que el prestador carga el importe que quiere cobrar, sin exponer reglas de comision.
+
+Ajuste posterior:
+
+- Se eliminaron fallbacks que podian mostrar `total_price_snapshot` en provider cuando faltaba `provider_price`.
+- La notificacion de nueva solicitud para prestador se mantiene en precio propio del prestador, cantidad/unidad y detalle solicitado.
 
 ## Transporte / Chofer hibernado
 
@@ -126,6 +139,8 @@ Archivos:
 Cambios:
 
 - `/`, `/cliente`, `/hub-clientes`, `/viaje`, `/viaje/`, `/chofer`, `/chofer/`, `/index.html`, `/chofer-panel.html` y `/login-chofer.html` redirigen publicamente a `/servicios`.
+- `/operadores` muestra una sola app: MIMI Servicios para prestadores.
+- Se retiro el asset visual del auto del hub de operadores para evitar referencias publicas a transporte.
 - `chofer/index.html` y `viaje/index.html` redirigen a `/servicios`.
 - Manifest de partners queda enfocado en prestadores.
 - Textos legales publicos quedan enfocados en Servicios y prestadores.

@@ -371,7 +371,7 @@ serve(async (req) => {
       category?.name || offering?.title || "Servicio",
       quantityText,
       serviceDetails.service_mode_label || "Ruta al abrir la app",
-      pricingResult.totalPrice > 0 ? `total ${money(pricingResult.totalPrice, pricingResult.currency)}` : "precio a coordinar",
+      pricingResult.providerPrice > 0 ? `tu precio ${money(pricingResult.providerPrice, pricingResult.currency)}` : "precio a coordinar",
     ].filter(Boolean).join(" · ");
 
     await createUserNotificationWithPush(admin, {
@@ -390,7 +390,7 @@ serve(async (req) => {
         pricing_model: pricingResult.model,
         unit_quantity: appliesUnitQuantity ? unitQuantity : "",
         unit_name: appliesUnitQuantity ? unitName : "",
-        total_price: pricingResult.totalPrice,
+        provider_price: pricingResult.providerPrice,
         currency: pricingResult.currency,
       },
     });
