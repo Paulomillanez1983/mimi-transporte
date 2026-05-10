@@ -167,6 +167,44 @@ Second blocker `provider_request_not_found` was traced to the E2E fixture, not t
 
 The runner also now asserts that `svc-search-providers` returns the prepared test provider before creating the request.
 
+Third blocker `BOOT_ERROR / Function failed to start / 503` was traced to the service lifecycle Edge Functions:
+
+- `svc-provider-en-route`
+- `svc-provider-arrived`
+- `svc-start-service`
+- `svc-complete-service`
+
+The installed Supabase CLI version does not provide `supabase functions logs`; attempting the requested command returned CLI usage help. The source issue was still confirmed from repository state and smoke tests: these remote functions existed, but their local source directories were empty. I rebuilt the source and redeployed only the affected functions using:
+
+```powershell
+supabase functions deploy svc-provider-en-route --project-ref xrphpqmutvadjrucqicn --workdir mimi-servicios --use-api
+supabase functions deploy svc-provider-arrived --project-ref xrphpqmutvadjrucqicn --workdir mimi-servicios --use-api
+supabase functions deploy svc-start-service --project-ref xrphpqmutvadjrucqicn --workdir mimi-servicios --use-api
+supabase functions deploy svc-complete-service --project-ref xrphpqmutvadjrucqicn --workdir mimi-servicios --use-api
+```
+
+Smoke verification after redeploy:
+
+- `svc-provider-en-route`: controlled `401 AUTH_REQUIRED`, no BOOT_ERROR.
+- `svc-provider-arrived`: controlled `401 AUTH_REQUIRED`, no BOOT_ERROR.
+- `svc-start-service`: controlled `401 AUTH_REQUIRED`, no BOOT_ERROR.
+- `svc-complete-service`: controlled `401 AUTH_REQUIRED`, no BOOT_ERROR.
+
+Implementation notes:
+
+- JWT is validated with Supabase Auth before any mutation.
+- Provider is resolved from `auth.uid()`.
+- Provider must be approved and not blocked.
+- Request must belong to `accepted_provider_id`.
+- Lifecycle transitions are explicit:
+  - `ACCEPTED/SCHEDULED -> PROVIDER_EN_ROUTE`
+  - `PROVIDER_EN_ROUTE -> PROVIDER_ARRIVED`
+  - `PROVIDER_ARRIVED/PROVIDER_EN_ROUTE/ACCEPTED/SCHEDULED -> IN_PROGRESS`
+  - `IN_PROGRESS -> COMPLETED`
+- `svc-complete-service` calls the internal RPC `svc_complete_service_atomic` only after provider ownership validation.
+- `service_role` remains server-side only inside Edge Functions.
+- No RLS policy was weakened.
+
 Current blocker in the Codex execution environment: missing E2E credential env vars. The script must be re-run in the terminal where the client/provider/admin test credentials are configured.
 
 ## Events currently present

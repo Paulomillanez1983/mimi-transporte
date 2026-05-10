@@ -90,7 +90,7 @@ async function requestJson(url, options = {}, label = "request") {
   if (!response.ok) {
     const error = new Error(data?.error || data?.message || `${label}_failed`);
     error.status = response.status;
-    error.details = data;
+    error.details = { label, url, response: data };
     throw error;
   }
   return data;
