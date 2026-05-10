@@ -20,6 +20,30 @@
  *   MIMI_E2E_REQUIRE_REALTIME=false
  */
 
+const ENV_ALIASES = {
+  MIMI_SUPABASE_URL: ["MIMI_SUPABASE_URL", "SUPABASE_TEST_URL"],
+  MIMI_SUPABASE_ANON_KEY: ["MIMI_SUPABASE_ANON_KEY", "SUPABASE_TEST_ANON_KEY"],
+  MIMI_E2E_CLIENT_EMAIL: ["MIMI_E2E_CLIENT_EMAIL", "E2E_CLIENT_EMAIL", "TEST_CLIENT_EMAIL", "PLAYWRIGHT_CLIENT_EMAIL", "CYPRESS_CLIENT_EMAIL", "QA_CLIENT_EMAIL"],
+  MIMI_E2E_CLIENT_PASSWORD: ["MIMI_E2E_CLIENT_PASSWORD", "E2E_CLIENT_PASSWORD", "TEST_CLIENT_PASSWORD", "PLAYWRIGHT_CLIENT_PASSWORD", "CYPRESS_CLIENT_PASSWORD", "QA_CLIENT_PASSWORD"],
+  MIMI_E2E_PROVIDER_EMAIL: ["MIMI_E2E_PROVIDER_EMAIL", "E2E_PROVIDER_EMAIL", "TEST_PROVIDER_EMAIL", "PLAYWRIGHT_PROVIDER_EMAIL"],
+  MIMI_E2E_PROVIDER_PASSWORD: ["MIMI_E2E_PROVIDER_PASSWORD", "E2E_PROVIDER_PASSWORD", "TEST_PROVIDER_PASSWORD", "PLAYWRIGHT_PROVIDER_PASSWORD"],
+  MIMI_E2E_ADMIN_EMAIL: ["MIMI_E2E_ADMIN_EMAIL", "E2E_ADMIN_EMAIL", "TEST_ADMIN_EMAIL", "PLAYWRIGHT_ADMIN_EMAIL", "ADMIN_TEST_EMAIL"],
+  MIMI_E2E_ADMIN_PASSWORD: ["MIMI_E2E_ADMIN_PASSWORD", "E2E_ADMIN_PASSWORD", "TEST_ADMIN_PASSWORD", "PLAYWRIGHT_ADMIN_PASSWORD", "ADMIN_TEST_PASSWORD"],
+  MIMI_E2E_PROVIDER_ID: ["MIMI_E2E_PROVIDER_ID", "E2E_PROVIDER_ID"],
+  MIMI_E2E_CATEGORY_ID: ["MIMI_E2E_CATEGORY_ID", "E2E_CATEGORY_ID"],
+  MIMI_E2E_SERVICE_LAT: ["MIMI_E2E_SERVICE_LAT", "E2E_SERVICE_LAT"],
+  MIMI_E2E_SERVICE_LNG: ["MIMI_E2E_SERVICE_LNG", "E2E_SERVICE_LNG"],
+  MIMI_E2E_REQUIRE_REALTIME: ["MIMI_E2E_REQUIRE_REALTIME", "E2E_REQUIRE_REALTIME"]
+};
+
+function env(key) {
+  const aliases = ENV_ALIASES[key] || [key];
+  for (const alias of aliases) {
+    if (process.env[alias]) return process.env[alias];
+  }
+  return "";
+}
+
 const requiredEnv = [
   "MIMI_SUPABASE_URL",
   "MIMI_SUPABASE_ANON_KEY",
@@ -31,22 +55,25 @@ const requiredEnv = [
   "MIMI_E2E_ADMIN_PASSWORD"
 ];
 
-const missing = requiredEnv.filter((key) => !process.env[key]);
+const missing = requiredEnv.filter((key) => !env(key));
 if (missing.length) {
   console.log(JSON.stringify({
-    ok: false,
+    ok: null,
+    status: "BLOCKED_BY_ENVIRONMENT",
     skipped: true,
     reason: "missing_required_env",
-    missing
+    missing,
+    found: requiredEnv.filter((key) => env(key)),
+    aliasesSupported: Object.fromEntries(requiredEnv.map((key) => [key, ENV_ALIASES[key] || [key]]))
   }, null, 2));
-  process.exit(2);
+  process.exit(0);
 }
 
-const SUPABASE_URL = process.env.MIMI_SUPABASE_URL.replace(/\/$/, "");
-const ANON_KEY = process.env.MIMI_SUPABASE_ANON_KEY;
-const SERVICE_LAT = Number(process.env.MIMI_E2E_SERVICE_LAT || "-31.3101063");
-const SERVICE_LNG = Number(process.env.MIMI_E2E_SERVICE_LNG || "-64.2753784");
-const REQUIRE_REALTIME = process.env.MIMI_E2E_REQUIRE_REALTIME !== "false";
+const SUPABASE_URL = env("MIMI_SUPABASE_URL").replace(/\/$/, "");
+const ANON_KEY = env("MIMI_SUPABASE_ANON_KEY");
+const SERVICE_LAT = Number(env("MIMI_E2E_SERVICE_LAT") || "-31.3101063");
+const SERVICE_LNG = Number(env("MIMI_E2E_SERVICE_LNG") || "-64.2753784");
+const REQUIRE_REALTIME = env("MIMI_E2E_REQUIRE_REALTIME") !== "false";
 const DEFAULT_TIMEOUT_MS = 20000;
 
 function redactEmail(email) {
@@ -154,8 +181,9 @@ function first(rowset, label) {
 }
 
 async function loadProviderContext(providerSession) {
-  const providerFilter = process.env.MIMI_E2E_PROVIDER_ID
-    ? `id=eq.${encodeURIComponent(process.env.MIMI_E2E_PROVIDER_ID)}`
+  const providerIdOverride = env("MIMI_E2E_PROVIDER_ID");
+  const providerFilter = providerIdOverride
+    ? `id=eq.${encodeURIComponent(providerIdOverride)}`
     : `user_id=eq.${encodeURIComponent(providerSession.userId)}`;
 
   const provider = first(await restSelect(
@@ -172,8 +200,9 @@ async function loadProviderContext(providerSession) {
     throw new Error("provider_not_approved_or_blocked");
   }
 
-  const offeringFilter = process.env.MIMI_E2E_CATEGORY_ID
-    ? `category_id=eq.${encodeURIComponent(process.env.MIMI_E2E_CATEGORY_ID)}`
+  const categoryIdOverride = env("MIMI_E2E_CATEGORY_ID");
+  const offeringFilter = categoryIdOverride
+    ? `category_id=eq.${encodeURIComponent(categoryIdOverride)}`
     : "active=eq.true";
 
   const offerings = await restSelect(
@@ -364,9 +393,9 @@ async function run() {
     startedAt: new Date().toISOString(),
     productionUrl: SUPABASE_URL,
     users: {
-      client: redactEmail(process.env.MIMI_E2E_CLIENT_EMAIL),
-      provider: redactEmail(process.env.MIMI_E2E_PROVIDER_EMAIL),
-      admin: redactEmail(process.env.MIMI_E2E_ADMIN_EMAIL)
+      client: redactEmail(env("MIMI_E2E_CLIENT_EMAIL")),
+      provider: redactEmail(env("MIMI_E2E_PROVIDER_EMAIL")),
+      admin: redactEmail(env("MIMI_E2E_ADMIN_EMAIL"))
     },
     ids: {},
     states: [],
@@ -376,8 +405,8 @@ async function run() {
     warnings: []
   };
 
-  const clientSession = await signIn(process.env.MIMI_E2E_CLIENT_EMAIL, process.env.MIMI_E2E_CLIENT_PASSWORD);
-  const providerSession = await signIn(process.env.MIMI_E2E_PROVIDER_EMAIL, process.env.MIMI_E2E_PROVIDER_PASSWORD);
+  const clientSession = await signIn(env("MIMI_E2E_CLIENT_EMAIL"), env("MIMI_E2E_CLIENT_PASSWORD"));
+  const providerSession = await signIn(env("MIMI_E2E_PROVIDER_EMAIL"), env("MIMI_E2E_PROVIDER_PASSWORD"));
   result.ids.client_user_id = clientSession.userId;
   result.ids.provider_user_id = providerSession.userId;
 
@@ -474,7 +503,7 @@ async function run() {
     result.warnings.push(result.realtime.warning);
   }
 
-  const adminSession = await signIn(process.env.MIMI_E2E_ADMIN_EMAIL, process.env.MIMI_E2E_ADMIN_PASSWORD);
+  const adminSession = await signIn(env("MIMI_E2E_ADMIN_EMAIL"), env("MIMI_E2E_ADMIN_PASSWORD"));
   const adminEvents = await verifyEvents(adminSession, requestId);
   result.admin = {
     user_id: adminSession.userId,

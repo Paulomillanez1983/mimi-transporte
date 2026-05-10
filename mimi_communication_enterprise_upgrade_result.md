@@ -54,6 +54,18 @@ El objetivo fue reemplazar rutas legacy rotas (`soporte_tickets`, `soporte_mensa
 | `admin-send-support-message` | ACTIVE | true |
 | `admin-update-support-status` | ACTIVE | true |
 
+## Auditoría de credenciales E2E
+
+Resultado sin exponer valores:
+
+- Local `.env.local`: existe, sin variables E2E requeridas.
+- Runtime local: sin variables E2E requeridas.
+- Vercel Environment Variables: no hay variables configuradas para el proyecto.
+- GitHub Actions Secrets: no se listaron secrets para el repo consultado.
+- Referencias encontradas: documentación enterprise y `qa/enterprise-global-e2e.js`.
+
+Estado E2E autenticado actual: `BLOCKED_BY_ENVIRONMENT`.
+
 ## Realtime
 
 Validación remota de publicación `supabase_realtime`:
@@ -92,7 +104,7 @@ Resultado:
 - JS syntax checks: OK
 - Rutas/manifests/service workers: OK
 - `git diff --check`: OK, solo warnings CRLF de Windows.
-- `enterprise-global-e2e`: no ejecutado en esta corrida por falta de variables `MIMI_E2E_*` en la sesión local. El backend E2E enterprise ya había sido validado previamente; para esta fase se validaron las funciones de comunicación y rutas.
+- `enterprise-global-e2e`: `BLOCKED_BY_ENVIRONMENT`, no fallo. Se inspeccionaron `.env*`, runtime local, referencias QA/docs, Vercel Env Vars y GitHub Actions Secrets sin imprimir valores. No hay credenciales E2E cargadas en el entorno local/Vercel/GitHub consultado. El runner fue ajustado para reportar `ok: null`, `status: "BLOCKED_BY_ENVIRONMENT"` y `skipped: true` cuando falten credenciales, en vez de marcar un falso failed.
 
 Validaciones remotas:
 
