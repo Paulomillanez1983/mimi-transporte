@@ -51,8 +51,8 @@
 
   <!-- Styles -->
   <link rel="stylesheet" href="./styles/app.css">
-  <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.10.3">
-  <link rel="stylesheet" href="./styles/provider.css?v=2026.05.10.3">
+  <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.10.5">
+  <link rel="stylesheet" href="./styles/provider.css?v=2026.05.10.5">
 
   <!-- Provider map theme: light, clean, professional -->
   <script>
@@ -194,6 +194,23 @@
           <div class="service-type" id="activeServiceType">Electricista</div>
           <div class="service-location" id="activeServiceLocation">Nueva Córdoba</div>
           <div class="service-client" id="activeServiceClient">Mariana</div>
+        </div>
+        <div class="service-navigation-panel" id="activeServiceNavigation" hidden>
+          <div class="service-route-metrics">
+            <div>
+              <span>ETA</span>
+              <strong id="serviceEta">--</strong>
+            </div>
+            <div>
+              <span>Distancia</span>
+              <strong id="serviceDistance">--</strong>
+            </div>
+          </div>
+          <div class="service-next-step" id="serviceNextStep">Calculando la mejor ruta al cliente...</div>
+          <div class="service-nav-actions">
+            <button class="service-nav-btn" id="openExternalNavigation" type="button">Abrir mapa</button>
+            <button class="service-nav-btn secondary" type="button" data-provider-flow="chat">Chat cliente</button>
+          </div>
         </div>
         <button class="service-action-btn" id="serviceActionBtn" type="button">
           Llegué al domicilio
@@ -356,9 +373,13 @@
 
           <div class="panel-section" id="providerSupportPanel">
             <h3 class="section-title">Ayuda y soporte</h3>
-            <div class="summary-card">
-              <strong>Soporte MIMI</strong>
-              <span class="muted">Para dudas de cuenta, verificación o servicios, escribinos desde el chat o a soporte@mimigo.app.</span>
+            <div class="provider-support-live-card">
+              <div>
+                <span class="support-kicker">Chat privado con MIMI</span>
+                <strong>Habla con soporte/admin desde la app</strong>
+                <p>Usalo para cuenta, verificacion, servicios, pagos o problemas con una solicitud.</p>
+              </div>
+              <button class="provider-support-chat-btn" id="providerSupportChatBtn" type="button">Abrir chat</button>
             </div>
           </div>
         </div>
@@ -474,12 +495,20 @@
     <div class="chat-drawer" id="chatDrawer" aria-hidden="true">
       <div class="drawer-handle"></div>
       <div class="chat-header">
-        <h3>Chat con cliente</h3>
+        <div>
+          <h3 id="chatTitle">Chat con cliente</h3>
+          <p id="chatSubtitle">Conversacion segura vinculada a tu servicio.</p>
+        </div>
         <button class="chat-close" id="chatClose" type="button" aria-label="Cerrar chat">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </button>
+      </div>
+      <div class="chat-quick-replies" id="chatQuickReplies">
+        <button type="button" data-chat-quick="Estoy en camino.">Estoy en camino</button>
+        <button type="button" data-chat-quick="Llegue al domicilio.">Llegue</button>
+        <button type="button" data-chat-quick="Necesito un dato mas para coordinar.">Necesito datos</button>
       </div>
       <div class="chat-messages" id="chatMessages"></div>
       <div class="chat-input-area">
@@ -622,6 +651,6 @@
   <script src="./env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Push notifications are initialized from src/services/push.js. -->
-  <script type="module" src="./src/main-provider.js?v=2026.05.10.3"></script>
+  <script type="module" src="./src/main-provider.js?v=2026.05.10.5"></script>
 </body>
 </html>

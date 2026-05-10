@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.10.2";
+const MIMI_PROVIDER_BUILD = "2026.05.10.5";
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -25,6 +25,7 @@ import {
   initState,
   subscribe,
   actions,
+  updateState,
   getDeviceId,
   STORAGE_KEYS
 } from "./state/app-state.js";
@@ -34,6 +35,8 @@ import {
   invokeFunction,
   loadActiveRequest,
   loadCategories,
+  loadConversationForRequest,
+  loadMessages,
   loadOfferDetails,
   loadNotifications,
   loadOffers,
@@ -42,6 +45,7 @@ import {
   registerDevice,
   resolveServiceIntent,
   saveProviderWorkspace,
+  sendMessage,
   uploadProviderAvatar,
   uploadProviderDocument,
   signOut,
@@ -77,6 +81,12 @@ class MimiProviderApp {
     this.realtimeChannel = null;
     this.offerRealtimeChannel = null;
     this.notificationRealtimeChannel = null;
+    this.chatRealtimeChannel = null;
+    this.currentChatMode = "client";
+    this.supportConversationId = null;
+    this.lastRoadRouteKey = null;
+    this.lastRoadRouteAt = 0;
+    this.lastRoadRouteData = null;
     
     // DOM Elements cache
     this.elements = {};
@@ -274,6 +284,11 @@ verificationResultList: document.getElementById("verificationResultList"),
       activeServiceType: document.getElementById('activeServiceType'),
       activeServiceLocation: document.getElementById('activeServiceLocation'),
       activeServiceClient: document.getElementById('activeServiceClient'),
+      activeServiceNavigation: document.getElementById('activeServiceNavigation'),
+      serviceEta: document.getElementById('serviceEta'),
+      serviceDistance: document.getElementById('serviceDistance'),
+      serviceNextStep: document.getElementById('serviceNextStep'),
+      openExternalNavigation: document.getElementById('openExternalNavigation'),
       serviceActionBtn: document.getElementById('serviceActionBtn'),
       
       // Distance alert
@@ -350,9 +365,13 @@ verificationResultList: document.getElementById("verificationResultList"),
       // Chat drawer
       chatDrawer: document.getElementById('chatDrawer'),
       chatClose: document.getElementById('chatClose'),
+      chatTitle: document.getElementById('chatTitle'),
+      chatSubtitle: document.getElementById('chatSubtitle'),
+      chatQuickReplies: document.getElementById('chatQuickReplies'),
       chatMessages: document.getElementById('chatMessages'),
       chatInput: document.getElementById('chatInput'),
       chatSend: document.getElementById('chatSend'),
+      providerSupportChatBtn: document.getElementById('providerSupportChatBtn'),
       
       // Modal
       verificationModal: document.getElementById('verificationModal'),
@@ -784,6 +803,9 @@ setTimeout(() => {
     }
 
     if (hasProvider && hasService) {
+      this.updateProviderNavigationPanel({ providerPosition, servicePosition });
+      this.updateProviderRoadRoute({ providerPosition, servicePosition });
+
       const fitKey = [
         Number(providerPosition.lat).toFixed(4),
         Number(providerPosition.lng).toFixed(4),
@@ -806,6 +828,8 @@ setTimeout(() => {
       return;
     }
 
+    this.updateProviderNavigationPanel({ providerPosition, servicePosition: null });
+
     if (hasProvider) {
       this.map.easeTo({
         center: [Number(providerPosition.lng), Number(providerPosition.lat)],
@@ -827,6 +851,151 @@ setTimeout(() => {
 
     return service?.location || "Ubicacion a confirmar";
   }
+
+  drawProviderRouteCoordinates(coordinates = []) {
+    if (!this.map || !this.ensureProviderRouteLayer()) return;
+    const routeSource = this.map.getSource(this.routeSourceId);
+    if (!routeSource) return;
+
+    routeSource.setData({
+      type: "Feature",
+      geometry: {
+        type: "LineString",
+        coordinates: Array.isArray(coordinates) ? coordinates : []
+      },
+      properties: {}
+    });
+  }
+
+  distanceMetersBetween(a, b) {
+    if (!this.isValidLatLng(a) || !this.isValidLatLng(b)) return null;
+    const toRad = (value) => (Number(value) * Math.PI) / 180;
+    const earth = 6371000;
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const lat1 = toRad(a.lat);
+    const lat2 = toRad(b.lat);
+    const h =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+    return 2 * earth * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  }
+
+  formatRouteDistance(meters) {
+    const value = Number(meters);
+    if (!Number.isFinite(value)) return "--";
+    if (value < 1000) return `${Math.max(50, Math.round(value / 10) * 10)} m`;
+    return `${(value / 1000).toFixed(value < 10000 ? 1 : 0)} km`;
+  }
+
+  formatRouteEta(seconds) {
+    const value = Number(seconds);
+    if (!Number.isFinite(value)) return "--";
+    const minutes = Math.ceil(value / 60);
+    return `${Math.max(1, minutes)} min`;
+  }
+
+  routeInstructionText(route) {
+    const steps = route?.legs?.[0]?.steps ?? [];
+    const step = steps.find((item) => item?.maneuver?.type && item.maneuver.type !== "depart") ?? steps[0];
+    const type = step?.maneuver?.type;
+    const modifier = step?.maneuver?.modifier;
+    const street = step?.name ? ` por ${step.name}` : "";
+
+    if (!type) return "Segui la ruta marcada hasta el domicilio del cliente.";
+
+    const labels = {
+      turn: modifier === "left" ? "Dobla a la izquierda" : modifier === "right" ? "Dobla a la derecha" : "Segui el giro indicado",
+      new_name: "Continua",
+      continue: "Continua derecho",
+      merge: "Incorporate a la via",
+      fork: "Toma la bifurcacion indicada",
+      roundabout: "En la rotonda, toma la salida indicada",
+      arrive: "Estas llegando al domicilio"
+    };
+
+    return `${labels[type] || "Segui la indicacion"}${street}.`;
+  }
+
+  updateProviderRoadRoute({ providerPosition, servicePosition }) {
+    if (!this.isValidLatLng(providerPosition) || !this.isValidLatLng(servicePosition)) return;
+
+    const routeKey = [
+      Number(providerPosition.lat).toFixed(4),
+      Number(providerPosition.lng).toFixed(4),
+      Number(servicePosition.lat).toFixed(4),
+      Number(servicePosition.lng).toFixed(4)
+    ].join(":");
+
+    const now = Date.now();
+    if (this.lastRoadRouteKey === routeKey && now - this.lastRoadRouteAt < 15000) return;
+
+    this.lastRoadRouteKey = routeKey;
+    this.lastRoadRouteAt = now;
+
+    const url =
+      `https://router.project-osrm.org/route/v1/driving/` +
+      `${Number(providerPosition.lng)},${Number(providerPosition.lat)};` +
+      `${Number(servicePosition.lng)},${Number(servicePosition.lat)}` +
+      `?overview=full&geometries=geojson&steps=true`;
+
+    fetch(url)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        const route = data?.routes?.[0];
+        const coordinates = route?.geometry?.coordinates;
+        if (!Array.isArray(coordinates) || coordinates.length < 2) return;
+        this.lastRoadRouteData = route;
+        this.drawProviderRouteCoordinates(coordinates);
+        this.updateProviderNavigationPanel({ providerPosition, servicePosition, route });
+      })
+      .catch((error) => {
+        console.warn("[MIMI][provider-route] road route fallback:", error?.message || error);
+      });
+  }
+
+  updateProviderNavigationPanel({ providerPosition, servicePosition, route = null }) {
+    const panel = this.elements.activeServiceNavigation;
+    if (!panel) return;
+
+    if (!this.state?.activeService || !this.isValidLatLng(servicePosition)) {
+      panel.hidden = true;
+      return;
+    }
+
+    const distance = route?.distance ?? this.distanceMetersBetween(providerPosition, servicePosition);
+    const durationSeconds = route?.duration ?? (distance ? (distance / 1000 / 28) * 3600 : null);
+    const status = this.normalizeRequestStatus(this.state.activeService.status);
+
+    panel.hidden = false;
+    if (this.elements.serviceDistance) {
+      this.elements.serviceDistance.textContent = this.formatRouteDistance(distance);
+    }
+    if (this.elements.serviceEta) {
+      this.elements.serviceEta.textContent = this.formatRouteEta(durationSeconds);
+    }
+    if (this.elements.serviceNextStep) {
+      const statusHints = {
+        ACCEPTED: "Toca En camino cuando salgas hacia el domicilio.",
+        PROVIDER_EN_ROUTE: this.routeInstructionText(route ?? this.lastRoadRouteData),
+        PROVIDER_ARRIVED: "Ya estas en el domicilio. Confirma llegada o inicia el servicio.",
+        IN_PROGRESS: "Servicio en curso. Finalizalo cuando termines el trabajo."
+      };
+      this.elements.serviceNextStep.textContent = statusHints[status] || "Ruta activa hacia el cliente.";
+    }
+  }
+
+  openExternalNavigation() {
+    const destination = this.servicePositionFromState();
+    if (!this.isValidLatLng(destination)) {
+      this.showToast("Todavia no tenemos la ubicacion del cliente", "warning");
+      return;
+    }
+
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${destination.lat},${destination.lng}`)}&travelmode=driving`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
   /**
    * Update provider marker on map
    */
@@ -1663,11 +1832,15 @@ this.elements.tabButtons.forEach((btn) => {
     });
 
     this.elements.quickChat?.addEventListener('click', () => {
-      actions.toggleChat();
+      this.openClientChat();
     });
 
     this.elements.quickSupport?.addEventListener('click', () => {
-      this.openProviderSection("support");
+      this.openProviderSupportChat();
+    });
+
+    this.elements.providerSupportChatBtn?.addEventListener('click', () => {
+      this.openProviderSupportChat();
     });
 
     // Notification drawer
@@ -1685,8 +1858,22 @@ this.elements.tabButtons.forEach((btn) => {
       this.sendChatMessage();
     });
 
-    this.elements.chatInput?.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') this.sendChatMessage();
+    this.elements.chatInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.sendChatMessage();
+      }
+    });
+
+    this.elements.chatQuickReplies?.addEventListener('click', (event) => {
+      const button = event.target?.closest?.('[data-chat-quick]');
+      if (!button) return;
+      if (this.elements.chatInput) this.elements.chatInput.value = button.dataset.chatQuick || "";
+      this.sendChatMessage();
+    });
+
+    this.elements.openExternalNavigation?.addEventListener('click', () => {
+      this.openExternalNavigation();
     });
 
     // Offer actions
@@ -1826,6 +2013,11 @@ document.addEventListener("click", (event) => {
   const actionButton = event.target?.closest?.("[data-provider-business-action]");
   if (actionButton) {
     this.handleProviderBusinessAction(actionButton.dataset.providerBusinessAction, actionButton);
+  }
+
+  const flowButton = event.target?.closest?.("[data-provider-flow]");
+  if (flowButton?.dataset.providerFlow === "chat") {
+    this.openClientChat();
   }
 });
 
@@ -3584,26 +3776,264 @@ startLocationTracking() {
     }
   }
 
+  activeServiceRequestId() {
+    const service = this.state?.activeService;
+    return service?.requestId ?? service?.request_id ?? service?.id ?? null;
+  }
+
+  async openClientChat() {
+    const conversationId = await this.ensureClientConversation();
+    if (!conversationId) return;
+
+    this.setChatMode("client");
+    await this.loadChatThread(conversationId);
+  }
+
+  async ensureClientConversation() {
+    const service = this.state?.activeService;
+    const requestId = this.activeServiceRequestId();
+
+    if (!service || !requestId) {
+      this.showToast("El chat se habilita cuando tenes un servicio activo", "warning");
+      return null;
+    }
+
+    if (service.conversationId) {
+      return service.conversationId;
+    }
+
+    if (this.currentChatMode !== "support" && this.state?.chat?.conversationId) {
+      return this.state.chat.conversationId;
+    }
+
+    try {
+      const conversation = await loadConversationForRequest(requestId);
+      if (!conversation?.id) {
+        this.showToast("La conversacion todavia no esta creada para este servicio", "warning");
+        return null;
+      }
+
+      const nextService = {
+        ...service,
+        conversationId: conversation.id,
+        raw: {
+          ...(service.raw ?? {}),
+          conversation_id: conversation.id
+        }
+      };
+
+      actions.setActiveService(nextService);
+      updateState({
+        chat: {
+          conversationId: conversation.id
+        },
+        client: {
+          activeConversationId: conversation.id
+        }
+      });
+
+      return conversation.id;
+    } catch (error) {
+      console.error("[MIMI][provider-chat] conversation load failed:", error);
+      this.showToast("No pudimos abrir el chat del servicio", "error");
+      return null;
+    }
+  }
+
+  async openProviderSupportChat() {
+    this.openProviderSection("support");
+    const conversationId = await this.ensureProviderSupportConversation();
+    if (!conversationId) return;
+
+    this.setChatMode("support");
+    await this.loadChatThread(conversationId);
+  }
+
+  async ensureProviderSupportConversation() {
+    if (this.supportConversationId) return this.supportConversationId;
+
+    const supabase = getSupabaseClient();
+    const userId = this.state?.session?.userId;
+    if (!supabase || !userId) {
+      this.showToast("Inicia sesion para hablar con soporte", "warning");
+      return null;
+    }
+
+    try {
+      const { data: existing, error: existingError } = await supabase
+        .from("svc_conversations")
+        .select("*")
+        .eq("client_user_id", userId)
+        .eq("app_context", "support")
+        .eq("participant_role", "provider")
+        .eq("status", "OPEN")
+        .contains("metadata_json", { support_type: "provider_admin" })
+        .order("updated_at", { ascending: false })
+        .limit(1);
+
+      if (existingError) throw existingError;
+
+      if (existing?.[0]?.id) {
+        this.supportConversationId = existing[0].id;
+        return existing[0].id;
+      }
+
+      const { data: created, error: createError } = await supabase
+        .from("svc_conversations")
+        .insert({
+          client_user_id: userId,
+          provider_user_id: null,
+          status: "OPEN",
+          app_context: "support",
+          subject: "Soporte MIMI prestador",
+          participant_role: "provider",
+          admin_status: "abierto",
+          metadata_json: {
+            support_type: "provider_admin",
+            provider_id: this.state?.session?.providerId ?? null,
+            source: "provider_app"
+          }
+        })
+        .select("*")
+        .single();
+
+      if (createError) throw createError;
+
+      this.supportConversationId = created?.id ?? null;
+      return this.supportConversationId;
+    } catch (error) {
+      console.error("[MIMI][provider-support] conversation failed:", error);
+      this.showToast("No pudimos abrir soporte dentro de la app", "error");
+      return null;
+    }
+  }
+
+  setChatMode(mode) {
+    this.currentChatMode = mode;
+    if (this.elements.chatDrawer) this.elements.chatDrawer.dataset.mode = mode;
+
+    const isSupport = mode === "support";
+    if (this.elements.chatTitle) {
+      this.elements.chatTitle.textContent = isSupport ? "Soporte MIMI" : "Chat con cliente";
+    }
+    if (this.elements.chatSubtitle) {
+      this.elements.chatSubtitle.textContent = isSupport
+        ? "Canal privado con soporte/admin. Queda registrado para seguimiento."
+        : "Conversacion segura vinculada a tu servicio activo.";
+    }
+    if (this.elements.chatQuickReplies) {
+      this.elements.chatQuickReplies.hidden = isSupport;
+    }
+    if (this.elements.chatInput) {
+      this.elements.chatInput.placeholder = isSupport
+        ? "Contanos que necesitas resolver..."
+        : "Escribi un mensaje al cliente...";
+    }
+  }
+
+  async loadChatThread(conversationId) {
+    try {
+      const messages = await loadMessages(conversationId);
+      updateState({
+        chat: {
+          conversationId,
+          messages: Array.isArray(messages) ? messages : [],
+          unreadCount: 0
+        },
+        ui: {
+          chatDrawerOpen: true
+        }
+      });
+
+      this.subscribeChatMessages(conversationId);
+      this.renderChatMessages();
+    } catch (error) {
+      console.error("[MIMI][provider-chat] messages load failed:", error);
+      this.showToast("No pudimos cargar los mensajes", "error");
+    }
+  }
+
+  subscribeChatMessages(conversationId) {
+    const supabase = getSupabaseClient();
+    if (!supabase || !conversationId) return;
+
+    if (this.chatRealtimeChannel) {
+      supabase.removeChannel(this.chatRealtimeChannel);
+      this.chatRealtimeChannel = null;
+    }
+
+    this.chatRealtimeChannel = supabase
+      .channel(`provider-chat-${conversationId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "svc_messages",
+          filter: `conversation_id=eq.${conversationId}`
+        },
+        (payload) => {
+          const message = payload.new ?? payload.old;
+          if (!message?.id) return;
+          this.upsertChatMessage(message);
+        }
+      )
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR") {
+          console.warn("[MIMI][provider-chat] realtime channel error");
+        }
+      });
+  }
+
+  upsertChatMessage(message) {
+    const current = Array.isArray(this.state?.chat?.messages) ? this.state.chat.messages : [];
+    const exists = current.some((item) => item.id === message.id);
+    const messages = exists
+      ? current.map((item) => (item.id === message.id ? { ...item, ...message } : item))
+      : [...current, message];
+
+    updateState({
+      chat: {
+        conversationId: message.conversation_id ?? this.state?.chat?.conversationId ?? null,
+        messages,
+        unreadCount: messages.filter(
+          (item) => !item.read_at && item.sender_user_id !== this.state?.session?.userId
+        ).length
+      }
+    });
+
+    this.renderChatMessages();
+  }
+
   /**
    * Send chat message
    */
-  sendChatMessage() {
+  async sendChatMessage() {
     const input = this.elements.chatInput;
     const text = input?.value.trim();
-    
     if (!text) return;
 
-    const message = {
-      id: Date.now(),
-      text,
-      type: 'outgoing',
-      timestamp: Date.now()
-    };
+    let conversationId = this.state?.chat?.conversationId;
+    if (!conversationId) {
+      conversationId = this.currentChatMode === "support"
+        ? await this.ensureProviderSupportConversation()
+        : await this.ensureClientConversation();
+    }
 
-    actions.addMessage(message);
-    input.value = '';
-    
-this.renderChatMessages();
+    if (!conversationId) return;
+
+    this.setButtonBusy(this.elements.chatSend, true, "");
+
+    try {
+      const message = await sendMessage({ conversationId, body: text });
+      input.value = "";
+      if (message?.id) this.upsertChatMessage(message);
+    } catch (error) {
+      console.error("[MIMI][provider-chat] send failed:", error);
+      this.showToast("No pudimos enviar el mensaje", "error");
+    } finally {
+      this.setButtonBusy(this.elements.chatSend, false);
+    }
   }
 
   /**
@@ -3613,16 +4043,32 @@ this.renderChatMessages();
     const container = this.elements.chatMessages;
     if (!container) return;
 
-    const messages = this.state?.chat.messages || [];
-    container.innerHTML = messages.map(msg => `
-      <div class="chat-message ${msg.type}">
-        ${msg.text}
-        <div class="chat-message-time">
-          ${new Date(msg.timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+    const messages = this.state?.chat?.messages || [];
+
+    if (!messages.length) {
+      container.innerHTML = `
+        <div class="chat-empty-state">
+          <strong>${this.currentChatMode === "support" ? "Soporte listo para ayudarte" : "Todavia no hay mensajes"}</strong>
+          <span>${this.currentChatMode === "support" ? "Escribi tu consulta y un operador/admin podra verla." : "Usa el chat solo para coordinar este servicio activo."}</span>
         </div>
-      </div>
-    `).join('');
-    
+      `;
+      return;
+    }
+
+    container.innerHTML = messages.map((msg) => {
+      const outgoing = msg.sender_user_id === this.state?.session?.userId || msg.type === "outgoing";
+      const body = msg.body ?? msg.text ?? "";
+      const timestamp = msg.created_at ?? msg.timestamp ?? Date.now();
+      return `
+        <div class="chat-message ${outgoing ? "outgoing" : "incoming"}">
+          <span>${this.escapeHtml(body)}</span>
+          <div class="chat-message-time">
+            ${new Date(timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        </div>
+      `;
+    }).join('');
+
     container.scrollTop = container.scrollHeight;
   }
 
@@ -4152,16 +4598,22 @@ renderOnlineButton() {
       
       // Button text
       const buttonLabels = {
-        'ACCEPTED': 'Llegu al domicilio',
-        'PROVIDER_EN_ROUTE': 'Llegu al domicilio',
+        'ACCEPTED': 'Llegue al domicilio',
+        'PROVIDER_EN_ROUTE': 'Llegue al domicilio',
         'PROVIDER_ARRIVED': 'Iniciar servicio',
         'IN_PROGRESS': 'Finalizar servicio'
       };
       
       if (this.elements.serviceActionBtn) {
-        this.elements.serviceActionBtn.textContent = buttonLabels[serviceStatus] || 'Accin';
+        this.elements.serviceActionBtn.textContent = buttonLabels[serviceStatus] || 'Accion';
       }
     }
+
+    this.updateProviderNavigationPanel({
+      providerPosition: this.state?.location?.current,
+      servicePosition: this.servicePositionFromState(),
+      route: this.lastRoadRouteData
+    });
   }
 
   /**

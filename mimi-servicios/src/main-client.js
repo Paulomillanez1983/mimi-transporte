@@ -605,6 +605,7 @@ function currentConversationId() {
 }
 
 let infoAutoHideTimer = null;
+let clientSupportConversationId = null;
 
 function setInfo(message, error = null) {
   setState((draft) => {
@@ -846,6 +847,103 @@ async function registerCurrentDevice() {
   } catch {
     // no-op
   }
+}
+
+async function ensureClientSupportConversation() {
+  if (clientSupportConversationId) return clientSupportConversationId;
+
+  const supabase = getSupabaseClient();
+  const userId = state.session.userId;
+  if (!supabase || !userId) {
+    throw new Error("LOGIN_REQUIRED");
+  }
+
+  const { data: existing, error: existingError } = await supabase
+    .from("svc_conversations")
+    .select("*")
+    .eq("client_user_id", userId)
+    .eq("app_context", "support")
+    .eq("participant_role", "client")
+    .eq("status", "OPEN")
+    .contains("metadata_json", { support_type: "client_admin" })
+    .order("updated_at", { ascending: false })
+    .limit(1);
+
+  if (existingError) throw existingError;
+
+  if (existing?.[0]?.id) {
+    clientSupportConversationId = existing[0].id;
+    return clientSupportConversationId;
+  }
+
+  const { data: created, error: createError } = await supabase
+    .from("svc_conversations")
+    .insert({
+      client_user_id: userId,
+      provider_user_id: null,
+      status: "OPEN",
+      app_context: "support",
+      subject: "Soporte MIMI cliente",
+      participant_role: "client",
+      admin_status: "abierto",
+      metadata_json: {
+        support_type: "client_admin",
+        source: "client_app"
+      }
+    })
+    .select("*")
+    .single();
+
+  if (createError) throw createError;
+
+  clientSupportConversationId = created?.id ?? null;
+  return clientSupportConversationId;
+}
+
+function escapeSupportHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function formatSupportDate(value) {
+  if (!value) return "";
+  try {
+    return new Date(value).toLocaleString("es-AR", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  } catch (_) {
+    return "";
+  }
+}
+
+function renderSupportThread(messages = []) {
+  const thread = document.getElementById("supportThread");
+  if (!thread) return;
+
+  thread.innerHTML = messages.length
+    ? messages
+        .map((message) => `
+          <article class="support-message ${message.sender_user_id === state.session.userId ? "is-own" : ""}">
+            <strong>${message.sender_user_id === state.session.userId ? "Vos" : "Soporte MIMI"}</strong>
+            <p>${escapeSupportHtml(message.body ?? "")}</p>
+            <span>${escapeSupportHtml(formatSupportDate(message.created_at))}</span>
+          </article>
+        `)
+        .join("")
+    : `
+      <article class="support-message">
+        <strong>Soporte MIMI</strong>
+        <p>Escribi tu consulta. El equipo la va a ver desde el panel admin.</p>
+        <span>Canal privado</span>
+      </article>
+    `;
 }
 
 function retryDeviceRegistrationAfterUserGesture() {
@@ -2170,27 +2268,28 @@ function bindBasicControls() {
     event.preventDefault();
 
     const input = document.getElementById("supportInput");
-    const thread = document.getElementById("supportThread");
     const status = document.getElementById("supportStatusText");
     const body = input?.value?.trim();
 
     if (!body) return;
 
-    if (thread) {
-      const item = document.createElement("article");
-      item.className = "support-message is-own";
-      item.innerHTML = `<strong>Vos</strong><p></p><span>Enviado ahora</span>`;
-      item.querySelector("p").textContent = body;
-      thread.prepend(item);
-    }
+    if (status) status.textContent = "Enviando tu consulta...";
 
-    if (status) {
-      status.textContent = state.session.userId
-        ? "Recibimos tu consulta. Cuando conectemos el endpoint de soporte cliente, saldrá al panel del equipo."
-        : "Tu consulta quedo preparada. Iniciá sesión para asociarla a tu cuenta.";
+    try {
+      const conversationId = await ensureClientSupportConversation();
+      const message = await sendMessage({ conversationId, body });
+      const messages = await loadMessages(conversationId);
+      renderSupportThread(messages?.length ? messages : [message].filter(Boolean));
+      if (status) status.textContent = "Consulta enviada al equipo MIMI. Te respondemos por este chat.";
+      input.value = "";
+    } catch (error) {
+      if (status) {
+        status.textContent = error?.message === "LOGIN_REQUIRED"
+          ? "Inicia sesion para abrir un chat privado con soporte."
+          : "No pudimos enviar la consulta. Proba nuevamente.";
+      }
+      setInfo(null, normalizeAuthError(error, "No se pudo enviar la consulta de soporte."));
     }
-
-    input.value = "";
   });
 
   document.querySelector(".app-shell")?.addEventListener("click", async (event) => {
