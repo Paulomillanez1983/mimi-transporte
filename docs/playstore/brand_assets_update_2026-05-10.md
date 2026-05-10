@@ -16,7 +16,7 @@ Los assets se conectaron a previews sociales, PWA/TWA manifests, iconos de app, 
 
 Cliente:
 
-- OG/social: `assets/og/og-mimigo-client-branding-v2.png`
+- OG/social: `assets/og/og-mimigo-client-branding-v3.png`
 - Splash: `assets/brand/mimigo-client-splash-1536x1024.png`
 - Wordmark: `mimi-servicios/assets/brand/mimigo-client-wordmark.png`
 - Iconos PWA: `assets/icons/mimigo-client-icon-192.png`, `assets/icons/mimigo-client-icon-512.png`, `assets/icons/mimigo-client-icon-512-maskable.png`
@@ -25,7 +25,7 @@ Cliente:
 
 Partners:
 
-- OG/social: `assets/og/og-mimigo-partners-branding-v2.png`
+- OG/social: `assets/og/og-mimigo-partners-branding-v3.png`
 - Login hero: `mimi-servicios/assets/brand/mimigo-partners-workspace-hero-1600x1100.png`
 - Splash: `assets/brand/mimigo-partners-splash-1536x1024.png`
 - Wordmark: `mimi-servicios/assets/brand/mimigo-partners-wordmark.png`
@@ -35,8 +35,8 @@ Partners:
 
 ## Integracion
 
-- `/servicios`, `/hub-clientes.html` y `mimi-servicios/cliente.html` usan `og-mimigo-client-branding-v2.png?v=branding-v2`.
-- `/prestador`, `/partners`, `/hub-operadores.html` y `mimi-servicios/prestador.html` usan `og-mimigo-partners-branding-v2.png?v=branding-v2`.
+- `/servicios`, `/hub-clientes.html` y `mimi-servicios/cliente.html` usan `og-mimigo-client-branding-v3.png?v=branding-v3`.
+- `/prestador`, `/partners`, `/hub-operadores.html` y `mimi-servicios/prestador.html` usan `og-mimigo-partners-branding-v3.png?v=branding-v3`.
 - `manifest.json`, `manifest-clientes.json` y `mimi-servicios/manifest.json` usan iconos cliente.
 - `manifest-partners.json` y `mimi-servicios/manifest-prestador.json` usan iconos partners.
 - El splash/login de prestador usa `mimigo-partners-workspace-hero-1600x1100.png` y `mimigo-partners-wordmark.png`.

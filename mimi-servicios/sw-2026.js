@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-10-branding-v2-auth-gate";
+const APP_VERSION = "2026-05-10-branding-v3-auth-gate";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [
@@ -44,15 +44,15 @@ const APP_ASSETS = [
   "./assets/icons/mimigo-client-icon-192.png",
   "./assets/icons/mimigo-client-icon-512.png",
   "./assets/icons/mimigo-client-icon-512-maskable.png",
-  "./assets/icons/mimigo-client-apple-touch-icon.png",
-  "./assets/icons/mimigo-client-icon-32.png",
-  "./assets/icons/mimigo-client-icon-16.png",
+  "./assets/icons/mimigo-client-apple-touch-icon.png?v=branding-v3",
+  "./assets/icons/mimigo-client-icon-32.png?v=branding-v3",
+  "./assets/icons/mimigo-client-icon-16.png?v=branding-v3",
   "./assets/icons/mimigo-partners-icon-192.png",
   "./assets/icons/mimigo-partners-icon-512.png",
   "./assets/icons/mimigo-partners-icon-512-maskable.png",
-  "./assets/icons/mimigo-partners-apple-touch-icon.png",
-  "./assets/icons/mimigo-partners-icon-32.png",
-  "./assets/icons/mimigo-partners-icon-16.png",
+  "./assets/icons/mimigo-partners-apple-touch-icon.png?v=branding-v3",
+  "./assets/icons/mimigo-partners-icon-32.png?v=branding-v3",
+  "./assets/icons/mimigo-partners-icon-16.png?v=branding-v3",
   "./assets/brand/mimigo-client-wordmark.png",
   "./assets/brand/mimigo-partners-wordmark.png",
   "./assets/brand/mimigo-client-splash-1536x1024.png",
@@ -127,7 +127,7 @@ self.addEventListener("push", (event) => {
   const options = {
     body: payload.body || payload.notification?.body || "Tenés una novedad en MIMI",
     icon: payload.icon || "./assets/icons/mimigo-client-icon-192.png",
-    badge: payload.badge || "./assets/icons/mimigo-client-icon-32.png",
+    badge: payload.badge || "./assets/icons/mimigo-client-icon-32.png?v=branding-v3",
     tag: payload.tag || "mimi-services-push",
     renotify: true,
     requireInteraction: payload.requireInteraction || false,

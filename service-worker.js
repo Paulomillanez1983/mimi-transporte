@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mimi-services-v1';
+const CACHE_NAME = 'mimi-services-v2-brand-icons';
 const APP_BASE_PATH = (() => {
   const path = self.location.pathname || '/';
   return path.endsWith('/') ? path : path.replace(/[^/]*$/, '');
