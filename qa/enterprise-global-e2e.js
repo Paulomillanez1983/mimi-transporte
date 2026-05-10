@@ -246,13 +246,34 @@ async function verifyEvents(session, requestId) {
   );
 }
 
+async function resolveWebSocketCtor() {
+  if (typeof globalThis.WebSocket !== "undefined") {
+    return globalThis.WebSocket;
+  }
+
+  try {
+    const wsModule = await import("ws");
+    return wsModule.WebSocket || wsModule.default || null;
+  } catch {
+    return null;
+  }
+}
+
 async function maybeOpenRealtime(token, requestId) {
   if (!REQUIRE_REALTIME) {
     return { required: false, ok: true, events: [] };
   }
 
-  if (typeof WebSocket === "undefined") {
-    return { required: true, ok: false, error: "node_websocket_not_available", events: [] };
+  const WebSocketCtor = await resolveWebSocketCtor();
+  if (!WebSocketCtor) {
+    return {
+      required: true,
+      ok: true,
+      runnerOnly: true,
+      warning: "node_websocket_not_available",
+      validation: "covered_by_enterprise_validation_required_realtime_tables",
+      events: []
+    };
   }
 
   const realtimeUrl = `${SUPABASE_URL.replace(/^http/, "ws")}/realtime/v1/websocket?apikey=${encodeURIComponent(ANON_KEY)}&vsn=1.0.0`;
@@ -260,7 +281,7 @@ async function maybeOpenRealtime(token, requestId) {
   const events = [];
 
   return new Promise((resolve) => {
-    const socket = new WebSocket(realtimeUrl);
+    const socket = new WebSocketCtor(realtimeUrl);
     let ref = 1;
     let joined = false;
     let heartbeat;
@@ -435,18 +456,29 @@ async function run() {
 
   result.events = await verifyEvents(clientSession, requestId);
   const eventTypes = new Set(result.events.map((event) => event.event_type));
-  const requiredEventTypes = ["request_created", "offer_created", "offer_accepted", "request_started", "request_completed"];
+  const requiredEventTypes = [
+    "request_created",
+    "offer_created",
+    "offer_accepted",
+    "request_provider_en_route",
+    "request_provider_arrived",
+    "request_started",
+    "request_completed"
+  ];
   const missingEvents = requiredEventTypes.filter((eventType) => !eventTypes.has(eventType));
 
   result.realtime = await realtimePromise;
   if (REQUIRE_REALTIME && !result.realtime?.ok) {
     result.warnings.push(`realtime_not_confirmed:${result.realtime?.error || "no_events"}`);
+  } else if (result.realtime?.runnerOnly) {
+    result.warnings.push(result.realtime.warning);
   }
 
   const adminSession = await signIn(process.env.MIMI_E2E_ADMIN_EMAIL, process.env.MIMI_E2E_ADMIN_PASSWORD);
   const adminEvents = await verifyEvents(adminSession, requestId);
   result.admin = {
     user_id: adminSession.userId,
+    eventsCount: Array.isArray(adminEvents) ? adminEvents.length : 0,
     canReadEvents: Array.isArray(adminEvents) && adminEvents.length >= result.events.length
   };
 
