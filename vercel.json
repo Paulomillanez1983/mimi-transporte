@@ -54,32 +54,32 @@
     },
     {
       "source": "/operadores",
-      "destination": "/prestador",
+      "destination": "/mimi-servicios/prestador.html",
       "permanent": false
     },
     {
       "source": "/operadores/",
-      "destination": "/prestador",
+      "destination": "/mimi-servicios/prestador.html",
       "permanent": false
     },
     {
       "source": "/hub-operadores",
-      "destination": "/prestador",
+      "destination": "/mimi-servicios/prestador.html",
       "permanent": false
     },
     {
       "source": "/hub-operadores.html",
-      "destination": "/prestador",
+      "destination": "/mimi-servicios/prestador.html",
       "permanent": false
     },
     {
       "source": "/partners",
-      "destination": "/prestador",
+      "destination": "/mimi-servicios/prestador.html",
       "permanent": false
     },
     {
       "source": "/partners.html",
-      "destination": "/prestador",
+      "destination": "/mimi-servicios/prestador.html",
       "permanent": false
     }
   ],
