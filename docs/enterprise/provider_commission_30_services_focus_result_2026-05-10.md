@@ -68,6 +68,14 @@ Edge Functions desplegadas:
 - `svc-search-providers`
 - `create-payment-intent`
 
+Deploy Vercel:
+
+- Commit: `9ee56bf feat: align services pricing and provider ux`
+- Deployment: `dpl_5JnsuifZSdE57tgXsNbxBwivqj6g`
+- Production URL: `https://mimi-transporte-4m2tqwrg8-paulomillanez1983s-projects.vercel.app`
+- Alias activo: `https://mimi-transporte.vercel.app`
+- Estado Vercel: `Ready`
+
 ## Frontend cliente
 
 Archivos:
@@ -142,6 +150,15 @@ PASSED:
 - `supabase functions deploy svc-create-request --project-ref xrphpqmutvadjrucqicn --workdir mimi-servicios`
 - `supabase functions deploy svc-search-providers --project-ref xrphpqmutvadjrucqicn --workdir mimi-servicios`
 - `supabase functions deploy create-payment-intent --project-ref xrphpqmutvadjrucqicn --workdir mimi-servicios`
+- `npx vercel deploy --prod --yes`
+- `npx vercel inspect https://mimi-transporte.vercel.app`
+- Produccion HTTP:
+  - `/servicios` -> `200`
+  - `/prestador` -> `200`
+  - `/chofer` -> `200` final en `/servicios`
+  - `/viaje` -> `200` final en `/servicios`
+  - `/index.html` -> `200` final en `/servicios`
+  - `/terminos` -> `200`
 
 BLOCKED_BY_ENVIRONMENT:
 
