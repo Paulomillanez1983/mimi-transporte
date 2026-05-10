@@ -91,7 +91,16 @@ El flujo recomendado queda:
 - E2E autenticado real: `BLOCKED_BY_ENVIRONMENT`.
   - Faltan variables locales QA: `MIMI_SUPABASE_URL`, `MIMI_SUPABASE_ANON_KEY`, `MIMI_E2E_CLIENT_EMAIL`, `MIMI_E2E_CLIENT_PASSWORD`, `MIMI_E2E_PROVIDER_EMAIL`, `MIMI_E2E_PROVIDER_PASSWORD`, `MIMI_E2E_ADMIN_EMAIL`, `MIMI_E2E_ADMIN_PASSWORD`.
 - Validacion push nativa real: requiere navegador/dispositivo con permisos, service worker activo y token FCM registrado.
-- Deploy produccion: pendiente en esta fase hasta commit/push/deploy.
+
+## Deploy produccion
+
+- Commit: `0aa1c5e feat: clarify services request push flow`.
+- Vercel deploy: `dpl_ChdUZK92nWTL2THyqCwELe92z15a`.
+- Estado: Ready.
+- Alias productivo: `https://mimi-transporte.vercel.app`.
+- Verificado:
+  - `/mimi-servicios/cliente.html` responde 200 y sirve `main-client.js?v=2026.05.10.9`.
+  - `/mimi-servicios/prestador.html` responde 200 y sirve `main-provider.js?v=2026.05.10.10`.
 
 ## Riesgos residuales
 
