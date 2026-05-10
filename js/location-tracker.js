@@ -4,7 +4,6 @@
  */
 
 import CONFIG from './config.js';
-import supabaseService from './supabase-client.js';
 
 class LocationTracker {
   constructor() {
@@ -16,7 +15,6 @@ class LocationTracker {
     this.permissionStatus = null;
 
     this._visibilityHandler = this._handleVisibilityChange.bind(this);
-    this._lastDbUpdate = 0;
   }
 
   async start(callback) {
@@ -192,46 +190,7 @@ class LocationTracker {
         console.error('[LocationTracker] Callback error:', e);
       }
     });
-
-    this._throttledUpdate(newPosition);
-  }
-
-  _throttledUpdate(position) {
-    const now = Date.now();
-
-    if (!this._lastDbUpdate || now - this._lastDbUpdate > 4000) {
-      this._lastDbUpdate = now;
-      this._sendToSupabase(position);
-    }
-  }
-
-  async _sendToSupabase(position) {
-    try {
-      const { data: { user } } = await supabaseService.client.auth.getUser();
-      if (!user) {
-        console.warn('[LocationTracker] No user, skipping update');
-        return;
-      }
-
-      const { error } = await supabaseService.client
-        .from('choferes')
-        .update({
-          lat: position.lat,
-          lng: position.lng,
-          accuracy: position.accuracy,
-          heading: position.heading,
-          speed: position.speed,
-          last_location_at: new Date().toISOString(),
-          last_seen_at: new Date().toISOString()
-        })
-        .eq('user_id', user.id);
-
-      if (error) {
-        console.error('[LocationTracker] Supabase error:', error);
-      }
-    } catch (err) {
-      console.error('[LocationTracker] Update error:', err);
-    }
+    // La persistencia queda centralizada en DriverApp para evitar escrituras GPS duplicadas.
   }
 
   _refreshPosition() {
@@ -324,7 +283,6 @@ class LocationTracker {
     this.isTracking = false;
     this.callbacks = [];
     this.lastPosition = null;
-    this._lastDbUpdate = 0;
   }
 
   getLastPosition() {

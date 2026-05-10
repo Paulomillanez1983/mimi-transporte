@@ -19,9 +19,37 @@ import { updateTrackingMarkers } from "../services/map.js";
 
 let trackingTimer = null;
 let trackingInFlight = false;
+let lastTrackingPoint = null;
+let lastTrackingSentAt = 0;
+let lastTrackingRequestId = null;
+
+const TRACKING_MIN_DISTANCE_METERS = 1000;
+const TRACKING_HEARTBEAT_MS = 180000;
 
 function getRequestId(service) {
   return service?.request_id ?? service?.id ?? null;
+}
+
+function distanceMeters(from, to) {
+  if (!from || !to) return Infinity;
+
+  const lat1 = Number(from.lat);
+  const lon1 = Number(from.lng);
+  const lat2 = Number(to.lat);
+  const lon2 = Number(to.lng);
+
+  if (![lat1, lon1, lat2, lon2].every(Number.isFinite)) return Infinity;
+
+  const earthRadius = 6371000;
+  const phi1 = (lat1 * Math.PI) / 180;
+  const phi2 = (lat2 * Math.PI) / 180;
+  const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
+  const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(deltaPhi / 2) ** 2 +
+    Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) ** 2;
+
+  return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function hydrateConversationState(conversation, messages) {
@@ -220,6 +248,10 @@ export function stopProviderTrackingLoop() {
     window.clearInterval(trackingTimer);
     trackingTimer = null;
   }
+
+  lastTrackingPoint = null;
+  lastTrackingSentAt = 0;
+  lastTrackingRequestId = null;
 }
 
 export function startProviderTrackingLoop() {
@@ -232,6 +264,12 @@ export function startProviderTrackingLoop() {
     const requestId = getRequestId(activeService);
 
     if (!requestId || trackingInFlight) return;
+
+    if (String(lastTrackingRequestId || "") !== String(requestId)) {
+      lastTrackingRequestId = requestId;
+      lastTrackingPoint = null;
+      lastTrackingSentAt = 0;
+    }
 
     const allowed = ["PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "IN_PROGRESS"];
     if (!allowed.includes(activeService?.status)) return;
@@ -268,11 +306,20 @@ export function startProviderTrackingLoop() {
         providerPosition: state.tracking.providerPosition
       });
 
+      const now = Date.now();
+      const movedEnough =
+        distanceMeters(lastTrackingPoint, coords) >= TRACKING_MIN_DISTANCE_METERS;
+      const heartbeatDue = now - lastTrackingSentAt >= TRACKING_HEARTBEAT_MS;
+
+      if (!movedEnough && !heartbeatDue) return;
+
       try {
         await trackLocation({
           requestId,
           ...coords
         });
+        lastTrackingPoint = coords;
+        lastTrackingSentAt = now;
       } catch {
         // noop
       }

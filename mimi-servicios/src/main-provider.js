@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.10.6";
+const MIMI_PROVIDER_BUILD = "2026.05.10.7";
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -89,6 +89,11 @@ class MimiProviderApp {
     this.lastRoadRouteData = null;
     this.navigationMode = false;
     this.navigationCameraFollowing = true;
+    this.lastProviderTrackingPoint = null;
+    this.lastProviderTrackingSentAt = 0;
+    this.lastProviderTrackingRequestId = null;
+    this.providerTrackingMinDistanceMeters = 1000;
+    this.providerTrackingHeartbeatMs = 180000;
     
     // DOM Elements cache
     this.elements = {};
@@ -3748,15 +3753,35 @@ startLocationTracking() {
 
     if (!loc || !service?.requestId) return;
 
+    if (String(this.lastProviderTrackingRequestId || "") !== String(service.requestId)) {
+      this.lastProviderTrackingRequestId = service.requestId;
+      this.lastProviderTrackingPoint = null;
+      this.lastProviderTrackingSentAt = 0;
+    }
+
+    const now = Date.now();
+    const movedMeters = this.lastProviderTrackingPoint
+      ? this.distanceMetersBetween(this.lastProviderTrackingPoint, loc)
+      : Infinity;
+    const movedEnough =
+      !Number.isFinite(movedMeters) ||
+      movedMeters >= this.providerTrackingMinDistanceMeters;
+    const heartbeatDue =
+      now - this.lastProviderTrackingSentAt >= this.providerTrackingHeartbeatMs;
+
+    if (!movedEnough && !heartbeatDue) return;
+
     try {
-        await invokeFunction("svc-track-location", {
+      await invokeFunction("svc-track-location", {
         request_id: service.requestId,
         lat: loc.lat,
         lng: loc.lng,
-         accuracy: loc.accuracy ?? null,
+        accuracy: loc.accuracy ?? null,
         heading: loc.heading ?? null,
         speed: loc.speed ?? null
       });
+      this.lastProviderTrackingPoint = { lat: loc.lat, lng: loc.lng };
+      this.lastProviderTrackingSentAt = now;
     } catch (err) {
       console.warn("[MIMI] Error tracking location:", err);
     }
@@ -3772,6 +3797,10 @@ startLocationTracking() {
       clearInterval(this.trackingInterval);
       this.trackingInterval = null;
     }
+
+    this.lastProviderTrackingPoint = null;
+    this.lastProviderTrackingSentAt = 0;
+    this.lastProviderTrackingRequestId = null;
   }
 
   /**
