@@ -52,9 +52,46 @@ Both are passing in production.
 
 ## Authenticated E2E status
 
+### Provider test account preparation
+
+Prepared on 2026-05-10 UTC, scoped only to:
+
+- Email: `testprestador@mimi-go.app`
+- Auth user id: `ed5fe977-d2cb-414c-84ba-205dffbd4eac`
+- Provider id: `4a05bc72-b6f5-4f6b-b27f-2f93921f9745`
+
+Preparation SQL:
+
+- `docs/backend-hardening/e2e_prepare_test_provider_2026-05-09.sql`
+
+The script is intentionally scoped by exact email and does not touch real providers. It made the test provider compatible with the E2E flow:
+
+- `approved = true`
+- `blocked = false`
+- `status = ONLINE_IDLE`
+- `last_lat = -31.3101063`
+- `last_lng = -64.2753784`
+- `notes_internal = E2E test account...`
+- profile `review_status = approved`
+- profile `kyc_status = approved`
+- profile `onboarding_completed = true`
+- category linked: `PINTURA`
+- active offering created/updated: `Pintura E2E`
+- offering pricing model: `SQUARE_METER`
+- offering unit: `m2`
+- offering price: `15000`
+- offering metadata includes `"e2e": true`
+
+Verification after preparation confirmed rows in:
+
+- `svc_providers`
+- `svc_provider_profiles`
+- `svc_provider_categories`
+- `svc_provider_service_offerings`
+
 ### Required test users
 
-No reusable controlled credentials were available in this session.
+The provider row is now prepared, but reusable controlled credentials are still required in the shell that runs the E2E.
 
 Required env for the real E2E runner:
 
@@ -119,6 +156,10 @@ Current execution result:
   ]
 }
 ```
+
+Earlier blocker `provider_not_approved_or_blocked` is resolved for `testprestador@mimi-go.app`.
+
+Current blocker in the Codex execution environment: missing E2E credential env vars. The script must be re-run in the terminal where the client/provider/admin test credentials are configured.
 
 ## Events currently present
 
