@@ -115,15 +115,17 @@ serve(async (req) => {
 
     if (providerError) throw providerError;
 
-    await admin.rpc("svc_log_request_event", {
+    const { error: auditError } = await admin.rpc("svc_log_request_event", {
       p_request_id: request.id,
       p_event_type: "request_reviewed",
       p_actor_user_id: user.id,
       p_provider_id: providerId,
       p_metadata: { rating },
-    }).catch((error) => {
-      console.warn("request_reviewed audit skipped:", error?.message ?? error);
     });
+
+    if (auditError) {
+      console.warn("request_reviewed audit skipped:", auditError.message);
+    }
 
     return json({
       ok: true,
