@@ -599,6 +599,7 @@ export async function createRequest(payload = {}) {
     request_type: payload.requestType,
     scheduled_for: payload.scheduledFor,
     requested_hours: payload.requestedHours,
+    notes: payload.notes ?? null,
     provider_price: payload.providerPrice,
     platform_fee: payload.platformFee,
     total_price: payload.totalPrice,
@@ -715,12 +716,77 @@ export async function loadOffers(providerId) {
 
   return fetchTable("svc_request_offers", (query) =>
     query
-      .select("*")
+      .select(`
+        *,
+        svc_requests(
+          id,
+          client_user_id,
+          category_id,
+          selected_provider_id,
+          accepted_provider_id,
+          request_type,
+          status,
+          address_text,
+          service_lat,
+          service_lng,
+          scheduled_for,
+          requested_hours,
+          notes,
+          provider_price_snapshot,
+          platform_fee_snapshot,
+          total_price_snapshot,
+          currency,
+          provider_response_deadline_at,
+          metadata_json,
+          created_at,
+          svc_categories(id,name,code,description)
+        )
+      `)
       .eq("provider_id", providerId)
       .in("status", ["PENDING"])
       .order("created_at", { ascending: false })
       .limit(20)
   );
+}
+
+export async function loadOfferDetails(offerId) {
+  if (!hasBackend() || !offerId) return null;
+
+  await requireSession();
+
+  const rows = await fetchTable("svc_request_offers", (query) =>
+    query
+      .select(`
+        *,
+        svc_requests(
+          id,
+          client_user_id,
+          category_id,
+          selected_provider_id,
+          accepted_provider_id,
+          request_type,
+          status,
+          address_text,
+          service_lat,
+          service_lng,
+          scheduled_for,
+          requested_hours,
+          notes,
+          provider_price_snapshot,
+          platform_fee_snapshot,
+          total_price_snapshot,
+          currency,
+          provider_response_deadline_at,
+          metadata_json,
+          created_at,
+          svc_categories(id,name,code,description)
+        )
+      `)
+      .eq("id", offerId)
+      .limit(1)
+  );
+
+  return rows?.[0] ?? null;
 }
 
 export async function updateRequestStatus(functionName, payload = {}) {

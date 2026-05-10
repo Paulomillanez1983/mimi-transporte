@@ -122,6 +122,34 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
+function offerServiceDetails(offer = {}) {
+  const request = offer.svc_requests ?? offer.request ?? {};
+  const metadata = request.metadata_json ?? offer.metadata_json ?? {};
+  const details = metadata.service_details ?? {};
+  return details && typeof details === "object" ? details : {};
+}
+
+function offerDetailRows(offer = {}) {
+  const request = offer.svc_requests ?? offer.request ?? {};
+  const details = offerServiceDetails(offer);
+  const rows = [];
+  const quantity = Number(details.unit_quantity || 0);
+  const unitName = details.unit_name || "";
+  const unitPrice = Number(details.unit_price || 0);
+  const total = Number(details.total_price ?? request.total_price_snapshot ?? offer.total_price_snapshot ?? 0);
+  const currencyCode = details.currency || request.currency || "ARS";
+
+  if (quantity > 0 && unitName) rows.push(["Cantidad", `${quantity.toLocaleString("es-AR")} ${unitName}`]);
+  if (unitPrice > 0 && unitName) rows.push(["Precio publicado", `${currency(unitPrice, currencyCode)} / ${unitName}`]);
+  if (details.service_mode_label) rows.push(["Modalidad", details.service_mode_label]);
+  rows.push(["Total", total > 0 ? currency(total, currencyCode) : "A coordinar"]);
+
+  const notes = String(details.client_notes || request.notes || "").trim();
+  if (notes) rows.push(["Detalle", notes.split("\n")[0]]);
+
+  return rows.slice(0, 5);
+}
+
 function categoryGroup(category = {}) {
   const code = String(category.code ?? "").toUpperCase();
   if (["PSICOLOGIA", "NUTRICION", "KINESIOLOGIA", "ABOGACIA", "CONTABILIDAD", "ENFERMERIA", "CLASES_PARTICULARES"].includes(code)) {
@@ -327,16 +355,31 @@ export function renderOffersList(state) {
     ? offers
         .map((offer) => {
           const request = offer.svc_requests ?? {};
+          const details = offerServiceDetails(offer);
+          const detailRows = offerDetailRows(offer);
+          const serviceName = details.category_name ?? offer.title ?? request.svc_categories?.name ?? "Nueva solicitud";
+          const total = Number(details.total_price ?? offer.total_price_snapshot ?? request.total_price_snapshot ?? 0);
 
           return `
             <article class="offer-card">
               <header>
                 <div>
-                  <strong>${escapeHtml(offer.title ?? "Nueva solicitud")}</strong>
+                  <strong>${escapeHtml(serviceName)}</strong>
                   <span class="muted">${escapeHtml(offer.address_text ?? request.address_text ?? "Ubicación a confirmar")}</span>
                 </div>
-                <strong>${currency(offer.total_price_snapshot ?? request.total_price_snapshot ?? 0)}</strong>
+                <strong>${total > 0 ? currency(total, details.currency ?? request.currency) : "A coordinar"}</strong>
               </header>
+
+              ${detailRows.length ? `
+                <div class="offer-detail-grid offer-detail-grid-inline">
+                  ${detailRows.map(([label, value]) => `
+                    <div class="offer-detail-pill">
+                      <span>${escapeHtml(label)}</span>
+                      <strong>${escapeHtml(value)}</strong>
+                    </div>
+                  `).join("")}
+                </div>
+              ` : ""}
 
               <div class="result-meta">
                 <div class="metric">

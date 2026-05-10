@@ -1621,6 +1621,7 @@ async function handleProviderSelection(providerId) {
     requestType: state.requestDraft.requestType,
     scheduledFor: state.requestDraft.scheduledFor || null,
     requestedHours,
+    notes: state.ui.categorySearchTerm || null,
     providerPrice: pricing.provider_price,
     platformFee: pricing.platform_fee,
     totalPrice: pricing.total_price,

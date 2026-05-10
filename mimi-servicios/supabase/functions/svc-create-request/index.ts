@@ -68,6 +68,148 @@ function priceFromOffering(offering: Record<string, unknown>, pricing: Record<st
   return { model, providerPrice, platformFee: 0, totalPrice: providerPrice, currency, priceLabel: null };
 }
 
+function unitNameForModel(model: string, explicit: unknown) {
+  const value = String(explicit || "").trim();
+  if (value) return value;
+  if (model === "SQUARE_METER") return "m2";
+  if (model === "LINEAR_METER") return "metro lineal";
+  if (model === "HOURLY") return "hora";
+  if (model === "BASE_VISIT") return "visita";
+  if (model === "FIXED") return "trabajo";
+  return "unidad";
+}
+
+function pricingModelLabel(model: string) {
+  const labels: Record<string, string> = {
+    HOURLY: "Por hora",
+    BASE_VISIT: "Por visita",
+    QUOTE: "A coordinar",
+    FIXED: "Precio cerrado",
+    UNIT: "Por unidad",
+    SQUARE_METER: "Por m2",
+    LINEAR_METER: "Por metro lineal",
+  };
+  return labels[model] || "A coordinar";
+}
+
+function serviceModeLabel(value: unknown) {
+  const mode = String(value || "").toUpperCase();
+  if (mode === "ONLINE") return "Online";
+  if (mode === "HYBRID") return "Online o presencial";
+  if (mode === "IN_PERSON") return "Presencial";
+  return "A coordinar";
+}
+
+function money(value: number, currency = "ARS") {
+  if (!Number.isFinite(value) || value <= 0) return "A coordinar";
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+async function dispatchPushDeliveries(
+  admin: ReturnType<typeof createClient>,
+  notification: Record<string, unknown> | null,
+  userId: string,
+  payload: Record<string, unknown>,
+) {
+  if (!notification?.id) return;
+
+  try {
+    const { data: devices, error } = await admin
+      .from("svc_user_devices")
+      .select("id,push_token,platform")
+      .eq("user_id", userId)
+      .eq("active", true)
+      .eq("notifications_enabled", true)
+      .not("push_token", "is", null);
+
+    if (error) throw error;
+    if (!devices?.length) return;
+
+    const serverKey = Deno.env.get("FCM_SERVER_KEY") || Deno.env.get("FIREBASE_SERVER_KEY") || "";
+    let sent = 0;
+    let failed = 0;
+
+    for (const device of devices) {
+      const token = String(device.push_token || "").trim();
+      if (!token) continue;
+
+      let status = "QUEUED";
+      let providerMessageId: string | null = null;
+      let errorMessage: string | null = null;
+      let sentAt: string | null = null;
+
+      if (!serverKey) {
+        errorMessage = "FCM_SERVER_KEY_MISSING";
+      } else {
+        try {
+          const response = await fetch("https://fcm.googleapis.com/fcm/send", {
+            method: "POST",
+            headers: {
+              "Authorization": `key=${serverKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              to: token,
+              priority: "high",
+              notification: {
+                title: String(notification.title || "Nueva solicitud MIMI"),
+                body: String(notification.body || "Tenes una solicitud pendiente."),
+                icon: "/mimi-servicios/assets/icons/icon-192.png",
+                tag: `svc-request-${payload.request_id || notification.id}`,
+              },
+              data: Object.fromEntries(
+                Object.entries(payload).map(([key, value]) => [key, String(value ?? "")]),
+              ),
+            }),
+          });
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok || Number(result?.failure || 0) > 0) {
+            status = "FAILED";
+            failed += 1;
+            errorMessage = JSON.stringify(result).slice(0, 500);
+          } else {
+            status = "SENT";
+            sent += 1;
+            sentAt = new Date().toISOString();
+            providerMessageId = String(result?.results?.[0]?.message_id || result?.message_id || "");
+          }
+        } catch (sendError) {
+          status = "FAILED";
+          failed += 1;
+          errorMessage = sendError instanceof Error ? sendError.message : "push_send_failed";
+        }
+      }
+
+      await admin.from("svc_notification_deliveries").insert({
+        notification_id: notification.id,
+        user_device_id: device.id,
+        channel: "PUSH",
+        status,
+        provider_message_id: providerMessageId,
+        error_message: errorMessage,
+        sent_at: sentAt,
+        provider_status: serverKey ? status : "queued_missing_fcm_server_key",
+      });
+    }
+
+    if (sent > 0 || failed > 0 || devices.length > 0) {
+      await admin
+        .from("svc_notifications")
+        .update({
+          delivery_status: sent === devices.length ? "SENT" : sent > 0 ? "PARTIAL" : "PENDING",
+          delivered_at: sent > 0 ? new Date().toISOString() : null,
+        })
+        .eq("id", notification.id);
+    }
+  } catch (error) {
+    console.warn("svc-create-request push dispatch skipped:", error);
+  }
+}
+
 async function requireUser(req: Request, supabaseUrl: string, anonKey: string) {
   const auth = req.headers.get("Authorization") || "";
   const token = auth.replace(/^Bearer\s+/i, "").trim();
@@ -131,10 +273,10 @@ serve(async (req) => {
       return json({ ok: false, error: "provider_offline" }, 400);
     }
 
-    const [{ data: offering }, { data: pricing }] = await Promise.all([
+    const [{ data: offering }, { data: pricing }, { data: category }] = await Promise.all([
       admin
         .from("svc_provider_service_offerings")
-        .select("id,pricing_model,currency,price_per_hour,base_visit_fee,fixed_price,unit_name,unit_price,quote_required,service_mode,duration_minutes,active")
+        .select("id,title,description,pricing_model,currency,price_per_hour,base_visit_fee,fixed_price,unit_name,unit_price,quote_required,service_mode,duration_minutes,active")
         .eq("provider_id", providerId)
         .eq("category_id", categoryId)
         .eq("active", true)
@@ -147,6 +289,11 @@ serve(async (req) => {
         .eq("category_id", categoryId)
         .eq("active", true)
         .limit(1)
+        .maybeSingle(),
+      admin
+        .from("svc_categories")
+        .select("id,name,code,description")
+        .eq("id", categoryId)
         .maybeSingle(),
     ]);
 
@@ -184,10 +331,51 @@ serve(async (req) => {
     }
 
     const pricingResult = priceFromOffering(offering || {}, pricing || {}, requestedHours, unitQuantity);
+    const appliesUnitQuantity = ["UNIT", "SQUARE_METER", "LINEAR_METER"].includes(pricingResult.model);
+    const unitName = unitNameForModel(pricingResult.model, body.unit_name || offering?.unit_name);
+    const serviceMode = body.service_mode || offering?.service_mode || null;
+    const unitPrice = appliesUnitQuantity
+      ? asNumber(offering?.unit_price, pricingResult.providerPrice > 0 ? pricingResult.providerPrice / unitQuantity : 0)
+      : pricingResult.model === "HOURLY"
+        ? asNumber(offering?.price_per_hour, asNumber(pricing?.price_per_hour))
+        : pricingResult.model === "BASE_VISIT"
+          ? asNumber(offering?.base_visit_fee)
+          : pricingResult.model === "FIXED"
+            ? asNumber(offering?.fixed_price)
+            : 0;
+    const serviceDetails = {
+      schema_version: 1,
+      source: "svc-create-request",
+      category_id: categoryId,
+      category_name: category?.name || null,
+      provider_id: providerId,
+      offering_id: offering?.id || body.offering_id || null,
+      offering_title: offering?.title || null,
+      request_type: requestType,
+      address_text: body.address_text || null,
+      service_lat: serviceLat,
+      service_lng: serviceLng,
+      scheduled_for: body.scheduled_for || null,
+      requested_hours: pricingResult.model === "HOURLY" ? requestedHours : null,
+      pricing_model: pricingResult.model,
+      pricing_model_label: pricingModelLabel(pricingResult.model),
+      service_mode: serviceMode,
+      service_mode_label: serviceModeLabel(serviceMode),
+      unit_quantity: appliesUnitQuantity ? unitQuantity : null,
+      unit_name: appliesUnitQuantity ? unitName : null,
+      unit_price: unitPrice || null,
+      price_label: pricingResult.priceLabel,
+      provider_price: pricingResult.providerPrice,
+      platform_fee: pricingResult.platformFee,
+      total_price: pricingResult.totalPrice,
+      total_price_label: money(pricingResult.totalPrice, pricingResult.currency),
+      currency: pricingResult.currency,
+      client_notes: body.notes ? String(body.notes) : null,
+    };
     const notes = [
       body.notes ? String(body.notes) : "",
       pricingResult.model !== "HOURLY"
-        ? `Cotizacion de referencia: ${pricingResult.model}; cantidad=${unitQuantity}; unidad=${body.unit_name || offering?.unit_name || ""}`.trim()
+        ? `Cotizacion de referencia: ${pricingResult.model}; cantidad=${unitQuantity}; unidad=${unitName}`.trim()
         : "",
     ].filter(Boolean).join("\n");
 
@@ -211,6 +399,13 @@ serve(async (req) => {
         currency: pricingResult.currency,
         provider_response_deadline_at: expiresAt,
         created_via: "CLIENT_APP",
+        metadata_json: {
+          service_details: serviceDetails,
+          provider_confirmation: {
+            requires_response: true,
+            deadline_at: expiresAt,
+          },
+        },
       })
       .select("*")
       .single();
@@ -256,23 +451,54 @@ serve(async (req) => {
       metadata_json: {
         source: "svc-create-request",
         pricing_model: pricingResult.model,
-        unit_quantity: ["UNIT", "SQUARE_METER", "LINEAR_METER"].includes(pricingResult.model) ? unitQuantity : null,
-        unit_name: body.unit_name || offering?.unit_name || null,
+        unit_quantity: appliesUnitQuantity ? unitQuantity : null,
+        unit_name: appliesUnitQuantity ? unitName : null,
         offering_id: offering?.id || null,
+        service_details: serviceDetails,
       },
     });
 
-    await admin.from("svc_notifications").insert({
+    const quantityText = appliesUnitQuantity
+      ? `${unitQuantity} ${unitName}`
+      : pricingResult.model === "HOURLY"
+        ? `${requestedHours} hs`
+        : null;
+    const notificationBody = [
+      category?.name || offering?.title || "Servicio",
+      quantityText,
+      body.address_text ? `en ${String(body.address_text)}` : null,
+      pricingResult.totalPrice > 0 ? `total ${money(pricingResult.totalPrice, pricingResult.currency)}` : "precio a coordinar",
+    ].filter(Boolean).join(" · ");
+
+    const { data: notificationRow } = await admin.from("svc_notifications").insert({
       user_id: provider.user_id,
       type: "SERVICE_REQUEST_CREATED",
       title: "Nueva solicitud de servicio",
-      body: "Tenes una solicitud pendiente para revisar.",
+      body: notificationBody,
       data_json: {
         request_id: requestRow.id,
         provider_id: providerId,
         category_id: categoryId,
         offer_id: offerRow.id,
+        service_details: serviceDetails,
+        url: "/mimi-servicios/prestador",
       },
+    }).select("*").maybeSingle();
+
+    await dispatchPushDeliveries(admin, notificationRow, provider.user_id, {
+      type: "SERVICE_REQUEST_CREATED",
+      request_id: requestRow.id,
+      provider_id: providerId,
+      category_id: categoryId,
+      offer_id: offerRow.id,
+      title: "Nueva solicitud de servicio",
+      body: notificationBody,
+      url: "/mimi-servicios/prestador",
+      pricing_model: pricingResult.model,
+      unit_quantity: appliesUnitQuantity ? unitQuantity : "",
+      unit_name: appliesUnitQuantity ? unitName : "",
+      total_price: pricingResult.totalPrice,
+      currency: pricingResult.currency,
     });
 
     return json({
@@ -288,9 +514,10 @@ serve(async (req) => {
         currency: pricingResult.currency,
         pricing_model: pricingResult.model,
         unit_quantity: unitQuantity,
-        unit_name: body.unit_name || offering?.unit_name || null,
+        unit_name: appliesUnitQuantity ? unitName : null,
         offering_id: offering?.id || null,
         price_label: pricingResult.priceLabel,
+        service_details: serviceDetails,
       },
     });
   } catch (error) {

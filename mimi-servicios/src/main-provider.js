@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.08.1";
+const MIMI_PROVIDER_BUILD = "2026.05.10.1";
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -39,6 +39,7 @@ import {
   invokeFunction,
   loadActiveRequest,
   loadCategories,
+  loadOfferDetails,
   loadNotifications,
   loadOffers,
   loadProviderWorkspace,
@@ -244,6 +245,7 @@ async registerProviderPushToken() {
       offerLocation: document.getElementById('offerLocation'),
       offerClient: document.getElementById('offerClient'),
       offerPrice: document.getElementById('offerPrice'),
+      offerDetails: document.getElementById('offerDetails'),
       acceptOffer: document.getElementById('acceptOffer'),
       rejectOffer: document.getElementById('rejectOffer'),
       cameraCaptureModal: document.getElementById("cameraCaptureModal"),
@@ -1009,6 +1011,13 @@ setTimeout(async () => {
     this.applyWorkspaceToState(workspace);
 
     actions.updateState({
+      provider: {
+        ...(this.state?.provider ?? {}),
+        offers: Array.isArray(offers) ? offers : []
+      }
+    });
+
+    actions.updateState({
       notifications: {
         items: this.normalizeNotifications(notifications),
         unreadCount: (notifications ?? []).filter((item) => !item.read_at).length
@@ -1119,11 +1128,13 @@ stats: {
   }
 
   normalizeServiceForState(service = {}) {
+    const details = this.extractServiceDetails(service);
     return {
       id: service.id ?? service.request_id ?? crypto.randomUUID?.() ?? String(Date.now()),
       requestId: service.request_id ?? service.id ?? null,
       status: this.normalizeRequestStatus(service.status),
       serviceType:
+        details.category_name ??
         service.service_type ??
         service.category_name ??
         service.title ??
@@ -1138,7 +1149,8 @@ stats: {
       location: service.address_text ?? service.location ?? "Ubicacin a confirmar",
       address: service.address_text ?? null,
       price:
-        Number(service.total_price_snapshot ?? service.total_price ?? service.provider_amount ?? 0),
+        Number(details.total_price ?? service.total_price_snapshot ?? service.total_price ?? service.provider_amount ?? 0),
+      details,
       scheduledFor: service.scheduled_for ?? null,
       startedAt: service.started_at ?? null,
       conversationId: service.conversation_id ?? null,
@@ -1146,13 +1158,85 @@ stats: {
     };
   }
 
+  extractServiceDetails(requestOrOffer = {}) {
+    const request = requestOrOffer?.svc_requests ?? requestOrOffer?.request ?? requestOrOffer;
+    const metadata = request?.metadata_json ?? requestOrOffer?.metadata_json ?? {};
+    const details = metadata?.service_details ?? requestOrOffer?.service_details ?? {};
+    return details && typeof details === "object" ? details : {};
+  }
+
+  formatMoney(value, currency = "ARS") {
+    const amount = Number(value || 0);
+    if (!Number.isFinite(amount) || amount <= 0) return "";
+    return new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0
+    }).format(amount);
+  }
+
+  buildServiceDetailRows(offer = {}) {
+    const request = offer.svc_requests ?? offer.request ?? {};
+    const details = this.extractServiceDetails(offer);
+    const rows = [];
+    const pricingModel = String(details.pricing_model || "").toUpperCase();
+    const quantity = Number(details.unit_quantity || 0);
+    const unitName = details.unit_name || "";
+    const unitPrice = Number(details.unit_price || 0);
+    const total = Number(details.total_price ?? request.total_price_snapshot ?? offer.total_price_snapshot ?? 0);
+    const currency = details.currency || request.currency || "ARS";
+
+    if (quantity > 0 && unitName) {
+      rows.push({
+        label: "Cantidad",
+        value: `${quantity.toLocaleString("es-AR")} ${unitName}`
+      });
+    } else if (pricingModel === "HOURLY" && Number(request.requested_hours || details.requested_hours || 0) > 0) {
+      rows.push({
+        label: "Tiempo estimado",
+        value: `${Number(request.requested_hours || details.requested_hours)} hs`
+      });
+    }
+
+    if (unitPrice > 0 && unitName) {
+      rows.push({
+        label: "Precio publicado",
+        value: `${this.formatMoney(unitPrice, currency)} / ${unitName}`
+      });
+    }
+
+    if (details.service_mode_label) {
+      rows.push({ label: "Modalidad", value: details.service_mode_label });
+    }
+
+    if (total > 0) {
+      rows.push({ label: "Total calculado", value: this.formatMoney(total, currency) });
+    } else {
+      rows.push({ label: "Precio", value: "A coordinar" });
+    }
+
+    const notes = String(details.client_notes || request.notes || "").trim();
+    if (notes) {
+      rows.push({
+        label: "Detalle del cliente",
+        value: notes.split("\n")[0]
+      });
+    }
+
+    return rows.slice(0, 5);
+  }
+
   normalizeOfferForState(offer = {}) {
     const request = offer.svc_requests ?? offer.request ?? {};
+    const details = this.extractServiceDetails(offer);
+    const detailRows = this.buildServiceDetailRows(offer);
+    const total = Number(details.total_price ?? offer.total_price_snapshot ?? request.total_price_snapshot ?? request.total_price ?? 0);
 
     return {
       id: offer.id,
       requestId: offer.request_id ?? request.id ?? null,
       serviceType:
+        details.category_name ??
         offer.title ??
         request.title ??
         request.category_name ??
@@ -1160,7 +1244,10 @@ stats: {
         "Servicio",
       clientName: offer.client_name ?? request.client_name ?? "Cliente",
       location: offer.address_text ?? request.address_text ?? "Ubicacin a confirmar",
-      price: Number(offer.total_price_snapshot ?? request.total_price_snapshot ?? request.total_price ?? 0),
+      price: total,
+      priceLabel: total > 0 ? this.formatMoney(total, details.currency || request.currency || "ARS") : "Precio a coordinar",
+      detailRows,
+      details,
       mode: request.request_type ?? "IMMEDIATE",
       expiresAt: offer.expires_at ?? null,
       createdAt: offer.created_at ?? new Date().toISOString(),
@@ -3741,9 +3828,22 @@ renderOnlineButton() {
         this.elements.offerClient.textContent = `Cliente: ${offer.clientName}`;
       }
       if (this.elements.offerPrice) {
-        this.elements.offerPrice.textContent = offer.price 
-          ? `$${offer.price.toLocaleString('es-AR')} estimado`
-          : 'Precio a convenir';
+        this.elements.offerPrice.textContent = offer.priceLabel || (offer.price
+          ? this.formatMoney(offer.price, offer.details?.currency || "ARS")
+          : 'Precio a convenir');
+      }
+      if (this.elements.offerDetails) {
+        const rows = Array.isArray(offer.detailRows) ? offer.detailRows : [];
+        this.elements.offerDetails.innerHTML = rows.length
+          ? rows
+              .map((row) => `
+                <div class="offer-detail-pill">
+                  <span>${this.escapeHtml(row.label)}</span>
+                  <strong>${this.escapeHtml(row.value)}</strong>
+                </div>
+              `)
+              .join("")
+          : "";
       }
     }
 
@@ -4061,9 +4161,48 @@ if (this.elements.drawerInitials) {
     actions.addNotification(normalized);
 
     this.showToast(normalized.title || "Nueva notificacin", "info");
+    this.showForegroundNotification(normalized.title, normalized.text, notif.data_json);
   }
 
-  onOfferChange(payload) {
+  async showForegroundNotification(title, body, data = {}) {
+    try {
+      if (!("Notification" in window) || Notification.permission !== "granted") return;
+      const registration = await navigator.serviceWorker?.ready;
+      const options = {
+        body: body || "",
+        icon: "./assets/icons/icon-192.png",
+        badge: "./assets/icons/icon-192.png",
+        tag: `mimi-service-${data?.request_id || data?.offer_id || Date.now()}`,
+        renotify: true,
+        data: {
+          ...(data || {}),
+          url: data?.url || "/mimi-servicios/prestador"
+        }
+      };
+
+      if (registration?.showNotification) {
+        await registration.showNotification(title || "MIMI Servicios", options);
+      } else {
+        new Notification(title || "MIMI Servicios", options);
+      }
+    } catch (error) {
+      console.warn("[MIMI] foreground notification skipped:", error);
+    }
+  }
+
+  async hydrateOfferForDisplay(row) {
+    if (!row?.id) return row;
+
+    try {
+      const detailed = await loadOfferDetails(row.id);
+      return detailed || row;
+    } catch (error) {
+      console.warn("[MIMI] no pudimos cargar el detalle completo de la oferta:", error);
+      return row;
+    }
+  }
+
+  async onOfferChange(payload) {
     const eventType = payload?.eventType;
     const row = payload?.new ?? payload?.old;
     if (!row) return;
@@ -4074,11 +4213,27 @@ if (this.elements.drawerInitials) {
       if (this.state?.activeOffer?.id === row.id) {
         actions.clearActiveOffer();
       }
+      actions.updateState({
+        provider: {
+          ...(this.state?.provider ?? {}),
+          offers: (this.state?.provider?.offers ?? []).filter((item) => item.id !== row.id)
+        }
+      });
       return;
     }
 
     if (["PENDING", "PENDING_PROVIDER_RESPONSE"].includes(status)) {
-      actions.setActiveOffer(this.normalizeOfferForState(row));
+      const detailedOffer = await this.hydrateOfferForDisplay(row);
+      actions.setActiveOffer(this.normalizeOfferForState(detailedOffer));
+      actions.updateState({
+        provider: {
+          ...(this.state?.provider ?? {}),
+          offers: [
+            detailedOffer,
+            ...(this.state?.provider?.offers ?? []).filter((item) => item.id !== detailedOffer.id)
+          ]
+        }
+      });
       actions.setProviderStatus("INVITED");
       this.showToast("Nueva solicitud disponible", "info");
     }
