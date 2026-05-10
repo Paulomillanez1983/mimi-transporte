@@ -106,6 +106,7 @@ const initialState = {
     providers: [],
     selectedProvider: null,
     activeRequest: null,
+    serviceHistory: [],
     activeConversationId: null,
     insights: {
       paymentIntent: null,

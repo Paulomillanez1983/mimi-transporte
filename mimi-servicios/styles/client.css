@@ -1536,6 +1536,109 @@ button {
   flex: 1 1 130px;
 }
 
+.history-service-card {
+  padding: 13px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid var(--client-border);
+  display: grid;
+  gap: 10px;
+}
+
+.history-service-card > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.history-service-card strong {
+  color: var(--client-text);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.history-service-card span,
+.history-service-card small {
+  color: var(--client-muted);
+  font-size: 11px;
+}
+
+.history-service-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.history-service-meta span,
+.history-review-pill {
+  width: fit-content;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 900;
+}
+
+.history-service-meta b {
+  color: #059669;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.review-sheet {
+  gap: 14px;
+}
+
+.review-form {
+  display: grid;
+  gap: 14px;
+}
+
+.review-stars {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.review-stars button {
+  min-height: 46px;
+  border-radius: 14px;
+  border: 1px solid #dbe4ee;
+  background: #fff;
+  color: #cbd5e1;
+  font-size: 24px;
+  font-weight: 950;
+}
+
+.review-stars button.is-selected {
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.35);
+  background: #fffbeb;
+}
+
+.review-comment-field {
+  display: grid;
+  gap: 7px;
+}
+
+.review-comment-field span,
+#reviewStatusText {
+  color: var(--client-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.review-comment-field textarea {
+  resize: vertical;
+  min-height: 96px;
+  border-radius: 16px;
+  border: 1px solid var(--client-border);
+  padding: 12px;
+  font: inherit;
+  color: var(--client-text);
+  background: #fff;
+}
+
 .details-grid {
   display: grid;
   gap: 12px;

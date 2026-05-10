@@ -1226,6 +1226,75 @@ function renderProviderSpotlight(state) {
   `;
 }
 
+function serviceHistoryTitle(item) {
+  return (
+    item.svc_categories?.name ||
+    item.category_name ||
+    item.provider?.full_name ||
+    "Servicio MIMI"
+  );
+}
+
+function serviceHistoryDate(item) {
+  const value = item.completed_at || item.cancelled_at || item.updated_at || item.created_at;
+  if (!value) return "Fecha no disponible";
+
+  try {
+    return new Date(value).toLocaleString("es-AR", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  } catch (_) {
+    return "Fecha no disponible";
+  }
+}
+
+function renderClientServiceHistory(state) {
+  const container = document.getElementById("serviceHistoryPanel");
+  if (!container) return;
+
+  const history = state.client.serviceHistory ?? [];
+
+  if (!history.length) {
+    container.innerHTML = `
+      <div class="summary-card">
+        <strong>Todavia no hay historial</strong>
+        <span class="muted">Cuando un servicio termine, queda aca y sale de la solicitud activa.</span>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = history
+    .slice(0, 8)
+    .map((item) => {
+      const status = String(item.status || "").toUpperCase();
+      const reviewed = Boolean(item.review?.rating);
+      return `
+        <article class="history-service-card">
+          <div>
+            <strong>${escapeHtml(serviceHistoryTitle(item))}</strong>
+            <span>${escapeHtml(item.provider?.full_name || "Prestador MIMI")} - ${escapeHtml(serviceHistoryDate(item))}</span>
+          </div>
+          <div class="history-service-meta">
+            <span>${escapeHtml(stateLabels[status] ?? status)}</span>
+            <b>${escapeHtml(currency(item.total_price_snapshot ?? 0, item.currency ?? "ARS"))}</b>
+          </div>
+          ${
+            status === "COMPLETED" && !reviewed
+              ? `<button class="btn-secondary" type="button" data-history-action="rate" data-request-id="${escapeHtml(item.id)}">Calificar</button>`
+              : reviewed
+                ? `<small class="history-review-pill">${escapeHtml(String(item.review.rating))}/5 guardado</small>`
+                : ""
+          }
+        </article>
+      `;
+    })
+    .join("");
+}
+
 function renderStickyAction(state, normalizedProviders = null) {
   const button = document.getElementById("requestNearestButton");
   if (!button) return;
@@ -1446,6 +1515,7 @@ export function renderClientScreen(state) {
   renderFinancialPanel(state);
   renderMatchingPanel(state);
   renderProviderSpotlight(state);
+  renderClientServiceHistory(state);
   renderNotifications(state);
   renderChat(state);
   renderMapStatus(state);

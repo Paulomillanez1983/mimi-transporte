@@ -7,6 +7,7 @@ const DEFAULT_ENDPOINTS = {
   startService: "svc-start-service",
   completeService: "svc-complete-service",
   cancelRequest: "svc-cancel-request",
+  submitReview: "svc-submit-review",
   trackLocation: "svc-track-location"
 };
 
@@ -41,6 +42,7 @@ export const appConfig = {
     completeService: "svc-complete-service",
     cancelRequest: "svc-cancel-request",
     sendMessage: "svc-send-message",
+    submitReview: "svc-submit-review",
     trackLocation: "svc-track-location",
     registerDevice: "svc-register-device",
     resolveServiceIntent: "svc-resolve-service-intent",

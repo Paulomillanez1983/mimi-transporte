@@ -5,6 +5,7 @@ import {
   createRequest,
   loadActiveRequest,
   loadCategories,
+  loadClientServiceHistory,
   loadConversationForRequest,
   loadClientRequestInsights,
   loadMessages,
@@ -14,6 +15,7 @@ import {
   resolveServiceIntent,
   searchProviders,
   sendMessage,
+  submitServiceReview,
   updateRequestStatus
 } from "./services/service-api.js";
 import {
@@ -607,6 +609,8 @@ function currentConversationId() {
 let infoAutoHideTimer = null;
 let clientSupportConversationId = null;
 const clientPendingActions = new Set();
+let pendingReviewRequestId = null;
+let selectedReviewRating = 5;
 
 function setInfo(message, error = null) {
   setState((draft) => {
@@ -707,6 +711,128 @@ function normalizeAuthError(error, fallbackMessage) {
   }
 
   return error?.message || fallbackMessage;
+}
+
+async function refreshClientServiceHistory() {
+  if (!state.session.userId) return [];
+
+  const history = await loadClientServiceHistory(state.session.userId).catch((error) => {
+    console.warn("[MIMI Cliente] historial no disponible:", error?.message ?? error);
+    return state.client.serviceHistory ?? [];
+  });
+
+  setState((draft) => {
+    draft.client.serviceHistory = history;
+  });
+
+  return history;
+}
+
+function paintReviewStars() {
+  document.querySelectorAll("[data-review-rating]").forEach((button) => {
+    const value = Number(button.dataset.reviewRating || 0);
+    const active = value <= selectedReviewRating;
+    button.classList.toggle("is-selected", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+}
+
+function openReviewDialog(requestId) {
+  const request =
+    state.client.activeRequest?.id === requestId
+      ? state.client.activeRequest
+      : (state.client.serviceHistory ?? []).find((item) => item.id === requestId);
+
+  if (!request?.id) {
+    setInfo(null, "No encontramos el servicio para calificar.");
+    return;
+  }
+
+  if (String(request.status || "").toUpperCase() !== "COMPLETED") {
+    setInfo(null, "Solo podes calificar servicios completados.");
+    return;
+  }
+
+  if (request.review?.rating) {
+    setInfo("Este servicio ya fue calificado.");
+    return;
+  }
+
+  pendingReviewRequestId = request.id;
+  selectedReviewRating = 5;
+
+  const overlay = document.getElementById("reviewOverlay");
+  const textarea = document.getElementById("reviewCommentInput");
+  const title = document.getElementById("reviewServiceTitle");
+  const status = document.getElementById("reviewStatusText");
+
+  if (title) {
+    const category = request.svc_categories?.name || request.category_name || "Servicio";
+    title.textContent = `Calificar ${category}`;
+  }
+  if (textarea) textarea.value = "";
+  if (status) status.textContent = "Tu opinion ayuda a ordenar mejor la experiencia, sin rankings publicos de calidad.";
+
+  paintReviewStars();
+  if (overlay) {
+    overlay.hidden = false;
+    window.setTimeout(() => document.querySelector("[data-review-rating='5']")?.focus(), 0);
+  }
+}
+
+function closeReviewDialog() {
+  const overlay = document.getElementById("reviewOverlay");
+  if (overlay) overlay.hidden = true;
+  pendingReviewRequestId = null;
+  selectedReviewRating = 5;
+}
+
+async function submitCurrentReview() {
+  if (!pendingReviewRequestId) {
+    setInfo(null, "No hay un servicio seleccionado para calificar.");
+    return;
+  }
+
+  const submitButton = document.getElementById("reviewSubmitButton");
+  const comment = document.getElementById("reviewCommentInput")?.value ?? "";
+
+  await runClientAction(
+    `submit-review:${pendingReviewRequestId}`,
+    submitButton,
+    "Guardando...",
+    "Guardar calificacion",
+    async () => {
+      const result = await submitServiceReview({
+        requestId: pendingReviewRequestId,
+        rating: selectedReviewRating,
+        comment
+      });
+
+      if (result?.ok === false) {
+        throw new Error(result.error || "No se pudo guardar la calificacion.");
+      }
+
+      setState((draft) => {
+        const requestId = pendingReviewRequestId;
+        if (draft.client.activeRequest?.id === requestId) {
+          draft.client.activeRequest = null;
+        }
+        draft.client.selectedProvider = null;
+        draft.client.serviceHistory = (draft.client.serviceHistory ?? []).map((item) =>
+          item.id === requestId
+            ? { ...item, review: result.review ?? { rating: selectedReviewRating, comment } }
+            : item
+        );
+        draft.meta.info = "Gracias. La calificacion quedo guardada en tu historial.";
+        draft.meta.error = null;
+      });
+
+      closeReviewDialog();
+      await refreshClientServiceHistory();
+      setupRealtime(null, null);
+      return result;
+    }
+  );
 }
 
 
@@ -1572,6 +1698,7 @@ async function bootstrapAsyncData() {
   });
 
   await hydrateLiveContext();
+  await refreshClientServiceHistory();
   await registerCurrentDevice({ prompt: false });
   retryDeviceRegistrationAfterUserGesture();
 
@@ -1867,12 +1994,18 @@ async function handleProviderSelection(providerId) {
 async function handleRequestAction(action) {
   if (action === "refresh") {
     await hydrateLiveContext();
+    await refreshClientServiceHistory();
     setInfo("Estado actualizado. Si el prestador respondio, lo vas a ver aca.");
     return;
   }
 
   if (action === "rate") {
-    setInfo("La calificacion se habilita cuando el servicio queda cerrado.");
+    const requestId = state.client.activeRequest?.id;
+    if (requestId) {
+      openReviewDialog(requestId);
+      return;
+    }
+    setInfo("Elegi un servicio completado desde el historial para calificar.");
     return;
   }
 
@@ -2094,6 +2227,29 @@ function bindBasicControls() {
 
   document.getElementById("dismissClientOnboarding")?.addEventListener("click", () => {
     dismissClientOnboarding();
+  });
+
+  document.getElementById("reviewForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    try {
+      await submitCurrentReview();
+    } catch (error) {
+      setInfo(null, normalizeAuthError(error, "No se pudo guardar la calificacion."));
+    }
+  });
+
+  document.getElementById("reviewOverlay")?.addEventListener("click", (event) => {
+    const closeButton = event.target.closest("[data-review-close]");
+    if (closeButton || event.target.id === "reviewOverlay") {
+      closeReviewDialog();
+      return;
+    }
+
+    const ratingButton = event.target.closest("[data-review-rating]");
+    if (ratingButton) {
+      selectedReviewRating = Math.max(1, Math.min(5, Number(ratingButton.dataset.reviewRating || 5)));
+      paintReviewStars();
+    }
   });
 
   document.getElementById("notificationsButton")?.addEventListener("click", () => {
@@ -2500,6 +2656,15 @@ function bindBasicControls() {
           null,
           () => handleRequestAction(requestAction.dataset.requestAction)
         );
+        return;
+      }
+
+      const historyAction = event.target.closest("[data-history-action]");
+      if (historyAction) {
+        const requestId = historyAction.dataset.requestId;
+        if (historyAction.dataset.historyAction === "rate" && requestId) {
+          openReviewDialog(requestId);
+        }
         return;
       }
 

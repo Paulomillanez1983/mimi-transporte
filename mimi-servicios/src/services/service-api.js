@@ -656,6 +656,106 @@ export async function loadActiveRequest({ userId = null, providerId = null } = {
   return data?.[0] ?? null;
 }
 
+export async function loadClientServiceHistory(userId, { limit = 20 } = {}) {
+  const supabase = getSupabaseClient();
+  if (!hasBackend() || !userId || !supabase) return [];
+
+  await requireSession();
+
+  const { data: requests, error } = await supabase
+    .from("svc_requests")
+    .select(`
+      id,
+      category_id,
+      client_user_id,
+      selected_provider_id,
+      accepted_provider_id,
+      status,
+      address_text,
+      request_type,
+      total_price_snapshot,
+      provider_price_snapshot,
+      currency,
+      completed_at,
+      cancelled_at,
+      updated_at,
+      created_at,
+      svc_categories(id,name,code,description)
+    `)
+    .eq("client_user_id", userId)
+    .in("status", ["COMPLETED", "CANCELLED", "EXPIRED"])
+    .order("updated_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  if (!requests?.length) return [];
+
+  const requestIds = requests.map((item) => item.id).filter(Boolean);
+  const providerIds = [
+    ...new Set(
+      requests
+        .map((item) => item.accepted_provider_id || item.selected_provider_id)
+        .filter(Boolean)
+    )
+  ];
+
+  const [reviewsResult, providersResult] = await Promise.all([
+    requestIds.length
+      ? supabase
+          .from("svc_reviews")
+          .select("request_id,rating,comment,created_at")
+          .eq("client_user_id", userId)
+          .in("request_id", requestIds)
+      : Promise.resolve({ data: [], error: null }),
+    providerIds.length
+      ? supabase
+          .from("svc_providers")
+          .select("id,full_name,avatar_url,rating_avg,rating_count")
+          .in("id", providerIds)
+      : Promise.resolve({ data: [], error: null })
+  ]);
+
+  if (reviewsResult.error) throw reviewsResult.error;
+
+  const reviewByRequest = new Map(
+    (reviewsResult.data ?? []).map((item) => [item.request_id, item])
+  );
+  const providerById = new Map(
+    (providersResult.data ?? []).map((item) => [item.id, item])
+  );
+
+  return requests.map((request) => {
+    const providerId = request.accepted_provider_id || request.selected_provider_id;
+    return {
+      ...request,
+      provider: providerById.get(providerId) ?? null,
+      review: reviewByRequest.get(request.id) ?? null
+    };
+  });
+}
+
+export async function submitServiceReview({ requestId, rating, comment = "" } = {}) {
+  if (!hasBackend()) {
+    return {
+      ok: true,
+      review: {
+        request_id: requestId,
+        rating,
+        comment,
+        created_at: new Date().toISOString()
+      }
+    };
+  }
+
+  await requireSession();
+
+  return invokeFunction(appConfig.functions.submitReview, {
+    request_id: requestId,
+    rating,
+    comment
+  });
+}
+
 export async function loadConversationForRequest(requestId) {
   if (!hasBackend() || !requestId) return null;
 

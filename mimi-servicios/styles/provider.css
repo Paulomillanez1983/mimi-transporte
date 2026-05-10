@@ -12585,3 +12585,75 @@ body.provider-navigation-active .bottom-sheet {
     height: 84vh !important;
   }
 }
+
+/* Final compact incoming request card: keep the map visible while preserving the decision data. */
+.offer-card-float:not([hidden]) {
+  top: calc(var(--safe-top) + 92px) !important;
+  width: min(90vw, 340px) !important;
+}
+
+.offer-glass {
+  max-height: min(40vh, 330px) !important;
+  padding: 11px !important;
+  border-radius: 19px !important;
+  background: rgba(17, 17, 17, 0.76) !important;
+}
+
+.offer-header {
+  margin-bottom: 6px !important;
+}
+
+.offer-service {
+  font-size: 1.02rem !important;
+  line-height: 1.12 !important;
+}
+
+.offer-location {
+  max-width: 100% !important;
+  font-size: .7rem !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  margin-bottom: 5px !important;
+}
+
+.offer-client {
+  font-size: .7rem !important;
+  margin-bottom: 5px !important;
+}
+
+.offer-price {
+  font-size: 1.05rem !important;
+  margin-bottom: 7px !important;
+}
+
+.offer-detail-grid {
+  gap: 5px !important;
+}
+
+.offer-detail-pill {
+  padding: 6px 7px !important;
+  border-radius: 10px !important;
+}
+
+.offer-detail-pill span {
+  font-size: .52rem !important;
+}
+
+.offer-detail-pill strong {
+  font-size: .68rem !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.offer-actions {
+  padding-top: 7px !important;
+}
+
+.offer-btn {
+  min-height: 40px !important;
+  padding: 8px 10px !important;
+  border-radius: 12px !important;
+  font-size: .82rem !important;
+}

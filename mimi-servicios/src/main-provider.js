@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.10.10";
+const MIMI_PROVIDER_BUILD = "2026.05.10.11";
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -1823,7 +1823,7 @@ stats: {
       });
     }
 
-    return rows.slice(0, 5);
+    return rows.slice(0, 4);
   }
 
   normalizeOfferForState(offer = {}) {
