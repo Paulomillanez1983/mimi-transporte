@@ -97,6 +97,11 @@ const corsHeaders = {
 };
 
 const BUCKET = "service-provider-documents";
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const KYC_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const KYC_RATE_LIMIT_MAX_ATTEMPTS = 3;
+const KYC_DUPLICATE_WINDOW_MS = 2 * 60 * 1000;
+const ALLOWED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -117,6 +122,86 @@ function scoreLabel(score: number) {
 
 function normalizeDocumentReviewStatus(status: string) {
   return status === "REJECTED" ? "REJECTED" : "PENDING";
+}
+
+function storagePathBelongsToUser(path: string | null | undefined, userId: string) {
+  const value = String(path || "").replace(/^\/+/, "");
+  return value.startsWith(`${userId}/`);
+}
+
+function sniffImageMime(bytes: Uint8Array) {
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a
+  ) {
+    return "image/png";
+  }
+  if (
+    bytes.length >= 12 &&
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return "image/webp";
+  }
+  return null;
+}
+
+function assertImageDocumentBytes(bytes: Uint8Array, label: string) {
+  if (!bytes.length) {
+    throw new Error(`${label}_empty`);
+  }
+  if (bytes.length > MAX_IMAGE_BYTES) {
+    throw new Error(`${label}_too_large`);
+  }
+  const mime = sniffImageMime(bytes);
+  if (!mime || !ALLOWED_IMAGE_MIME_TYPES.has(mime)) {
+    throw new Error(`${label}_invalid_image`);
+  }
+  return mime;
+}
+
+async function logKycAudit(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  input: {
+    userId: string;
+    providerId: string;
+    eventType: string;
+    metadata?: Record<string, unknown>;
+    req: Request;
+  },
+) {
+  const userAgent = input.req.headers.get("user-agent")?.slice(0, 300) || null;
+  await supabaseAdmin
+    .from("audit_logs")
+    .insert({
+      user_id: input.userId,
+      actor_type: "provider",
+      event_type: input.eventType,
+      entity_type: "svc_provider_identity_check",
+      entity_id: input.providerId,
+      metadata: input.metadata || {},
+      user_agent: userAgent,
+    })
+    .throwOnError()
+    .catch((error) => {
+      console.warn("[svc-verify-provider-identity] audit log skipped:", error?.message || error);
+    });
 }
 
 serve(async (req) => {
@@ -183,7 +268,7 @@ serve(async (req) => {
 
     const { data: docs, error: docsError } = await supabaseAdmin
       .from("svc_provider_documents")
-      .select("id,provider_id,document_type,storage_bucket,storage_path,review_status,metadata_json,created_at")
+      .select("id,provider_id,document_type,storage_bucket,storage_path,mime_type,file_size_bytes,review_status,metadata_json,created_at")
       .eq("provider_id", providerId)
       .in("document_type", ["dni_front", "selfie"])
       .order("created_at", { ascending: false });
@@ -195,6 +280,28 @@ serve(async (req) => {
     const dniFront = docs?.find((doc) => doc.document_type === "dni_front");
     const selfie = docs?.find((doc) => doc.document_type === "selfie");
     const imageExtRegex = /\.(jpg|jpeg|png|webp)$/i;
+
+    for (const doc of [dniFront, selfie].filter(Boolean)) {
+      if (doc.storage_bucket !== BUCKET) {
+        return fail("Documento inválido para verificación.", 400);
+      }
+      if (!storagePathBelongsToUser(doc.storage_path, userId)) {
+        await logKycAudit(supabaseAdmin, {
+          userId,
+          providerId,
+          eventType: "kyc_document_path_forbidden",
+          req,
+          metadata: { document_type: doc.document_type },
+        });
+        return fail("Documento inválido para este prestador.", 403);
+      }
+      if (doc.file_size_bytes && Number(doc.file_size_bytes) > MAX_IMAGE_BYTES) {
+        return fail("La imagen supera el tamaño máximo permitido.", 400);
+      }
+      if (doc.mime_type && !ALLOWED_IMAGE_MIME_TYPES.has(String(doc.mime_type))) {
+        return fail("Formato de imagen inválido para verificación.", 400);
+      }
+    }
 
     if (dniFront && !imageExtRegex.test(dniFront.storage_path ?? "")) {
       return fail("DNI inválido. Solo se permiten imágenes tomadas con cámara.", 400);
@@ -212,6 +319,53 @@ serve(async (req) => {
       });
     }
 
+    const recentSince = new Date(Date.now() - KYC_RATE_LIMIT_WINDOW_MS).toISOString();
+    const duplicateSince = new Date(Date.now() - KYC_DUPLICATE_WINDOW_MS).toISOString();
+    const { data: recentChecks, error: recentChecksError } = await supabaseAdmin
+      .from("svc_provider_identity_checks")
+      .select("id,status,created_at,dni_front_document_id,selfie_document_id")
+      .eq("provider_id", providerId)
+      .gte("created_at", recentSince)
+      .order("created_at", { ascending: false })
+      .limit(KYC_RATE_LIMIT_MAX_ATTEMPTS + 1);
+
+    if (recentChecksError) {
+      return fail("No se pudo validar frecuencia de verificación.", 500, recentChecksError);
+    }
+
+    const duplicateCheck = (recentChecks || []).find((check) =>
+      check.dni_front_document_id === dniFront.id &&
+      check.selfie_document_id === selfie.id &&
+      String(check.created_at || "") >= duplicateSince
+    );
+
+    if (duplicateCheck) {
+      await logKycAudit(supabaseAdmin, {
+        userId,
+        providerId,
+        eventType: "kyc_duplicate_check_reused",
+        req,
+        metadata: { identity_check_id: duplicateCheck.id, status: duplicateCheck.status },
+      });
+      return json({
+        ok: true,
+        status: duplicateCheck.status,
+        reused: true,
+        message: "Verificación reciente reutilizada para evitar procesos duplicados.",
+      });
+    }
+
+    if ((recentChecks || []).length >= KYC_RATE_LIMIT_MAX_ATTEMPTS) {
+      await logKycAudit(supabaseAdmin, {
+        userId,
+        providerId,
+        eventType: "kyc_rate_limited",
+        req,
+        metadata: { window_minutes: KYC_RATE_LIMIT_WINDOW_MS / 60000 },
+      });
+      return fail("Demasiados intentos de verificación. Probá nuevamente en unos minutos.", 429);
+    }
+
     async function downloadBytes(path: string) {
       const { data, error } = await supabaseAdmin.storage.from(BUCKET).download(path);
 
@@ -224,6 +378,21 @@ serve(async (req) => {
 
     const dniBytes = await downloadBytes(dniFront.storage_path);
     const selfieBytes = await downloadBytes(selfie.storage_path);
+    const dniMime = assertImageDocumentBytes(dniBytes, "dni_front");
+    const selfieMime = assertImageDocumentBytes(selfieBytes, "selfie");
+
+    await logKycAudit(supabaseAdmin, {
+      userId,
+      providerId,
+      eventType: "kyc_verification_started",
+      req,
+      metadata: {
+        dni_front_document_id: dniFront.id,
+        selfie_document_id: selfie.id,
+        dni_mime: dniMime,
+        selfie_mime: selfieMime,
+      },
+    });
 
     const rekognition = new RekognitionClient({
       region: AWS_REGION,
@@ -428,6 +597,19 @@ const { error: profileUpdateError } = await supabaseAdmin
 if (profileUpdateError) {
   return fail("No se pudo actualizar score del perfil.", 500, profileUpdateError);
 }
+    await logKycAudit(supabaseAdmin, {
+      userId,
+      providerId,
+      eventType: "kyc_verification_completed",
+      req,
+      metadata: {
+        status: nextReviewStatus,
+        ai_score: aiScore,
+        ai_score_label: aiScoreLabel,
+        risk_flags: riskFlags,
+      },
+    });
+
     return json({
       ok: true,
       status: nextReviewStatus,
@@ -435,8 +617,12 @@ if (profileUpdateError) {
     });
   } catch (error) {
     console.error("[svc-verify-provider-identity]", error);
+    const errorMessage = error?.message ?? String(error);
+    if (/^(dni_front|selfie)_(empty|too_large|invalid_image)$/.test(errorMessage)) {
+      return fail("Documento inválido. Subí una imagen JPG, PNG o WEBP clara y liviana.", 400);
+    }
     return fail("Error verificando identidad.", 500, {
-      message: error?.message ?? String(error),
+      message: errorMessage,
     });
   }
 });

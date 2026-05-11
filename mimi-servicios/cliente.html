@@ -41,13 +41,9 @@
     rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap"
   >
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"
-  >
   <link rel="stylesheet" href="./styles/app.css">
   <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.10.7">
-  <link rel="stylesheet" href="./styles/client.css?v=2026.05.10.15">
+  <link rel="stylesheet" href="./styles/client.css?v=2026.05.10.17">
 </head>
 <body data-client-view="home">
   <div class="app-shell">
@@ -528,6 +524,24 @@
     </div>
   </noscript>
 
+  <div class="auth-consent-overlay" id="authConsentOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="authConsentTitle">
+    <section class="auth-consent-sheet">
+      <div class="auth-consent-mark" aria-hidden="true">M</div>
+      <span class="eyebrow">Inicio seguro</span>
+      <h2 id="authConsentTitle">Vas a iniciar sesion con Google</h2>
+      <p>MIMI abre Google para validar tu identidad de forma segura. Android puede mostrar un aviso del navegador porque se usa un servicio externo.</p>
+      <div class="auth-consent-domain">
+        <span>Dominio oficial</span>
+        <strong>mimigo.com.ar</strong>
+      </div>
+      <div class="auth-consent-actions">
+        <button type="button" class="btn-secondary" id="authConsentCancel">Cancelar</button>
+        <button type="button" class="btn-primary" id="authConsentContinue">Continuar con Google</button>
+      </div>
+      <small>Si ves un aviso del sistema, corresponde al paso seguro hacia Google. MIMI no accede a otras apps sin tu permiso.</small>
+    </section>
+  </div>
+
   <!-- Modal para pedir teléfono al primer login (registro) -->
   <div class="phone-collect-overlay" id="phoneCollectOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="phoneCollectTitle">
     <section class="phone-collect-sheet">
@@ -565,7 +579,6 @@
 
   <script src="./env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <script type="module" src="./src/main-client.js?v=2026.05.10.20"></script>
+  <script type="module" src="./src/main-client.js?v=2026.05.10.24"></script>
 </body>
 </html>

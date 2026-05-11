@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-10-branding-v3-auth-gate";
+const APP_VERSION = "2026-05-11-client-auth-consent-1";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [
@@ -29,6 +29,10 @@ const APP_ASSETS = [
 
   "./src/services/map.js",
   "./src/services/realtime.js",
+  "./src/services/realtime-manager.js",
+  "./src/services/runtime-config.js",
+  "./src/services/observability.js",
+  "./src/services/pocketbase-cms.js",
   "./src/services/service-api.js",
   "./src/services/service-geocoding.js",
   "./src/services/sound.js",

@@ -20,14 +20,47 @@ let lastRoadRouteAt = 0;
 let lastRoadRouteCoordinates = [];
 let providerSimulationFrame = null;
 let providerSimulation = null;
+let mapLibreAssetsPromise = null;
 
 const SERVICE_ROUTE_SOURCE = "mimi-services-tracking-route";
 const PROVIDER_SIMULATION_SPEED_MPS = 7;
 const PROVIDER_SIMULATION_MAX_PROGRESS = 0.88;
 const PROVIDER_SIMULATION_MAX_AGE_MS = 190000;
+const MAPLIBRE_CSS_URL = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css";
+const MAPLIBRE_JS_URL = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js";
 const LIGHT_MAP_STYLE =
   window.MIMI_PROVIDER_MAP_STYLE ||
   "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
+
+export function ensureMapLibreAssets() {
+  if (window.maplibregl?.Map) return Promise.resolve(true);
+  if (mapLibreAssetsPromise) return mapLibreAssetsPromise;
+
+  mapLibreAssetsPromise = new Promise((resolve) => {
+    if (!document.querySelector(`link[href="${MAPLIBRE_CSS_URL}"]`)) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = MAPLIBRE_CSS_URL;
+      document.head.appendChild(link);
+    }
+
+    const existingScript = document.querySelector(`script[src="${MAPLIBRE_JS_URL}"]`);
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(true), { once: true });
+      existingScript.addEventListener("error", () => resolve(false), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = MAPLIBRE_JS_URL;
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.head.appendChild(script);
+  });
+
+  return mapLibreAssetsPromise;
+}
 
 function cameraKey(positions = []) {
   return positions
@@ -277,6 +310,7 @@ export async function initMap(containerId, initialCenter, zoom) {
   const container = document.getElementById(containerId);
   if (!container) return null;
 
+  await ensureMapLibreAssets();
   const mapLibreReady = await waitForMapLibre();
   if (!mapLibreReady || !supportsWebGL()) return null;
 

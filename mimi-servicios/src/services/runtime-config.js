@@ -27,6 +27,15 @@ export const MIMI_POCKETBASE_TIMEOUT_MS = numberFromRuntime(
   800
 );
 
+export const MIMI_OBSERVABILITY_ENABLED =
+  window.MIMI_SERVICES_ENV?.MIMI_OBSERVABILITY_ENABLED !== false &&
+  window.MIMI_SERVICES_CONFIG?.MIMI_OBSERVABILITY_ENABLED !== false;
+
+export const MIMI_OBSERVABILITY_SAMPLE_RATE = Math.min(
+  1,
+  Math.max(0, numberFromRuntime("MIMI_OBSERVABILITY_SAMPLE_RATE", 1))
+);
+
 function numberFromRuntime(key, fallback) {
   const value =
     window.MIMI_SERVICES_ENV?.[key] ??

@@ -36,6 +36,7 @@ import {
 } from "./services/supabase.js";
 import { getMimiPushToken } from "./services/push.js";
 import { loadCmsServiceCategories } from "./services/pocketbase-cms.js";
+import { initObservability, markPerformance } from "./services/observability.js";
 import {
   patchState,
   setState,
@@ -53,6 +54,27 @@ let authSubscription = null;
 const CLIENT_ONBOARDING_KEY = "mimi_services_client_onboarding_seen";
 const PWA_INSTALLED_KEY = "mimi_services_pwa_installed";
 const CATEGORY_USAGE_KEY = "mimi_services_category_usage_v1";
+
+initObservability("client");
+markPerformance("client_module_loaded");
+
+let clientMapInitPromise = null;
+
+function ensureClientMap() {
+  if (!clientMapInitPromise) {
+    clientMapInitPromise = initMap("clientMap", appConfig.mapInitialCenter, appConfig.mapInitialZoom)
+      .catch((error) => {
+        clientMapInitPromise = null;
+        console.warn("[MIMI Cliente] mapa no disponible:", error?.message || error);
+        return null;
+      });
+  }
+  return clientMapInitPromise;
+}
+
+function updateClientMapWhenReady(payload) {
+  ensureClientMap().then(() => updateClientMap(payload));
+}
 
 const NON_HOURLY_CATEGORY_MODELS = {
   GOMERIA_MOVIL: "BASE_VISIT",
@@ -1503,7 +1525,7 @@ async function selectServiceAddressSuggestion(index) {
   patchState("requestDraft.lat", lat);
   patchState("requestDraft.lng", lng);
 
-  updateClientMap({
+  updateClientMapWhenReady({
     servicePosition: { lat, lng },
     providerPosition: state.tracking.providerPosition
   });
@@ -1631,7 +1653,7 @@ async function handleUseCurrentServiceLocation() {
     patchState("requestDraft.lat", lat);
     patchState("requestDraft.lng", lng);
 
-    updateClientMap({
+    updateClientMapWhenReady({
       servicePosition: { lat, lng },
       providerPosition: state.tracking.providerPosition
     });
@@ -1734,7 +1756,7 @@ async function hydrateLiveContext(activeRequestOverride) {
     }
   });
 
-  updateClientMap({
+  updateClientMapWhenReady({
     servicePosition: state.tracking.clientPosition,
     providerPosition: state.tracking.providerPosition
   });
@@ -1880,7 +1902,50 @@ async function handleAuthPrimary() {
     return;
   }
 
+  const consent = await confirmExternalGoogleAuth();
+  if (!consent) return;
+
   await signInWithGoogle({ mode: "client" });
+}
+
+function confirmExternalGoogleAuth() {
+  const overlay = document.getElementById("authConsentOverlay");
+  const continueButton = document.getElementById("authConsentContinue");
+  const cancelButton = document.getElementById("authConsentCancel");
+  if (!overlay || !continueButton || !cancelButton) return Promise.resolve(true);
+
+  return new Promise((resolve) => {
+    let settled = false;
+
+    const cleanup = (value) => {
+      if (settled) return;
+      settled = true;
+      overlay.hidden = true;
+      document.body.classList.remove("auth-consent-open");
+      continueButton.removeEventListener("click", onContinue);
+      cancelButton.removeEventListener("click", onCancel);
+      overlay.removeEventListener("click", onOverlayClick);
+      window.removeEventListener("keydown", onKeyDown);
+      resolve(value);
+    };
+
+    const onContinue = () => cleanup(true);
+    const onCancel = () => cleanup(false);
+    const onOverlayClick = (event) => {
+      if (event.target === overlay) cleanup(false);
+    };
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") cleanup(false);
+    };
+
+    continueButton.addEventListener("click", onContinue);
+    cancelButton.addEventListener("click", onCancel);
+    overlay.addEventListener("click", onOverlayClick);
+    window.addEventListener("keydown", onKeyDown);
+    document.body.classList.add("auth-consent-open");
+    overlay.hidden = false;
+    window.setTimeout(() => continueButton.focus(), 30);
+  });
 }
 
 async function handleSearchSubmit(event) {
@@ -2940,7 +3005,7 @@ function setupRealtime(
         };
       });
 
-      updateClientMap({
+      updateClientMapWhenReady({
         servicePosition: state.tracking.clientPosition,
         providerPosition: {
           lat: payload.lat,
@@ -3080,7 +3145,7 @@ async function init() {
   setupCategoryPlaceholderExamples();
   setClientView(document.body.dataset.clientView || "home", { behavior: "auto" });
   registerInstallPrompt();
-  initMap("clientMap", appConfig.mapInitialCenter, appConfig.mapInitialZoom);
+  // Mapa diferido: se inicializa bajo demanda cuando hay ubicacion o tracking.
 
 const CLIENT_SW_ENABLED = true;
 

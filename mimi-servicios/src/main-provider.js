@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.10.20";
+const MIMI_PROVIDER_BUILD = "2026.05.10.24";
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -64,10 +64,15 @@ import {
   MIMI_ACTIVE_JOB_LOCATION_INTERVAL_MS,
   MIMI_PROVIDER_HEARTBEAT_INTERVAL_MS
 } from "./services/runtime-config.js";
+import { initObservability, markPerformance } from "./services/observability.js";
 import {
   disconnectRealtime as disconnectManagedRealtime,
   subscribeScopedChannel
 } from "./services/realtime-manager.js";
+import { ensureMapLibreAssets } from "./services/map.js";
+
+initObservability("provider");
+markPerformance("provider_module_loaded");
 
 // ============================================
 // APP CONTROLLER
@@ -501,9 +506,12 @@ async initMap() {
   }
 
   if (!window.maplibregl) {
-    console.warn("[MIMI][initMap] MapLibre no disponible");
-    this.showMapFallback();
-    return;
+    const mapLibreReady = await ensureMapLibreAssets();
+    if (!mapLibreReady || !window.maplibregl) {
+      console.warn("[MIMI][initMap] MapLibre no disponible");
+      this.showMapFallback();
+      return;
+    }
   }
 
   if (!this.supportsWebGLMap()) {
@@ -2008,9 +2016,11 @@ stats: {
     return new Promise((resolve) => {
       const cleanup = () => {
         overlay.hidden = true;
+        document.body.classList.remove("provider-pin-open");
         submit.removeEventListener("click", onSubmit);
         close?.removeEventListener("click", onCancel);
         overlay.removeEventListener("click", onOverlayClick);
+        window.removeEventListener("keydown", onEscape);
         inputs.forEach((input) => {
           input.removeEventListener("input", onInput);
           input.removeEventListener("keydown", onKeyDown);
@@ -2037,6 +2047,9 @@ stats: {
       const onOverlayClick = (event) => {
         if (event.target === overlay) onCancel();
       };
+      const onEscape = (event) => {
+        if (event.key === "Escape") onCancel();
+      };
       const onInput = (event) => {
         const input = event.currentTarget;
         input.value = input.value.replace(/\D/g, "").slice(0, 1);
@@ -2059,7 +2072,9 @@ stats: {
       submit.addEventListener("click", onSubmit);
       close?.addEventListener("click", onCancel);
       overlay.addEventListener("click", onOverlayClick);
+      window.addEventListener("keydown", onEscape);
       setStatus("");
+      document.body.classList.add("provider-pin-open");
       overlay.hidden = false;
       window.setTimeout(() => inputs[0]?.focus(), 30);
     });

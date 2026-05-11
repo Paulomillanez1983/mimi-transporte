@@ -1258,66 +1258,80 @@ function renderProviderBusiness(state) {
   const locationPolicy = firstOffering?.location_policy ?? defaults.locationPolicy;
   const providerAvatarUrl = String(state.provider.profile?.avatar_url || "").trim();
   const canPreviewProviderAvatar = /^https?:\/\//i.test(providerAvatarUrl) || /^data:image\//i.test(providerAvatarUrl);
+  const providerInitials = initialsFromName(state.provider.profile?.full_name || state.session.userName || "MIMI");
+  const visibleServiceLabels = selectedCategories.length
+    ? selectedCategories.map((category) => category.name)
+    : firstOffering?.title
+      ? [firstOffering.title]
+      : [];
 
   container.innerHTML = `
     <section class="provider-stack provider-publisher-app provider-publisher-app-v3">
       <form class="provider-settings-form provider-publisher-shell provider-simple-builder" id="providerBusinessForm">
         <section class="provider-simple-hero">
-          <div>
+          <div class="provider-simple-hero-copy">
             <span class="eyebrow">Servicios</span>
             <h3>${escapeHtml(firstOffering?.title ?? "Crea tu servicio")}</h3>
-            <p>Deci que haces, elegi el rubro sugerido y completa solo lo necesario para publicar.</p>
+            <p>Publica prestaciones claras, con precio y zona real para recibir solicitudes mejor calificadas.</p>
           </div>
           <div class="provider-simple-status ${offerings.length ? "is-ready" : ""}">
             <span>${offerings.length ? "Publicado" : "Pendiente"}</span>
             <strong>${escapeHtml(firstOffering ? primaryPrice : "Falta configurar")}</strong>
           </div>
+          <div class="provider-profile-avatar-dock">
+            <label class="provider-profile-avatar-action" title="Cambiar foto de perfil" aria-label="Cambiar foto de perfil">
+              <input name="providerAvatarFile" id="providerAvatarInput" type="file" accept="image/jpeg,image/png,image/webp">
+              <span class="provider-photo-preview" id="providerAvatarPreview">
+                ${canPreviewProviderAvatar
+                  ? `<img src="${escapeHtml(providerAvatarUrl)}" alt="Foto de perfil" loading="lazy">`
+                  : `<span>${escapeHtml(providerInitials)}</span>`}
+              </span>
+              <span class="provider-avatar-edit-dot" aria-hidden="true">+</span>
+            </label>
+            ${canPreviewProviderAvatar ? `<button type="button" class="provider-avatar-remove-link provider-avatar-remove-icon" data-provider-business-action="remove-avatar" aria-label="Quitar foto">x</button>` : ""}
+            <small id="providerAvatarStatus" class="provider-avatar-status"></small>
+            <input type="hidden" name="providerAvatarPublicUrl" value="${escapeHtml(providerAvatarUrl ?? "")}">
+          </div>
         </section>
 
-        <section class="provider-simple-card provider-photo-card">
-          <div class="provider-photo-preview" id="providerAvatarPreview">
-            ${canPreviewProviderAvatar
-              ? `<img src="${escapeHtml(providerAvatarUrl)}" alt="Foto de perfil" loading="lazy">`
-              : `<span>${escapeHtml(initialsFromName(state.provider.profile?.full_name || state.session.userName || "MIMI"))}</span>`}
+        <section class="provider-simple-card provider-current-services-card">
+          <div class="provider-current-services-copy">
+            <span class="eyebrow">Prestaciones que brindas</span>
+            <strong>${visibleServiceLabels.length ? "Activas para clientes" : "Todavia sin prestaciones"}</strong>
+            <small>${visibleServiceLabels.length ? "Estos rubros quedan asociados a tu perfil cuando guardas." : "Agrega al menos una prestacion para poder publicar."}</small>
           </div>
-          <div>
-            <strong>Foto de perfil</strong>
-            <p>Se muestra al cliente cuando solicita tu servicio. Se sube apenas la elegís.</p>
-            <label class="provider-file-pill">
-              <input name="providerAvatarFile" id="providerAvatarInput" type="file" accept="image/jpeg,image/png,image/webp">
-              ${canPreviewProviderAvatar ? "Cambiar foto" : "Elegir foto"}
-            </label>
-            ${canPreviewProviderAvatar ? `<button type="button" class="provider-avatar-remove-link" data-provider-business-action="remove-avatar">Quitar foto</button>` : ""}
-            <small id="providerAvatarStatus" class="provider-avatar-status"></small>
+          <div class="provider-service-pill-list" id="providerCurrentServicesSummary">
+            ${visibleServiceLabels.length
+              ? visibleServiceLabels.map((label) => `<span class="provider-service-pill">${escapeHtml(label)}</span>`).join("")
+              : `<span class="provider-service-pill is-empty">Sin rubros</span>`}
           </div>
-          <input type="hidden" name="providerAvatarPublicUrl" value="${escapeHtml(providerAvatarUrl ?? "")}">
         </section>
 
         <section class="provider-simple-card provider-ai-card" data-provider-setup-step="1">
           <div class="provider-simple-card-heading">
             <span>1</span>
             <div>
-              <strong>Que servicio prestas</strong>
-              <small>Escribilo con tus palabras. MIMI lo ordena en rubros para que confirmes.</small>
+              <strong>Agregar otra prestacion</strong>
+              <small>1. Escribis el servicio. 2. MIMI sugiere rubros. 3. Confirmas y guardas.</small>
             </div>
           </div>
           <div class="provider-ai-input-shell provider-search-box">
-            <textarea name="providerAiPrompt" rows="3" maxlength="500" placeholder="Ej: soy abogado penalista, hago manicura, pinto casas">${escapeHtml(firstOffering?.description ?? "")}</textarea>
+            <textarea name="providerAiPrompt" rows="2" maxlength="500" placeholder="Ej: pintura interior por m2, colocacion de ceramicos, electricidad domiciliaria">${escapeHtml(firstOffering?.description ?? "")}</textarea>
             <button class="provider-icon-action provider-mic-inside" data-provider-business-action="start-provider-dictation" type="button" aria-label="Dictar por voz" title="Dictar por voz">🎙</button>
-            <button class="btn-primary provider-suggest-button" data-provider-business-action="suggest-provider-service" type="button">Buscar rubros</button>
+            <button class="btn-primary provider-suggest-button" data-provider-business-action="suggest-provider-service" type="button">Sugerir rubros</button>
           </div>
           <div class="provider-voice-status" id="providerVoiceStatus" hidden></div>
-          <p class="provider-search-helper">Busca rubros para poder publicar. Las opciones aparecen en el panel de abajo.</p>
+          <p class="provider-search-helper">MIMI no publica nada automaticamente: primero elegis los rubros sugeridos y despues guardas.</p>
         </section>
 
         <section class="provider-ai-results-panel ${hasSelectedRubros ? "is-visible" : ""}" id="providerAiSuggestionsPanel" ${hasSelectedRubros ? "" : "hidden"} aria-live="polite">
           <div class="provider-results-title">
             <div>
-              <strong>Rubros sugeridos</strong>
-              <span>Elegi una o varias opciones que representen tu servicio.</span>
+              <strong>Coincidencias de MIMI</strong>
+              <span>Toca una o varias opciones para agregarlas a tus prestaciones.</span>
             </div>
           </div>
-          <div class="provider-ai-empty" id="providerAiEmpty" ${hasSelectedRubros ? "hidden" : ""}>Busca un rubro para ver sugerencias reales de MIMI.</div>
+          <div class="provider-ai-empty" id="providerAiEmpty" ${hasSelectedRubros ? "hidden" : ""}>Escribi un servicio y toca Sugerir rubros para ver opciones.</div>
           <div class="provider-ai-results-scroll">
           <div class="provider-ai-suggestions" id="providerAiSuggestions" ${hasSelectedRubros ? "" : "hidden"}>
             ${selectedCategories.length ? `

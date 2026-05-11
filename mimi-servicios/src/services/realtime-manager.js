@@ -2,9 +2,13 @@ import { getSupabaseClient } from "./supabase.js";
 import { MIMI_REALTIME_OPTIMIZED } from "./runtime-config.js";
 
 const channels = new Map();
+const pausedChannels = new Map();
 const stats = {
   messages: new Map(),
-  duplicates: 0
+  duplicates: 0,
+  paused: 0,
+  resumed: 0,
+  removed: 0
 };
 
 export function subscribeScopedChannel(key, buildChannel, {
@@ -44,6 +48,45 @@ export function removeScopedChannel(key) {
   const entry = channels.get(key);
   if (!entry) return;
 
+  detachChannel(entry);
+  channels.delete(key);
+  pausedChannels.delete(key);
+  stats.removed += 1;
+  debugRealtime("remove", key);
+}
+
+export function pauseScopedChannel(key) {
+  const entry = channels.get(key);
+  if (!entry || entry.critical) return;
+
+  detachChannel(entry);
+  channels.delete(key);
+  pausedChannels.set(key, {
+    ...entry,
+    channel: null,
+    pausedAt: Date.now()
+  });
+  stats.paused += 1;
+  debugRealtime("pause", key);
+}
+
+export function resumePausedChannels(scopePrefix = "") {
+  if (!MIMI_REALTIME_OPTIMIZED || document.visibilityState === "hidden") return;
+
+  [...pausedChannels.entries()]
+    .filter(([key]) => !scopePrefix || key.startsWith(scopePrefix))
+    .forEach(([key, entry]) => {
+      pausedChannels.delete(key);
+      subscribeScopedChannel(key, entry.buildChannel, {
+        pauseWhenHidden: entry.pauseWhenHidden,
+        critical: entry.critical
+      });
+      stats.resumed += 1;
+      debugRealtime("resume", key);
+    });
+}
+
+function detachChannel(entry) {
   const supabase = getSupabaseClient();
   try {
     if (supabase?.removeChannel) supabase.removeChannel(entry.channel);
@@ -51,9 +94,6 @@ export function removeScopedChannel(key) {
   } catch {
     // noop
   }
-
-  channels.delete(key);
-  debugRealtime("remove", key);
 }
 
 export function disconnectRealtime(scopePrefix = "") {
@@ -70,7 +110,11 @@ export function realtimeDebugSnapshot() {
   return {
     optimized: MIMI_REALTIME_OPTIMIZED,
     activeChannels: activeRealtimeChannels(),
+    pausedChannels: [...pausedChannels.keys()],
     duplicates: stats.duplicates,
+    paused: stats.paused,
+    resumed: stats.resumed,
+    removed: stats.removed,
     messages: Object.fromEntries(stats.messages)
   };
 }
@@ -89,11 +133,19 @@ function debugRealtime(event, key) {
 }
 
 document.addEventListener("visibilitychange", () => {
-  if (!MIMI_REALTIME_OPTIMIZED || document.visibilityState !== "hidden") return;
+  if (!MIMI_REALTIME_OPTIMIZED) return;
+
+  if (document.visibilityState === "visible") {
+    resumePausedChannels();
+    return;
+  }
 
   [...channels.values()]
     .filter((entry) => entry.pauseWhenHidden && !entry.critical)
-    .forEach((entry) => removeScopedChannel(entry.key));
+    .forEach((entry) => pauseScopedChannel(entry.key));
 });
+
+window.addEventListener("pagehide", () => disconnectRealtime());
+window.addEventListener("beforeunload", () => disconnectRealtime());
 
 window.MIMI_REALTIME_DEBUG = realtimeDebugSnapshot;
