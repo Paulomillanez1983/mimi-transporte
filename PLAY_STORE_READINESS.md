@@ -8,16 +8,16 @@ Base web preparada para publicar dos aplicaciones Android mediante Trusted Web A
 2. **MIMI GO Partners**: prestadores independientes.
 
 ## URLs finales
-- https://mimi-transporte.vercel.app/servicios
-- https://mimi-transporte.vercel.app/prestador
-- https://mimi-transporte.vercel.app/operadores
-- https://mimi-transporte.vercel.app/privacidad
-- https://mimi-transporte.vercel.app/terminos
-- https://mimi-transporte.vercel.app/.well-known/assetlinks.json
+- https://mimigo.com.ar/servicios
+- https://mimigo.com.ar/prestador
+- https://mimigo.com.ar/operadores
+- https://mimigo.com.ar/privacidad
+- https://mimigo.com.ar/terminos
+- https://mimigo.com.ar/.well-known/assetlinks.json
 
 ## Manifests
 ### App clientes
-- Manifest: https://mimi-transporte.vercel.app/manifest-clientes.json
+- Manifest: https://mimigo.com.ar/manifest-clientes.json
 - Package ID sugerido: `com.mimigo.clientes`
 - App name: `MIMI GO Servicios`
 - Start URL: `/servicios`
@@ -25,7 +25,7 @@ Base web preparada para publicar dos aplicaciones Android mediante Trusted Web A
 - Feature graphic: `docs/playstore/assets/mimigo-clientes-feature-graphic.png`
 
 ### App partners
-- Manifest: https://mimi-transporte.vercel.app/manifest-partners.json
+- Manifest: https://mimigo.com.ar/manifest-partners.json
 - Package ID sugerido: `com.mimigo.partners`
 - App name: `MIMI GO Partners`
 - Start URL: `/mimi-servicios/prestador.html`
@@ -55,14 +55,14 @@ npm install -g @bubblewrap/cli
 Crear app clientes:
 
 ```bash
-bubblewrap init --manifest https://mimi-transporte.vercel.app/manifest-clientes.json
+bubblewrap init --manifest https://mimigo.com.ar/manifest-clientes.json
 bubblewrap build
 ```
 
 Crear app partners en otra carpeta:
 
 ```bash
-bubblewrap init --manifest https://mimi-transporte.vercel.app/manifest-partners.json
+bubblewrap init --manifest https://mimigo.com.ar/manifest-partners.json
 bubblewrap build
 ```
 
@@ -71,14 +71,14 @@ bubblewrap build
 - packageId: `com.mimigo.clientes`
 - appName: `MIMI GO Servicios`
 - launcherName: `MIMI GO`
-- host: `mimi-transporte.vercel.app`
+- host: `mimigo.com.ar`
 - startUrl: `/servicios`
 
 ### MIMI GO Partners
 - packageId: `com.mimigo.partners`
 - appName: `MIMI GO Partners`
 - launcherName: `MIMI Partners`
-- host: `mimi-transporte.vercel.app`
+- host: `mimigo.com.ar`
 - startUrl: `/mimi-servicios/prestador.html`
 
 ## Digital Asset Links
