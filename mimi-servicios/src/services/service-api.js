@@ -1,9 +1,11 @@
 import { appConfig } from "../config.js";
 import { getSupabaseClient, callRpc } from "./supabase.js";
 import { buildMockProviders } from "./mock-data.js";
+import { MIMI_NEARBY_REFRESH_INTERVAL_MS } from "./runtime-config.js";
 
 const SERVICE_PROVIDER_DOCUMENTS_BUCKET = "service-provider-documents";
 const PROVIDER_DOCUMENT_SELECT = "id,provider_id,document_type,storage_bucket,storage_path,mime_type,file_size_bytes,review_status,review_notes,reviewed_at,metadata_json,created_at,updated_at";
+const providerSnapshotCache = new Map();
 
 function hasBackend() {
   return Boolean(getSupabaseClient());
@@ -325,8 +327,17 @@ export async function searchProviders(categoryId, draft = {}) {
     service_lng: draft.lng ?? null,
     request_type: draft.requestType ?? "IMMEDIATE",
     scheduled_for: draft.scheduledFor || null,
-    requested_hours: Number(draft.requestedHours ?? 2)
+    requested_hours: Number(draft.requestedHours ?? 2),
+    sort_by: draft.sortMode || draft.sort_by || "recommended",
+    radius_km: Number(draft.radiusKm || draft.radius_km || 25),
+    max_results: Number(draft.maxResults || draft.max_results || 20)
   };
+  const cacheKey = providerSnapshotCacheKey(payload);
+  const cachedSnapshot = readProviderSnapshotCache(cacheKey);
+
+  if (cachedSnapshot) {
+    return cachedSnapshot;
+  }
 
   // Si la categoría es del catálogo local (id string, no UUID), la edge function la rechaza con 400.
   // Saltamos directo al fallback de tablas (que tampoco va a encontrar providers reales,
@@ -337,6 +348,7 @@ export async function searchProviders(categoryId, draft = {}) {
       const providers = data?.providers ?? data?.data ?? data ?? [];
 
       if (Array.isArray(providers) && providers.length) {
+        writeProviderSnapshotCache(cacheKey, providers);
         return providers;
       }
     } catch (error) {
@@ -344,7 +356,40 @@ export async function searchProviders(categoryId, draft = {}) {
     }
   }
 
-  return searchProvidersFromTables(categoryId, draft);
+  const fallbackProviders = await searchProvidersFromTables(categoryId, draft);
+  writeProviderSnapshotCache(cacheKey, fallbackProviders);
+  return fallbackProviders;
+}
+
+function providerSnapshotCacheKey(payload = {}) {
+  const lat = Number(payload.service_lat);
+  const lng = Number(payload.service_lng);
+  return [
+    payload.category_id,
+    Number.isFinite(lat) ? lat.toFixed(3) : "no-lat",
+    Number.isFinite(lng) ? lng.toFixed(3) : "no-lng",
+    payload.request_type || "IMMEDIATE",
+    payload.scheduled_for || "now",
+    payload.requested_hours || 1
+  ].join(":");
+}
+
+function readProviderSnapshotCache(key) {
+  const hit = providerSnapshotCache.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.savedAt > MIMI_NEARBY_REFRESH_INTERVAL_MS) {
+    providerSnapshotCache.delete(key);
+    return null;
+  }
+  return hit.providers;
+}
+
+function writeProviderSnapshotCache(key, providers) {
+  if (!Array.isArray(providers)) return;
+  providerSnapshotCache.set(key, {
+    savedAt: Date.now(),
+    providers
+  });
 }
 
 function distanceKmBetween(latA, lngA, latB, lngB) {
@@ -721,7 +766,7 @@ export async function loadClientServiceHistory(userId, { limit = 20 } = {}) {
     requestIds.length
       ? supabase
           .from("svc_reviews")
-          .select("request_id,rating,comment,created_at")
+          .select("request_id,rating,stars,created_at")
           .eq("client_user_id", userId)
           .in("request_id", requestIds)
       : Promise.resolve({ data: [], error: null }),
@@ -752,14 +797,27 @@ export async function loadClientServiceHistory(userId, { limit = 20 } = {}) {
   });
 }
 
-export async function submitServiceReview({ requestId, rating, comment = "" } = {}) {
+export async function getServicePin(requestId) {
+  if (!hasBackend() || !requestId) return null;
+
+  await requireSession();
+
+  const response = await invokeFunction(appConfig.functions.getServicePin, {
+    request_id: requestId
+  });
+
+  return response?.ok ? response : null;
+}
+
+export async function submitServiceReview({ requestId, rating, stars } = {}) {
+  const normalizedStars = Number(stars ?? rating);
   if (!hasBackend()) {
     return {
       ok: true,
       review: {
         request_id: requestId,
-        rating,
-        comment,
+        rating: normalizedStars,
+        stars: normalizedStars,
         created_at: new Date().toISOString()
       }
     };
@@ -769,8 +827,7 @@ export async function submitServiceReview({ requestId, rating, comment = "" } = 
 
   return invokeFunction(appConfig.functions.submitReview, {
     request_id: requestId,
-    rating,
-    comment
+    stars: normalizedStars
   });
 }
 
@@ -842,6 +899,7 @@ export async function loadOffers(providerId) {
   if (!hasBackend() || !providerId) return [];
 
   await requireSession();
+  const nowIso = new Date().toISOString();
 
   return fetchTable("svc_request_offers", (query) =>
     query
@@ -873,6 +931,7 @@ export async function loadOffers(providerId) {
       `)
       .eq("provider_id", providerId)
       .in("status", ["PENDING"])
+      .gt("expires_at", nowIso)
       .order("created_at", { ascending: false })
       .limit(20)
   );
@@ -952,38 +1011,11 @@ export async function updateProviderStatus(providerId, status) {
 
   await requireSession();
 
-  let location = null;
-
-  try {
-    if (
-      typeof navigator !== "undefined" &&
-      navigator.geolocation &&
-      status !== "OFFLINE"
-    ) {
-      const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 30000
-        });
-      });
-
-      location = {
-        last_lat: position.coords.latitude,
-        last_lng: position.coords.longitude,
-        last_location: `POINT(${position.coords.longitude} ${position.coords.latitude})`
-      };
-    }
-  } catch {
-    location = null;
-  }
-
   const { data, error } = await supabase
     .from("svc_providers")
     .update({
       status,
-      last_seen_at: new Date().toISOString(),
-      ...(location ?? {})
+      last_seen_at: new Date().toISOString()
     })
     .eq("id", providerId)
     .select(
@@ -992,6 +1024,36 @@ export async function updateProviderStatus(providerId, status) {
     .single();
 
   if (error) throw error;
+
+  if (
+    typeof navigator !== "undefined" &&
+    navigator.geolocation &&
+    status !== "OFFLINE"
+  ) {
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          await supabase
+            .from("svc_providers")
+            .update({
+              last_lat: position.coords.latitude,
+              last_lng: position.coords.longitude,
+              last_location: `POINT(${position.coords.longitude} ${position.coords.latitude})`,
+              last_seen_at: new Date().toISOString()
+            })
+            .eq("id", providerId);
+        } catch (locationError) {
+          console.warn("[service-api] provider location update skipped", locationError);
+        }
+      },
+      () => {},
+      {
+        enableHighAccuracy: true,
+        timeout: 2500,
+        maximumAge: 30000
+      }
+    );
+  }
 
   return data;
 }
@@ -1105,7 +1167,7 @@ export async function loadProviderWorkspace(providerId) {
 
     fetchTable("svc_reviews", (query) =>
       query
-        .select("id,provider_id,client_user_id,rating,comment,created_at")
+        .select("id,provider_id,client_user_id,rating,stars,created_at")
         .eq("provider_id", providerId)
         .order("created_at", { ascending: false })
         .limit(4)

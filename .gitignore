@@ -3,3 +3,13 @@
 mimi-servicios/supabase/.temp/
 supabase/.temp/
 .temp/
+
+# Local PocketBase runtime/data
+pocketbase/
+pb_data/
+pb_migrations/
+
+# Local QA / backup artifacts
+backups/
+remote_snapshot.sql
+qa/*.png

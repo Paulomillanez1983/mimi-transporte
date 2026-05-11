@@ -8,6 +8,7 @@ import {
   loadClientServiceHistory,
   loadConversationForRequest,
   loadClientRequestInsights,
+  getServicePin,
   loadMessages,
   loadNotifications,
   registerDevice,
@@ -34,6 +35,7 @@ import {
   subscribeToAuthChanges
 } from "./services/supabase.js";
 import { getMimiPushToken } from "./services/push.js";
+import { loadCmsServiceCategories } from "./services/pocketbase-cms.js";
 import {
   patchState,
   setState,
@@ -840,7 +842,7 @@ function openReviewDialog(requestId) {
     return;
   }
 
-  if (request.review?.rating) {
+  if (request.review?.stars || request.review?.rating) {
     setInfo("Este servicio ya fue calificado.");
     return;
   }
@@ -849,7 +851,6 @@ function openReviewDialog(requestId) {
   selectedReviewRating = 5;
 
   const overlay = document.getElementById("reviewOverlay");
-  const textarea = document.getElementById("reviewCommentInput");
   const title = document.getElementById("reviewServiceTitle");
   const status = document.getElementById("reviewStatusText");
 
@@ -857,8 +858,7 @@ function openReviewDialog(requestId) {
     const category = request.svc_categories?.name || request.category_name || "Servicio";
     title.textContent = `Calificar ${category}`;
   }
-  if (textarea) textarea.value = "";
-  if (status) status.textContent = "Tu opinion ayuda a ordenar mejor la experiencia, sin rankings publicos de calidad.";
+  if (status) status.textContent = "Tu calificacion ayuda a ordenar mejor MIMI. Solo estrellas, sin comentarios publicos.";
 
   paintReviewStars();
   if (overlay) {
@@ -881,7 +881,6 @@ async function submitCurrentReview() {
   }
 
   const submitButton = document.getElementById("reviewSubmitButton");
-  const comment = document.getElementById("reviewCommentInput")?.value ?? "";
 
   await runClientAction(
     `submit-review:${pendingReviewRequestId}`,
@@ -891,8 +890,7 @@ async function submitCurrentReview() {
     async () => {
       const result = await submitServiceReview({
         requestId: pendingReviewRequestId,
-        rating: selectedReviewRating,
-        comment
+        stars: selectedReviewRating
       });
 
       if (result?.ok === false) {
@@ -907,7 +905,7 @@ async function submitCurrentReview() {
         draft.client.selectedProvider = null;
         draft.client.serviceHistory = (draft.client.serviceHistory ?? []).map((item) =>
           item.id === requestId
-            ? { ...item, review: result.review ?? { rating: selectedReviewRating, comment } }
+            ? { ...item, review: result.review ?? { stars: selectedReviewRating, rating: selectedReviewRating } }
             : item
         );
         draft.meta.info = "Gracias. La calificacion quedo guardada en tu historial.";
@@ -1335,6 +1333,7 @@ function mergeCategories(remoteCategories = [], localCategories = []) {
       byCode.set(category.code, {
         ...fallback,
         ...category,
+        id: category.source === "pocketbase_cms" && fallback.id ? fallback.id : category.id,
         aliases: [
           ...(Array.isArray(fallback.aliases) ? fallback.aliases : []),
           ...(Array.isArray(category.aliases) ? category.aliases : [])
@@ -1696,6 +1695,14 @@ async function hydrateLiveContext(activeRequestOverride) {
         providerCategories: []
       };
 
+  const pinVisibleStatuses = ["ACCEPTED", "SCHEDULED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED"];
+  const servicePin = activeRequest?.id && pinVisibleStatuses.includes(String(activeRequest.status || "").toUpperCase())
+    ? await getServicePin(activeRequest.id).catch((error) => {
+        console.warn("[MIMI] No se pudo obtener PIN de servicio:", error);
+        return null;
+      })
+    : null;
+
   setState((draft) => {
     draft.client.activeRequest = activeRequest
       ? {
@@ -1709,7 +1716,10 @@ async function hydrateLiveContext(activeRequestOverride) {
       : null;
 
     draft.client.activeConversationId = conversation?.id ?? null;
-    draft.client.insights = insights;
+    draft.client.insights = {
+      ...insights,
+      servicePin
+    };
     draft.chat.messages = messages;
     draft.chat.unreadCount = messages.filter(
       (message) =>
@@ -1746,6 +1756,18 @@ async function bootstrapAsyncData() {
   appConfig.categories = rankCategoriesForClient(
     mergeCategories(categories, appConfig.categories)
   );
+
+  loadCmsServiceCategories([])
+    .then((cmsCategories) => {
+      if (!Array.isArray(cmsCategories) || !cmsCategories.length) return;
+      appConfig.categories = rankCategoriesForClient(
+        mergeCategories(cmsCategories, appConfig.categories)
+      );
+      setState((draft) => {
+        draft.meta.cmsLoadedAt = new Date().toISOString();
+      });
+    })
+    .catch(() => {});
 
   if (session.isAuthenticated && session.role === "provider") {
     // mismo usuario puede usar ambos modos; no redirigimos automaticamente
@@ -1906,7 +1928,8 @@ async function handleSearchSubmit(event) {
       state.ui.selectedCategoryId,
       {
         ...state.requestDraft,
-        requestedHours: requestedHoursForCurrentCategory()
+        requestedHours: requestedHoursForCurrentCategory(),
+        sortMode: state.ui.providerSortMode || "recommended"
       }
     );
 
@@ -2158,6 +2181,36 @@ async function handleRequestAction(action) {
 
   await hydrateLiveContext();
   console.log("[MIMI Cancel] step 3 OK: state actualizado y context refrescado");
+}
+
+function openProviderSortSheet() {
+  const overlay = document.getElementById("providerSortOverlay");
+  if (!overlay) return;
+  overlay.hidden = false;
+  const mode = state.ui.providerSortMode || "recommended";
+  overlay.querySelectorAll("[data-provider-sort]").forEach((button) => {
+    const active = button.dataset.providerSort === mode;
+    button.classList.toggle("is-selected", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+}
+
+function closeProviderSortSheet() {
+  const overlay = document.getElementById("providerSortOverlay");
+  if (overlay) overlay.hidden = true;
+}
+
+function selectProviderSortMode(mode) {
+  const allowed = new Set(["recommended", "distance", "rating", "price"]);
+  const sortMode = allowed.has(mode) ? mode : "recommended";
+  patchState("ui.providerSortMode", sortMode);
+  closeProviderSortSheet();
+  setInfo(`Prestadores ordenados por ${
+    sortMode === "distance" ? "distancia" :
+    sortMode === "rating" ? "calificacion" :
+    sortMode === "price" ? "precio" :
+    "mejor match"
+  }.`);
 }
 
 async function handlePaymentAction(action) {
@@ -2756,6 +2809,25 @@ function bindBasicControls() {
         return;
       }
 
+      if (event.target.closest("#providerSortButton")) {
+        event.preventDefault();
+        openProviderSortSheet();
+        return;
+      }
+
+      const providerSort = event.target.closest("[data-provider-sort]");
+      if (providerSort) {
+        event.preventDefault();
+        selectProviderSortMode(providerSort.dataset.providerSort);
+        return;
+      }
+
+      if (event.target.closest("[data-provider-sort-close]")) {
+        event.preventDefault();
+        closeProviderSortSheet();
+        return;
+      }
+
       const focusProvider = event.target.closest("[data-provider-focus]");
       if (focusProvider) {
         patchState("ui.selectedProviderCandidateId", focusProvider.dataset.providerFocus);
@@ -2825,6 +2897,9 @@ function setupRealtime(
     return;
   }
 
+  const activeStatus = String(state.client.activeRequest?.status || "").toUpperCase();
+  const shouldTrackProvider = Boolean(requestId) && !["IN_PROGRESS", "COMPLETED", "CANCELLED"].includes(activeStatus);
+
   realtimeSubscription = subscribeToClientRealtime({
     userId: state.session.userId,
     requestId,
@@ -2855,7 +2930,7 @@ function setupRealtime(
 
       playNotificationSound();
     },
-    onTracking: ({ new: payload }) => {
+    onTracking: shouldTrackProvider ? ({ new: payload }) => {
       if (!payload) return;
 
       setState((draft) => {
@@ -2872,7 +2947,7 @@ function setupRealtime(
           lng: payload.lng
         }
       });
-    },
+    } : null,
     onRequest: ({ new: payload }) => {
       if (!payload) return;
 

@@ -47,7 +47,7 @@
   >
   <link rel="stylesheet" href="./styles/app.css">
   <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.10.7">
-  <link rel="stylesheet" href="./styles/client.css?v=branding-v3">
+  <link rel="stylesheet" href="./styles/client.css?v=2026.05.10.15">
 </head>
 <body data-client-view="home">
   <div class="app-shell">
@@ -302,7 +302,7 @@
             <h2 id="providersTitle">Todos los prestadores</h2>
             <span id="providersMeta">Esperando busqueda de proveedores registrados</span>
           </div>
-          <button class="sort-chip" type="button" aria-label="Ordenar resultados">
+          <button class="sort-chip" id="providerSortButton" type="button" aria-haspopup="dialog" aria-controls="providerSortOverlay" aria-label="Ordenar resultados">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
               <line x1="4" y1="6" x2="20" y2="6"></line><line x1="8" y1="12" x2="20" y2="12"></line><line x1="12" y1="18" x2="20" y2="18"></line>
             </svg>
@@ -464,6 +464,25 @@
       </section>
     </div>
 
+    <div class="request-confirm-overlay provider-sort-overlay" id="providerSortOverlay" hidden>
+      <section class="request-confirm-sheet provider-sort-sheet" role="dialog" aria-modal="true" aria-labelledby="providerSortTitle">
+        <div class="request-confirm-head">
+          <span class="eyebrow">Ordenar prestadores</span>
+          <h2 id="providerSortTitle">Elegí cómo comparar</h2>
+          <p>Usamos datos reales de distancia, precio, disponibilidad y reputación.</p>
+        </div>
+        <div class="provider-sort-options" role="listbox" aria-label="Criterio de orden">
+          <button type="button" data-provider-sort="recommended">Recomendado</button>
+          <button type="button" data-provider-sort="distance">Distancia</button>
+          <button type="button" data-provider-sort="rating">Calificación</button>
+          <button type="button" data-provider-sort="price">Precio</button>
+        </div>
+        <div class="request-confirm-actions">
+          <button class="btn-secondary" type="button" data-provider-sort-close>Cerrar</button>
+        </div>
+      </section>
+    </div>
+
     <div class="request-progress-overlay" id="requestProgressOverlay" hidden>
       <section class="request-progress-sheet" role="status" aria-live="polite" aria-atomic="true">
         <div class="request-progress-spinner" aria-hidden="true"></div>
@@ -493,11 +512,7 @@
             <button type="button" data-review-rating="4" aria-label="4 estrellas">★</button>
             <button type="button" data-review-rating="5" aria-label="5 estrellas">★</button>
           </div>
-          <label class="review-comment-field">
-            <span>Comentario opcional</span>
-            <textarea id="reviewCommentInput" maxlength="800" rows="4" placeholder="Contanos si la coordinacion fue clara..."></textarea>
-          </label>
-          <p id="reviewStatusText">Tu opinion ayuda a ordenar mejor la experiencia.</p>
+          <p id="reviewStatusText">Tu calificación ayuda a ordenar mejor la experiencia. Solo estrellas, sin comentarios públicos.</p>
           <div class="confirm-actions">
             <button class="btn-secondary" type="button" data-review-close>Ahora no</button>
             <button class="btn-primary" id="reviewSubmitButton" type="submit">Guardar calificacion</button>
@@ -551,6 +566,6 @@
   <script src="./env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <script type="module" src="./src/main-client.js?v=2026.05.10.13"></script>
+  <script type="module" src="./src/main-client.js?v=2026.05.10.20"></script>
 </body>
 </html>

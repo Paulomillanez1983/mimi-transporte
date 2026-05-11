@@ -1,4 +1,8 @@
 import { getSupabaseClient } from "./supabase.js";
+import {
+  disconnectRealtime as disconnectManagedRealtime,
+  subscribeScopedChannel
+} from "./realtime-manager.js";
 
 let channels = [];
 
@@ -10,6 +14,7 @@ function rememberChannel(channel) {
 
 export function disconnectRealtime() {
   const supabase = getSupabaseClient();
+  disconnectManagedRealtime("services:");
 
   if (!supabase) {
     channels = [];
@@ -35,8 +40,10 @@ function subscribeNotifications(userId, onNotification) {
   }
 
   return rememberChannel(
-    supabase
-      .channel(`mimi-servicios-notifications-${userId}`)
+    subscribeScopedChannel(
+      `services:notifications:${userId}`,
+      (count) => supabase
+      .channel(`client:${userId}:notifications`)
       .on(
         "postgres_changes",
         {
@@ -45,9 +52,11 @@ function subscribeNotifications(userId, onNotification) {
           table: "svc_notifications",
           filter: `user_id=eq.${userId}`
         },
-        onNotification
+        count(onNotification)
       )
-      .subscribe()
+      .subscribe(),
+      { pauseWhenHidden: true }
+    )
   );
 }
 
@@ -59,8 +68,10 @@ function subscribeMessages(conversationId, onMessage) {
   }
 
   return rememberChannel(
-    supabase
-      .channel(`mimi-servicios-messages-${conversationId}`)
+    subscribeScopedChannel(
+      `services:messages:${conversationId}`,
+      (count) => supabase
+      .channel(`conversation:${conversationId}:messages`)
       .on(
         "postgres_changes",
         {
@@ -69,9 +80,11 @@ function subscribeMessages(conversationId, onMessage) {
           table: "svc_messages",
           filter: `conversation_id=eq.${conversationId}`
         },
-        onMessage
+        count(onMessage)
       )
-      .subscribe()
+      .subscribe(),
+      { pauseWhenHidden: true }
+    )
   );
 }
 
@@ -84,8 +97,10 @@ function subscribeRequest(requestId, onTracking, onRequest, onOffer) {
 
   if (typeof onTracking === "function") {
     rememberChannel(
-      supabase
-        .channel(`mimi-servicios-tracking-${requestId}`)
+      subscribeScopedChannel(
+        `services:job:${requestId}:tracking`,
+        (count) => supabase
+        .channel(`job:${requestId}:tracking`)
         .on(
           "postgres_changes",
           {
@@ -94,13 +109,15 @@ function subscribeRequest(requestId, onTracking, onRequest, onOffer) {
             table: "svc_tracking",
             filter: `request_id=eq.${requestId}`
           },
-          onTracking
+          count(onTracking)
         )
-        .subscribe()
+        .subscribe(),
+        { critical: true }
+      )
     );
   }
 
-  const requestChannel = supabase.channel(`mimi-servicios-requests-${requestId}`);
+  const requestChannel = supabase.channel(`job:${requestId}`);
   let hasRequestSubscriptions = false;
 
   if (typeof onRequest === "function") {
@@ -137,7 +154,13 @@ function subscribeRequest(requestId, onTracking, onRequest, onOffer) {
     return null;
   }
 
-  return rememberChannel(requestChannel.subscribe());
+  return rememberChannel(
+    subscribeScopedChannel(
+      `services:job:${requestId}:state`,
+      () => requestChannel.subscribe(),
+      { critical: true }
+    )
+  );
 }
 
 function subscribeProviderOffers(providerId, onOffer) {
@@ -148,8 +171,10 @@ function subscribeProviderOffers(providerId, onOffer) {
   }
 
   return rememberChannel(
-    supabase
-      .channel(`mimi-servicios-provider-offers-${providerId}`)
+    subscribeScopedChannel(
+      `services:provider:${providerId}:inbox`,
+      (count) => supabase
+      .channel(`provider:${providerId}:inbox`)
       .on(
         "postgres_changes",
         {
@@ -158,9 +183,11 @@ function subscribeProviderOffers(providerId, onOffer) {
           table: "svc_request_offers",
           filter: `provider_id=eq.${providerId}`
         },
-        onOffer
+        count(onOffer)
       )
-      .subscribe()
+      .subscribe(),
+      { critical: true }
+    )
   );
 }
 

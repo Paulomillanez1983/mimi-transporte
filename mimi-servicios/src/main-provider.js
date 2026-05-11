@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.10.12";
+const MIMI_PROVIDER_BUILD = "2026.05.10.20";
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -60,6 +60,14 @@ import {
   signInWithGoogle
 } from "./services/supabase.js";
 import { getMimiPushToken } from "./services/push.js";
+import {
+  MIMI_ACTIVE_JOB_LOCATION_INTERVAL_MS,
+  MIMI_PROVIDER_HEARTBEAT_INTERVAL_MS
+} from "./services/runtime-config.js";
+import {
+  disconnectRealtime as disconnectManagedRealtime,
+  subscribeScopedChannel
+} from "./services/realtime-manager.js";
 
 // ============================================
 // APP CONTROLLER
@@ -89,6 +97,8 @@ class MimiProviderApp {
     this.lastRoadRouteKey = null;
     this.lastRoadRouteAt = 0;
     this.lastRoadRouteData = null;
+    this.lastRouteDataKey = "";
+    this.lastRouteDataAt = 0;
     this.navigationMode = false;
     this.navigationCameraFollowing = true;
     this.pendingActions = new Set();
@@ -96,7 +106,7 @@ class MimiProviderApp {
     this.lastProviderTrackingSentAt = 0;
     this.lastProviderTrackingRequestId = null;
     this.providerTrackingMinDistanceMeters = 1000;
-    this.providerTrackingHeartbeatMs = 180000;
+    this.providerTrackingHeartbeatMs = MIMI_PROVIDER_HEARTBEAT_INTERVAL_MS;
     
     // DOM Elements cache
     this.elements = {};
@@ -237,7 +247,10 @@ if (!canBootProviderPanel) {
   return;
 }
   this.initUI();
-  await this.initMap();
+  this.initMap().catch((err) => {
+    console.warn("[MIMI] Map init deferred failed:", err?.message ?? err);
+    this.showMapFallback();
+  });
 
   this.setupEventListeners();
   this.setupBottomSheetGestures();
@@ -291,6 +304,11 @@ async registerProviderPushToken({ prompt = false } = {}) {
       offerClient: document.getElementById('offerClient'),
       offerPrice: document.getElementById('offerPrice'),
       offerDetails: document.getElementById('offerDetails'),
+      providerPinOverlay: document.getElementById('providerPinOverlay'),
+      providerPinInputs: document.getElementById('providerPinInputs'),
+      providerPinStatus: document.getElementById('providerPinStatus'),
+      providerPinSubmit: document.getElementById('providerPinSubmit'),
+      providerPinClose: document.getElementById('providerPinClose'),
       acceptOffer: document.getElementById('acceptOffer'),
       rejectOffer: document.getElementById('rejectOffer'),
       cameraCaptureModal: document.getElementById("cameraCaptureModal"),
@@ -748,7 +766,7 @@ setTimeout(() => {
       } catch (err) {
         console.warn("[MIMI] Error actualizando presencia liviana:", err);
       }
-    }, 15 * 60 * 1000);
+    }, MIMI_PROVIDER_HEARTBEAT_INTERVAL_MS);
   }
 
   stopPresenceHeartbeat() {
@@ -891,12 +909,18 @@ setTimeout(() => {
             [Number(servicePosition.lng), Number(servicePosition.lat)]
           ]
         : [];
+      const routeDataKey = JSON.stringify(coordinates.map((coord) => coord.map((value) => Number(value).toFixed(5))));
+      const now = Date.now();
 
-      routeSource.setData({
-        type: "Feature",
-        geometry: { type: "LineString", coordinates },
-        properties: {}
-      });
+      if (routeDataKey !== this.lastRouteDataKey || now - this.lastRouteDataAt > 15000) {
+        this.lastRouteDataKey = routeDataKey;
+        this.lastRouteDataAt = now;
+        routeSource.setData({
+          type: "Feature",
+          geometry: { type: "LineString", coordinates },
+          properties: {}
+        });
+      }
     }
 
     if (hasProvider && hasService) {
@@ -1607,7 +1631,7 @@ setTimeout(async () => {
     actions.updateState({
       provider: {
         ...(this.state?.provider ?? {}),
-        offers: Array.isArray(offers) ? offers : []
+        offers: this.filterUsableOffers(offers)
       }
     });
 
@@ -1618,9 +1642,11 @@ setTimeout(async () => {
       }
     });
 
-    const firstOffer = Array.isArray(offers) ? offers[0] : null;
+    const firstOffer = this.filterUsableOffers(offers)[0] ?? null;
     if (firstOffer) {
       actions.setActiveOffer(this.normalizeOfferForState(firstOffer));
+    } else {
+      actions.clearActiveOffer();
     }
 
     if (activeRequest) {
@@ -1812,6 +1838,7 @@ stats: {
     const unitName = details.unit_name || "";
     const unitPrice = Number(details.unit_price || 0);
     const providerAmount = Number(details.provider_price ?? request.provider_price_snapshot ?? offer.provider_price_snapshot ?? 0);
+    const clientAmount = Number(details.total_price ?? request.total_price_snapshot ?? offer.total_price_snapshot ?? 0);
     const currency = details.currency || request.currency || "ARS";
 
     if (quantity > 0 && unitName) {
@@ -1839,6 +1866,10 @@ stats: {
       rows.push({ label: "Precio", value: "A coordinar" });
     }
 
+    if (clientAmount > 0 && clientAmount !== providerAmount) {
+      rows.push({ label: "Cliente paga", value: this.formatMoney(clientAmount, currency) });
+    }
+
     const notes = String(details.client_notes || request.notes || "").trim();
     if (notes) {
       rows.push({
@@ -1862,6 +1893,7 @@ stats: {
       requestId: offer.request_id ?? request.id ?? null,
       serviceType:
         details.category_name ??
+        details.offering_title ??
         offer.title ??
         request.title ??
         request.category_name ??
@@ -1878,6 +1910,32 @@ stats: {
       createdAt: offer.created_at ?? new Date().toISOString(),
       raw: offer
     };
+  }
+
+  isUsableOffer(offer = {}) {
+    const status = String(offer.status ?? "").trim().toUpperCase();
+    if (status && status !== "PENDING" && status !== "PENDING_PROVIDER_RESPONSE") {
+      return false;
+    }
+
+    const expiresAt = offer.expires_at ?? offer.expiresAt ?? null;
+    if (expiresAt) {
+      const expiresAtMs = Date.parse(expiresAt);
+      if (Number.isFinite(expiresAtMs) && expiresAtMs <= Date.now()) {
+        return false;
+      }
+    }
+
+    const providerId = this.state?.session?.providerId;
+    if (providerId && offer.provider_id && String(offer.provider_id) !== String(providerId)) {
+      return false;
+    }
+
+    return Boolean(offer.id);
+  }
+
+  filterUsableOffers(offers = []) {
+    return (Array.isArray(offers) ? offers : []).filter((offer) => this.isUsableOffer(offer));
   }
 
   normalizeNotifications(items = []) {
@@ -1903,12 +1961,13 @@ stats: {
     return aliases[value] ?? value;
   }
 
-  async applyServiceTransition(functionName, nextProviderStatus, successMessage) {
+  async applyServiceTransition(functionName, nextProviderStatus, successMessage, payload = {}) {
     const service = this.state?.activeService;
     if (!service?.requestId) return;
 
     const response = await invokeFunction(functionName, {
-      request_id: service.requestId
+      request_id: service.requestId,
+      ...payload
     });
 
     const updatedService = response?.service ?? response?.request ?? response?.data ?? null;
@@ -1922,6 +1981,88 @@ stats: {
     }
 
     this.showToast(successMessage, "success");
+  }
+
+  requestServicePin() {
+    const value = window.prompt("Ingresá el código de 4 dígitos que te brinda el cliente para iniciar el servicio.");
+    const pin = String(value || "").replace(/\D/g, "").slice(0, 4);
+    if (!/^\d{4}$/.test(pin)) {
+      this.showToast("Necesitamos un PIN de 4 dígitos para iniciar.", "error");
+      return null;
+    }
+    return pin;
+  }
+
+  requestServicePinDialog() {
+    const overlay = this.elements.providerPinOverlay;
+    const inputs = Array.from(this.elements.providerPinInputs?.querySelectorAll("input") || []);
+    const submit = this.elements.providerPinSubmit;
+    const close = this.elements.providerPinClose;
+    const status = this.elements.providerPinStatus;
+
+    if (!overlay || !inputs.length || !submit) {
+      this.showToast("No pudimos abrir el validador de codigo. Reintenta en unos segundos.", "error");
+      return Promise.resolve(null);
+    }
+
+    return new Promise((resolve) => {
+      const cleanup = () => {
+        overlay.hidden = true;
+        submit.removeEventListener("click", onSubmit);
+        close?.removeEventListener("click", onCancel);
+        overlay.removeEventListener("click", onOverlayClick);
+        inputs.forEach((input) => {
+          input.removeEventListener("input", onInput);
+          input.removeEventListener("keydown", onKeyDown);
+        });
+      };
+      const pinValue = () => inputs.map((input) => input.value.replace(/\D/g, "")).join("");
+      const setStatus = (message = "") => {
+        if (status) status.textContent = message;
+      };
+      const onCancel = () => {
+        cleanup();
+        resolve(null);
+      };
+      const onSubmit = () => {
+        const pin = pinValue();
+        if (!/^\d{4}$/.test(pin)) {
+          setStatus("Completa los 4 digitos para validar el servicio.");
+          inputs.find((input) => !input.value)?.focus();
+          return;
+        }
+        cleanup();
+        resolve(pin);
+      };
+      const onOverlayClick = (event) => {
+        if (event.target === overlay) onCancel();
+      };
+      const onInput = (event) => {
+        const input = event.currentTarget;
+        input.value = input.value.replace(/\D/g, "").slice(0, 1);
+        setStatus("");
+        if (input.value) inputs[inputs.indexOf(input) + 1]?.focus();
+      };
+      const onKeyDown = (event) => {
+        const index = inputs.indexOf(event.currentTarget);
+        if (event.key === "Backspace" && !event.currentTarget.value && index > 0) {
+          inputs[index - 1]?.focus();
+        }
+        if (event.key === "Enter") onSubmit();
+      };
+
+      inputs.forEach((input) => {
+        input.value = "";
+        input.addEventListener("input", onInput);
+        input.addEventListener("keydown", onKeyDown);
+      });
+      submit.addEventListener("click", onSubmit);
+      close?.addEventListener("click", onCancel);
+      overlay.addEventListener("click", onOverlayClick);
+      setStatus("");
+      overlay.hidden = false;
+      window.setTimeout(() => inputs[0]?.focus(), 30);
+    });
   }
 
   setButtonBusy(button, busy, label = null) {
@@ -1959,6 +2100,24 @@ stats: {
       this.setButtonBusy(button, false);
       this.pendingActions.delete(key);
     }
+  }
+
+  setStatusToggleBusy(busy, targetStatus = null) {
+    const buttons = this.elements.statusToggleModern?.querySelectorAll(".toggle-option") ?? [];
+    buttons.forEach((button) => {
+      button.disabled = Boolean(busy);
+      button.classList.toggle("is-status-updating", Boolean(busy));
+      button.setAttribute("aria-disabled", busy ? "true" : "false");
+      if (busy && targetStatus && button.dataset.status === targetStatus) {
+        button.classList.add("is-loading");
+        button.setAttribute("aria-busy", "true");
+      } else {
+        button.classList.remove("is-loading");
+        button.removeAttribute("aria-busy");
+      }
+    });
+
+    document.body.classList.toggle("provider-status-updating", Boolean(busy));
   }
 
   openProviderSection(section) {
@@ -2491,8 +2650,11 @@ if (!providerId) {
   return;
 }
   const pushRegistration = this.registerProviderPushToken({ prompt: true }).catch(() => {});
+  const previousStatus = this.state?.provider?.status ?? "OFFLINE";
+  const previousProfile = this.state?.provider?.profile ?? null;
   try {
     actions.setLoading(true);
+    this.setStatusToggleBusy(true, "ONLINE_IDLE");
 
     const profile = await updateProviderStatus(providerId, "ONLINE_IDLE");
 
@@ -2507,8 +2669,11 @@ if (!providerId) {
     this.showToast("Ests online. Usamos tu ubicacion actual como referencia.", "success");
   } catch (err) {
     console.error("[MIMI] Error poniendo online:", err);
-    this.showToast("No pudimos ponerte online", "error");
+    actions.setProfile(previousProfile);
+    actions.setProviderStatus(previousProfile?.status ?? previousStatus);
+    this.showToast("No pudimos ponerte online. Volvimos al ultimo estado confirmado.", "error");
   } finally {
+    this.setStatusToggleBusy(false);
     actions.setLoading(false);
   }
 }
@@ -2516,6 +2681,13 @@ if (!providerId) {
    * Handle status toggle
    */
 async handleStatusToggle(status) {
+  const previousStatus = this.state?.provider?.status ?? "OFFLINE";
+  const previousProfile = this.state?.provider?.profile ?? null;
+
+  if (previousStatus === status) {
+    return;
+  }
+
   if (status === "ONLINE_IDLE" && !this.state?.provider.isVerified) {
     this.showToast("Necesitas completar tu verificacion", "warning");
     actions.openModal("verification");
@@ -2541,6 +2713,7 @@ async handleStatusToggle(status) {
 
   try {
     actions.setLoading(true);
+    this.setStatusToggleBusy(true, status);
 
     const profile = await updateProviderStatus(providerId, status);
 
@@ -2560,8 +2733,11 @@ async handleStatusToggle(status) {
     }
   } catch (err) {
     console.error("[MIMI] Error cambiando disponibilidad:", err);
-    this.showToast("No pudimos actualizar tu estado", "error");
+    actions.setProfile(previousProfile);
+    actions.setProviderStatus(previousProfile?.status ?? previousStatus);
+    this.showToast("No pudimos actualizar tu estado. Volvimos al ultimo estado confirmado.", "error");
   } finally {
+    this.setStatusToggleBusy(false);
     actions.setLoading(false);
   }
 }
@@ -3923,7 +4099,7 @@ startLocationTracking() {
     } catch (err) {
       console.warn("[MIMI] Error tracking location:", err);
     }
-  }, 10000);
+  }, MIMI_ACTIVE_JOB_LOCATION_INTERVAL_MS);
 }
   /**
    * Stop location tracking
@@ -3968,6 +4144,7 @@ startLocationTracking() {
 
     try {
       actions.setLoading(true);
+      this.showToast("Aceptando solicitud...", "info");
 
       const response = await invokeFunction("svc-provider-respond-offer", {
         offer_id: offer.id,
@@ -3983,16 +4160,18 @@ startLocationTracking() {
       const requestType = String(service.request_type ?? offer.mode ?? "IMMEDIATE").toUpperCase();
       const isImmediate = requestType !== "SCHEDULED";
 
+      actions.setActiveService(this.normalizeServiceForState(service));
+      actions.clearActiveOffer();
+      actions.setProviderStatus(isImmediate ? "EN_ROUTE" : "BOOKED_UPCOMING");
+
       if (isImmediate) {
+        this.showToast("Solicitud aceptada. Activando ruta...", "success");
         const enRoute = await invokeFunction("svc-provider-en-route", {
           request_id: service.id ?? service.request_id
         });
         service = enRoute?.service ?? enRoute?.request ?? service;
+        actions.setActiveService(this.normalizeServiceForState(service));
       }
-
-      actions.setActiveService(this.normalizeServiceForState(service));
-      actions.clearActiveOffer();
-      actions.setProviderStatus(isImmediate ? "EN_ROUTE" : "BOOKED_UPCOMING");
 
       if (this.offerTimer) {
         clearInterval(this.offerTimer);
@@ -4020,6 +4199,7 @@ startLocationTracking() {
     const offer = this.state?.activeOffer;
 
     try {
+      this.showToast("Rechazando solicitud...", "info");
       if (offer?.id) {
         await invokeFunction("svc-provider-respond-offer", {
           offer_id: offer.id,
@@ -4069,12 +4249,18 @@ startLocationTracking() {
           break;
 
         case "PROVIDER_ARRIVED":
+          {
+            const pin = await this.requestServicePinDialog();
+            if (!pin) break;
           await this.applyServiceTransition(
             "svc-start-service",
             "IN_SERVICE",
-            "Servicio iniciado"
+            "Servicio iniciado",
+            { pin }
           );
+          this.stopLocationTracking();
           break;
+          }
 
         case "IN_PROGRESS": {
         const response = await invokeFunction("svc-complete-service", {
@@ -4819,8 +5005,17 @@ renderOnlineButton() {
       return;
     }
 
+    if (!this.isUsableOffer({ ...offer.raw, id: offer.id, expires_at: offer.expiresAt })) {
+      actions.clearActiveOffer();
+      if (this.elements.offerCard) this.elements.offerCard.hidden = true;
+      return;
+    }
+
     if (this.elements.offerCard) {
       this.elements.offerCard.hidden = false;
+      if (!this.offerHasDisplayDetails(offer)) {
+        this.ensureActiveOfferDetails();
+      }
       
       if (this.elements.offerService) {
         this.elements.offerService.textContent = offer.serviceType;
@@ -5125,13 +5320,16 @@ if (this.elements.drawerInitials) {
         return;
       }
 
+      disconnectManagedRealtime("provider-app:");
       this.notificationRealtimeChannel?.unsubscribe?.();
       this.offerRealtimeChannel?.unsubscribe?.();
       this.realtimeChannel?.unsubscribe?.();
 
       if (userId) {
-        this.notificationRealtimeChannel = supabase
-          .channel(`mimi-services-provider-notifications-${userId}`)
+        this.notificationRealtimeChannel = subscribeScopedChannel(
+          `provider-app:notifications:${userId}`,
+          (count) => supabase
+          .channel(`provider:${providerId || userId}:notifications`)
           .on(
             "postgres_changes",
             {
@@ -5140,14 +5338,20 @@ if (this.elements.drawerInitials) {
               table: "svc_notifications",
               filter: `user_id=eq.${userId}`
             },
-            (payload) => this.onNotification(payload)
+            count((payload) => this.onNotification(payload))
           )
-          .subscribe((status) => console.log("[MIMI] Notifications realtime:", status));
+          .subscribe((status) => {
+            if (window.MIMI_DEBUG_REALTIME) console.log("[MIMI] Notifications realtime:", status);
+          }),
+          { pauseWhenHidden: true }
+        );
       }
 
       if (providerId) {
-        this.offerRealtimeChannel = supabase
-          .channel(`mimi-services-provider-offers-${providerId}`)
+        this.offerRealtimeChannel = subscribeScopedChannel(
+          `provider-app:provider:${providerId}:inbox`,
+          (count) => supabase
+          .channel(`provider:${providerId}:inbox`)
           .on(
             "postgres_changes",
             {
@@ -5156,9 +5360,13 @@ if (this.elements.drawerInitials) {
               table: "svc_request_offers",
               filter: `provider_id=eq.${providerId}`
             },
-            (payload) => this.onOfferChange(payload)
+            count((payload) => this.onOfferChange(payload))
           )
-          .subscribe((status) => console.log("[MIMI] Offers realtime:", status));
+          .subscribe((status) => {
+            if (window.MIMI_DEBUG_REALTIME) console.log("[MIMI] Offers realtime:", status);
+          }),
+          { critical: true }
+        );
       }
     } catch (err) {
       console.error("[MIMI] Realtime error:", err);
@@ -5214,6 +5422,29 @@ if (this.elements.drawerInitials) {
     }
   }
 
+  offerHasDisplayDetails(offer = {}) {
+    const normalized = offer.details ? offer : this.normalizeOfferForState(offer);
+    return Boolean(
+      normalized.serviceType &&
+      normalized.serviceType !== "Servicio" &&
+      (Number(normalized.price || 0) > 0 || (normalized.detailRows || []).some((row) => row?.label !== "Precio"))
+    );
+  }
+
+  async ensureActiveOfferDetails() {
+    const offer = this.state?.activeOffer;
+    if (!offer?.id || this.offerHasDisplayDetails(offer)) return;
+
+    try {
+      const detailed = await loadOfferDetails(offer.id);
+      if (detailed && this.isUsableOffer(detailed)) {
+        actions.setActiveOffer(this.normalizeOfferForState(detailed));
+      }
+    } catch (error) {
+      console.warn("[MIMI] no pudimos refrescar detalle de oferta activa:", error);
+    }
+  }
+
   async onOfferChange(payload) {
     const eventType = payload?.eventType;
     const row = payload?.new ?? payload?.old;
@@ -5234,8 +5465,9 @@ if (this.elements.drawerInitials) {
       return;
     }
 
-    if (["PENDING", "PENDING_PROVIDER_RESPONSE"].includes(status)) {
+    if (["PENDING", "PENDING_PROVIDER_RESPONSE"].includes(status) && this.isUsableOffer(row)) {
       const detailedOffer = await this.hydrateOfferForDisplay(row);
+      if (!this.isUsableOffer(detailedOffer)) return;
       actions.setActiveOffer(this.normalizeOfferForState(detailedOffer));
       actions.updateState({
         provider: {

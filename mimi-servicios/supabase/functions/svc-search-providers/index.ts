@@ -137,6 +137,28 @@ function referencePrice(pricing?: Record<string, unknown>, offering?: Record<str
   return Number(candidates.find((value) => Number(value) > 0) ?? 0);
 }
 
+function sortProviders(providers: Array<Record<string, unknown>>, sortBy: string) {
+  const ratingScore = (provider: Record<string, unknown>) => {
+    const avg = Number(provider.rating || provider.rating_avg || 0);
+    const count = Number(provider.rating_count || 0);
+    return avg * Math.min(1, count / 10);
+  };
+
+  return [...providers].sort((a, b) => {
+    if (sortBy === "distance") {
+      return Number(a.distance_km || 999) - Number(b.distance_km || 999);
+    }
+    if (sortBy === "rating") {
+      return ratingScore(b) - ratingScore(a);
+    }
+    if (sortBy === "price") {
+      return Number(a.provider_price || a.total_price || 999999) - Number(b.provider_price || b.total_price || 999999);
+    }
+
+    return Number(b.score || 0) - Number(a.score || 0);
+  });
+}
+
 async function requireUser(req: Request, supabaseUrl: string, anonKey: string) {
   const auth = req.headers.get("Authorization") || "";
   const token = auth.replace(/^Bearer\s+/i, "").trim();
@@ -176,6 +198,12 @@ serve(async (req) => {
     const requestType = String(body?.request_type || "IMMEDIATE").toUpperCase();
     const requestedHours = Math.max(0.25, Math.min(Number(body?.requested_hours || 1), 24));
     const limit = Math.max(1, Math.min(Number(body?.max_results || 20), 50));
+    const page = Math.max(1, Number(body?.page || 1));
+    const offset = Math.max(0, (page - 1) * limit);
+    const radiusKm = Math.max(1, Math.min(Number(body?.radius_km || 25), 100));
+    const sortBy = ["distance", "rating", "price", "recommended"].includes(String(body?.sort_by || ""))
+      ? String(body?.sort_by)
+      : "recommended";
 
     if (!assertUuid(categoryId)) {
       return json({ ok: false, error: "category_id_invalid", providers: [] }, 400);
@@ -230,7 +258,11 @@ serve(async (req) => {
         };
       }));
 
-      return json({ ok: true, providers: publicProviders, count: publicProviders.length, source: "rpc" });
+      const sortedRpcProviders = sortProviders(publicProviders, sortBy)
+        .filter((provider) => provider.distance_km == null || Number(provider.distance_km) <= radiusKm)
+        .slice(offset, offset + limit);
+
+      return json({ ok: true, providers: sortedRpcProviders, count: sortedRpcProviders.length, source: "rpc", page, sort_by: sortBy, radius_km: radiusKm });
     }
 
     const { data: categoryLinks, error: categoryError } = await admin
@@ -357,10 +389,11 @@ serve(async (req) => {
         };
       })))
       .filter((provider) => provider.accepts_immediate !== false)
-      .sort((a, b) => Number(a.distance_km || 999) - Number(b.distance_km || 999))
-      .slice(0, limit);
+      .filter((provider) => provider.distance_km == null || Number(provider.distance_km) <= radiusKm);
 
-    return json({ ok: true, providers, count: providers.length, source: "tables" });
+    const sortedProviders = sortProviders(providers, sortBy).slice(offset, offset + limit);
+
+    return json({ ok: true, providers: sortedProviders, count: sortedProviders.length, source: "tables", page, sort_by: sortBy, radius_km: radiusKm });
   } catch (error) {
     console.error("svc-search-providers error:", error);
     return json(

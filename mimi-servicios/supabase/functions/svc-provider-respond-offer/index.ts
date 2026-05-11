@@ -19,6 +19,41 @@ function assertUuid(value: unknown) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
 }
 
+function randomPin() {
+  const value = crypto.getRandomValues(new Uint32Array(1))[0] % 10000;
+  return value.toString().padStart(4, "0");
+}
+
+function bytesToHex(bytes: Uint8Array) {
+  return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function bytesToBase64(bytes: Uint8Array) {
+  let binary = "";
+  bytes.forEach((byte) => binary += String.fromCharCode(byte));
+  return btoa(binary);
+}
+
+async function pinHash(pin: string, requestId: string, secret: string) {
+  const input = new TextEncoder().encode(`${requestId}:${pin}:${secret}`);
+  return bytesToHex(new Uint8Array(await crypto.subtle.digest("SHA-256", input)));
+}
+
+async function encryptPin(pin: string, requestId: string, secret: string) {
+  const material = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret));
+  const key = await crypto.subtle.importKey("raw", material, "AES-GCM", false, ["encrypt"]);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encoded = new TextEncoder().encode(JSON.stringify({ pin, request_id: requestId }));
+  const cipher = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded));
+
+  return JSON.stringify({
+    v: 1,
+    alg: "AES-GCM-SHA256",
+    iv: bytesToBase64(iv),
+    data: bytesToBase64(cipher),
+  });
+}
+
 async function requireUser(req: Request, supabaseUrl: string, anonKey: string) {
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
   if (!token) throw new Error("AUTH_REQUIRED");
@@ -36,6 +71,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+    const pinSecret = Deno.env.get("SERVICE_PIN_SECRET") || serviceRoleKey;
     if (!supabaseUrl || !serviceRoleKey || !anonKey) throw new Error("SUPABASE_ENV_MISSING");
     const user = await requireUser(req, supabaseUrl, anonKey);
     const body = await req.json().catch(() => ({}));
@@ -80,9 +116,28 @@ serve(async (req) => {
       }
       return json({ ok: true, rejected: true, offer });
     }
+    const { data: offerForPin, error: pinOfferError } = await admin
+      .from("svc_request_offers")
+      .select("request_id")
+      .eq("id", offerId)
+      .maybeSingle();
+
+    if (pinOfferError) throw pinOfferError;
+    if (!offerForPin?.request_id) return json({ ok: false, error: "offer_not_found" }, 404);
+
+    const pin = randomPin();
+    const pinExpiresAt = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString();
+    const [servicePinHash, servicePinCiphertext] = await Promise.all([
+      pinHash(pin, offerForPin.request_id, pinSecret),
+      encryptPin(pin, offerForPin.request_id, pinSecret),
+    ]);
+
     const { data: result, error } = await admin.rpc("svc_accept_offer_atomic", {
       p_offer_id: offerId,
       p_provider_user_id: user.id,
+      p_pin_hash: servicePinHash,
+      p_pin_ciphertext: servicePinCiphertext,
+      p_pin_expires_at: pinExpiresAt,
     });
     if (error) throw error;
     if (result?.ok === false) {
@@ -109,6 +164,7 @@ serve(async (req) => {
           request_id: requestId,
           offer_id: offerId,
           status: request.status || "ACCEPTED",
+          pin_ready: "true",
           url: "/mimi-servicios/cliente.html",
         },
       });

@@ -49,7 +49,8 @@ const initialState = {
     intentResolution: null,
     showAllCategories: false,
     hasCompletedClientSearch: false,
-    showClientOnboarding: true
+    showClientOnboarding: true,
+    providerSortMode: 'recommended'
   },
 
   session: {
@@ -116,7 +117,8 @@ const initialState = {
       providerProfile: null,
       providerPricing: [],
       providerReviews: [],
-      providerCategories: []
+      providerCategories: [],
+      servicePin: null
     }
   },
 
@@ -347,6 +349,7 @@ function persistState() {
         showAllCategories: currentState.ui.showAllCategories,
         hasCompletedClientSearch: currentState.ui.hasCompletedClientSearch,
         showClientOnboarding: currentState.ui.showClientOnboarding,
+        providerSortMode: currentState.ui.providerSortMode,
         activeMode: currentState.ui.activeMode
       })
     );

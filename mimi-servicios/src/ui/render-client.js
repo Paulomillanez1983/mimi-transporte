@@ -524,6 +524,28 @@ function normalizeProvider(provider, index = 0) {
   return normalized;
 }
 
+const providerSortLabels = {
+  recommended: "recomendado",
+  distance: "distancia",
+  rating: "calificacion",
+  price: "precio"
+};
+
+function sortProviders(providers, mode = "recommended") {
+  const normalizedMode = providerSortLabels[mode] ? mode : "recommended";
+  return [...providers].sort((a, b) => {
+    if (a.available !== b.available) return Number(b.available) - Number(a.available);
+    if (normalizedMode === "distance") return a.distance - b.distance;
+    if (normalizedMode === "rating") {
+      const aWeighted = a.rating * Math.min(a.ratingCount, 25) / 25;
+      const bWeighted = b.rating * Math.min(b.ratingCount, 25) / 25;
+      return bWeighted - aWeighted || b.ratingCount - a.ratingCount || a.distance - b.distance;
+    }
+    if (normalizedMode === "price") return a.price - b.price || a.distance - b.distance;
+    return b.score - a.score || a.distance - b.distance;
+  });
+}
+
 function starRating(rating) {
   const full = Math.max(0, Math.min(5, Math.floor(Number(rating ?? 0))));
   const half = Number(rating ?? 0) % 1 >= 0.5 ? "+" : "";
@@ -977,15 +999,12 @@ export function renderProvidersList(state) {
   const carousel = document.getElementById("nearbyProvidersCarousel");
   if (!meta || !list) return;
 
-  const providers = (Array.isArray(state.client.providers)
+  const sortMode = state.ui.providerSortMode || "recommended";
+  const providers = sortProviders((Array.isArray(state.client.providers)
     ? state.client.providers
     : []
   )
-    .map(normalizeProvider)
-    .sort((a, b) => {
-      if (a.available !== b.available) return Number(b.available) - Number(a.available);
-      return a.distance - b.distance;
-    });
+    .map(normalizeProvider), sortMode);
 
   const selectedId =
     state.ui.selectedProviderCandidateId ||
@@ -996,10 +1015,17 @@ export function renderProvidersList(state) {
   const selectedCategoryName = selectedCategory?.name || "la categoria elegida";
 
   meta.textContent = providers.length
-    ? `${providers.length} prestadores compatibles ordenados por cercania y disponibilidad`
+    ? `${providers.length} prestadores compatibles ordenados por ${providerSortLabels[sortMode] || "recomendado"}`
     : hasSearched
       ? `Sin prestadores disponibles para ${selectedCategoryName}`
       : "Esperando busqueda";
+
+  const sortButton = document.getElementById("providerSortButton");
+  if (sortButton) {
+    const label = providerSortLabels[sortMode] || "recomendado";
+    sortButton.querySelector("strong")?.remove();
+    sortButton.insertAdjacentHTML("beforeend", `<strong>${escapeHtml(label)}</strong>`);
+  }
 
   renderRadarMap(providers, selectedId);
 
@@ -1083,6 +1109,13 @@ export function renderRequestSummary(state) {
   const compactAddress = compactServiceAddress(rawAddress);
 
   summary.innerHTML = `
+    ${state.client.insights?.servicePin?.pin ? `
+      <div class="summary-card service-pin-card">
+        <span class="eyebrow">Código de inicio</span>
+        <strong class="service-pin-code">${escapeHtml(state.client.insights.servicePin.pin)}</strong>
+        <span class="muted">Compartilo únicamente cuando el prestador llegue a tu domicilio. El servicio empieza cuando el código se valida.</span>
+      </div>
+    ` : ""}
     <div class="request-flow-card">
       <div class="request-flow-head">
         <strong>${escapeHtml(stateLabels[currentStatus] ?? currentStatus)}</strong>
@@ -1254,9 +1287,9 @@ function renderProviderSpotlight(state) {
       <strong>${escapeHtml(selectedProvider?.full_name ?? "Prestador confirmado")}</strong>
       <p class="muted">${escapeHtml(profile?.bio ?? selectedProvider?.bio ?? "Perfil de prestador cargado desde MIMI Go.")}</p>
       <div class="chip-row">
-        ${(reviews.length ? reviews : [{ rating: selectedProvider?.rating ?? 5, comment: "Proveedor registrado en MIMI." }])
+        ${(reviews.length ? reviews : [{ stars: selectedProvider?.rating ?? 5, rating: selectedProvider?.rating ?? 5 }])
           .slice(0, 2)
-          .map((item) => `<span class="inline-chip">${escapeHtml(Number(item.rating ?? 5).toFixed(1))} / 5</span>`)
+          .map((item) => `<span class="inline-chip">${escapeHtml(Number(item.stars ?? item.rating ?? 5).toFixed(1))} / 5</span>`)
           .join("")}
       </div>
     </article>
@@ -1308,7 +1341,7 @@ function renderClientServiceHistory(state) {
     .slice(0, 8)
     .map((item) => {
       const status = String(item.status || "").toUpperCase();
-      const reviewed = Boolean(item.review?.rating);
+      const reviewed = Boolean(item.review?.stars ?? item.review?.rating);
       return `
         <article class="history-service-card">
           <div>
@@ -1323,7 +1356,7 @@ function renderClientServiceHistory(state) {
             status === "COMPLETED" && !reviewed
               ? `<button class="btn-secondary" type="button" data-history-action="rate" data-request-id="${escapeHtml(item.id)}">Calificar</button>`
               : reviewed
-                ? `<small class="history-review-pill">${escapeHtml(String(item.review.rating))}/5 guardado</small>`
+                ? `<small class="history-review-pill">${escapeHtml(String(item.review.stars ?? item.review.rating))}/5 guardado</small>`
                 : ""
           }
         </article>
