@@ -118,6 +118,8 @@ export async function resolveActorContext(admin: SupabaseAdmin, user: any, actor
       profile = createdProfile;
     }
 
+    profile = await inheritVerifiedClientPhoneForProvider(admin, user.id, provider.id, profile);
+
     return { actorRole, user, providerId: provider.id, provider, profile };
   }
 
@@ -137,6 +139,51 @@ export async function resolveActorContext(admin: SupabaseAdmin, user: any, actor
     .single();
   if (error) throw error;
   return { actorRole, user, providerId: null, provider: null, profile };
+}
+
+async function inheritVerifiedClientPhoneForProvider(
+  admin: SupabaseAdmin,
+  userId: string,
+  providerId: string,
+  providerProfile: Record<string, any> | null,
+) {
+  if (providerProfile?.phone_verified === true) return providerProfile;
+
+  const { data: clientProfile, error: clientError } = await admin
+    .from("svc_client_profiles")
+    .select("phone_number,country_code,phone_verified,phone_verified_at,phone_updated_at,phone_last_change_at,trusted_device,trusted_until,last_verified_device_id,auth_risk_level,metadata_json")
+    .eq("user_id", userId)
+    .eq("phone_verified", true)
+    .maybeSingle();
+  if (clientError) throw clientError;
+  if (!clientProfile?.phone_number) return providerProfile;
+
+  const nowIso = new Date().toISOString();
+  const { data: updatedProfile, error: updateError } = await admin
+    .from("svc_provider_profiles")
+    .update({
+      phone_number: clientProfile.phone_number,
+      phone_country_code: clientProfile.country_code,
+      phone_verified: true,
+      phone_verified_at: clientProfile.phone_verified_at || nowIso,
+      phone_updated_at: clientProfile.phone_updated_at || nowIso,
+      phone_last_change_at: clientProfile.phone_last_change_at || clientProfile.phone_verified_at || nowIso,
+      trusted_device: clientProfile.trusted_device === true,
+      trusted_until: clientProfile.trusted_until,
+      last_verified_device_id: clientProfile.last_verified_device_id,
+      auth_risk_level: clientProfile.auth_risk_level || "low",
+      metadata_json: {
+        ...(providerProfile?.metadata_json || {}),
+        source: "client_phone_verification_inherited",
+        inherited_from_client_profile: true,
+        inherited_at: nowIso,
+      },
+    })
+    .eq("provider_id", providerId)
+    .select("*")
+    .single();
+  if (updateError) throw updateError;
+  return updatedProfile;
 }
 
 export async function getDeviceTrust(

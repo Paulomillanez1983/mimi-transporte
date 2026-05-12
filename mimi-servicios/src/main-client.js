@@ -67,6 +67,7 @@ let intentLookupToken = 0;
 let realtimeSubscription = null;
 let authSubscription = null;
 let phoneCollectorAbortController = null;
+let deferredClientInstallPrompt = null;
 
 const CLIENT_ONBOARDING_KEY = "mimi_services_client_onboarding_seen";
 const PWA_INSTALLED_KEY = "mimi_services_pwa_installed";
@@ -870,7 +871,7 @@ function setInstallButtonVisible(visible) {
 
   const shouldShow =
     Boolean(visible) &&
-    Boolean(state.ui.installPromptEvent) &&
+    Boolean(deferredClientInstallPrompt) &&
     isMobileAndroidBrowser() &&
     !isInstallDismissed() &&
     localStorage.getItem(PWA_INSTALLED_KEY) !== "true";
@@ -2074,7 +2075,7 @@ async function bootstrapAsyncData() {
 function registerInstallPrompt() {
   if (isRunningAsInstalledPwa()) {
     localStorage.setItem(PWA_INSTALLED_KEY, "true");
-    patchState("ui.installPromptEvent", null);
+    deferredClientInstallPrompt = null;
     setInstallButtonVisible(false);
     return;
   }
@@ -2089,7 +2090,7 @@ function registerInstallPrompt() {
     }
 
     event.preventDefault();
-    patchState("ui.installPromptEvent", event);
+    deferredClientInstallPrompt = event;
     setInstallButtonVisible(true);
   });
 
@@ -2099,15 +2100,17 @@ function registerInstallPrompt() {
       return;
     }
 
-    const promptEvent = state.ui.installPromptEvent;
-    if (!promptEvent) {
+    const promptEvent = deferredClientInstallPrompt;
+    if (!promptEvent || typeof promptEvent.prompt !== "function") {
       setInfo("Chrome todavia no habilito la instalacion. Abri el menu del navegador y elegi Instalar app o Agregar a pantalla principal.");
+      deferredClientInstallPrompt = null;
       setInstallButtonVisible(false);
       return;
     }
 
-    const choice = await promptEvent.prompt();
-    patchState("ui.installPromptEvent", null);
+    await promptEvent.prompt();
+    const choice = await promptEvent.userChoice;
+    deferredClientInstallPrompt = null;
     if (choice?.outcome === "accepted") {
       localStorage.setItem(PWA_INSTALLED_KEY, "true");
       setInstallButtonVisible(false);
@@ -2122,7 +2125,7 @@ function registerInstallPrompt() {
 
   window.addEventListener("appinstalled", () => {
     localStorage.setItem(PWA_INSTALLED_KEY, "true");
-    patchState("ui.installPromptEvent", null);
+    deferredClientInstallPrompt = null;
     setInstallButtonVisible(false);
   });
 
