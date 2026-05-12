@@ -1841,17 +1841,21 @@ function renderClientCmsVisuals({ banners = [], homeSections = [], faqs = [] } =
   const supporting = firstActiveCmsItem(homeSections);
 
   if (panel && primary) {
-    setElementText(kicker, primary.placement === "provider" ? "MIMI Partners" : "MIMI Servicios");
-    setElementText(title, textFromCms(primary.title, 120));
+    setElementText(kicker, safeClientCmsCopy(primary.placement === "provider" ? "MIMI Partners" : "MIMI Servicios", "MIMI Servicios", 40));
+    setElementText(title, safeClientCmsCopy(primary.title, "Servicios disponibles en MIMI", 120));
     setElementText(
       body,
-      textFromCms(primary.subtitle || primary.body || supporting?.body || supporting?.subtitle, 220)
+      safeClientCmsCopy(
+        primary.subtitle || primary.body || supporting?.body || supporting?.subtitle,
+        "MIMI conecta tu solicitud con prestadores independientes registrados en la plataforma.",
+        220
+      )
     );
 
     const route = primary.cta_url || primary.cta_route || primary.route || supporting?.route || "";
     if (cta && route) {
       cta.hidden = false;
-      cta.textContent = textFromCms(primary.cta_label || "Ver mas", 40);
+      cta.textContent = safeClientCmsCopy(primary.cta_label || "Ver mas", "Ver mas", 40);
       cta.onclick = () => {
         window.location.href = route;
       };
@@ -1874,8 +1878,8 @@ function renderClientCmsVisuals({ banners = [], homeSections = [], faqs = [] } =
       const node = document.createElement("article");
       const question = document.createElement("strong");
       const answer = document.createElement("span");
-      question.textContent = textFromCms(item.question, 140);
-      answer.textContent = textFromCms(item.answer, 220);
+      question.textContent = safeClientCmsCopy(item.question, "Pregunta frecuente", 140);
+      answer.textContent = safeClientCmsCopy(item.answer, "MIMI conecta usuarios con prestadores independientes.", 220);
       node.append(question, answer);
       return node;
     }));
@@ -1898,6 +1902,20 @@ function textFromCms(value, maxLength = 180) {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, maxLength);
+}
+
+function safeClientCmsCopy(value, fallback, maxLength = 180) {
+  const text = textFromCms(value, maxLength);
+  if (!text) return fallback;
+  if (/pocketbase|mimi\s*cms|cms|contenido visual|actualizado desde/i.test(text)) {
+    return fallback;
+  }
+  return text
+    .replace(/servicios confiables/gi, "servicios disponibles")
+    .replace(/prestadores verificados/gi, "prestadores registrados")
+    .replace(/prestadores confiables/gi, "prestadores disponibles")
+    .replace(/confiables/gi, "disponibles")
+    .replace(/verificados/gi, "registrados");
 }
 
 async function bootstrapAsyncData() {
@@ -2553,12 +2571,14 @@ function bindBasicControls() {
     setClientView("home", { behavior: "auto" });
   });
 
-  document.getElementById("authPrimaryButton")?.addEventListener("click", async () => {
-    try {
-      await handleAuthPrimary();
-    } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo iniciar sesión."));
-    }
+  document.querySelectorAll("[data-auth-action='login']").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        await handleAuthPrimary();
+      } catch (error) {
+        setInfo(null, normalizeAuthError(error, "No se pudo iniciar sesión."));
+      }
+    });
   });
 
   document.getElementById("authSecondaryButton")?.addEventListener("click", async () => {

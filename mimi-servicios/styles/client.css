@@ -4030,3 +4030,288 @@ body.auth-consent-open {
     width: clamp(88px, 29vw, 112px);
   }
 }
+
+/* Client home enterprise polish 2026-05-12 */
+.client-header {
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 12px !important;
+  padding-inline: 15px !important;
+}
+
+.brand-lockup-image {
+  position: relative;
+  width: max-content;
+  max-width: min(66vw, 210px);
+  justify-content: flex-start !important;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.brand-lockup-image img {
+  width: clamp(124px, 36vw, 176px) !important;
+  max-height: 42px !important;
+  filter:
+    drop-shadow(0 9px 20px rgba(34, 197, 94, .2))
+    drop-shadow(0 1px 0 rgba(255, 255, 255, .14)) !important;
+}
+
+.brand-lockup-image::after {
+  content: "";
+  position: absolute;
+  inset: -24% auto -24% -42%;
+  width: 40%;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, .72) 48%, transparent 100%);
+  transform: skewX(-18deg);
+  animation: mimiLogoSheen 4.8s ease-in-out infinite;
+}
+
+@keyframes mimiLogoSheen {
+  0%, 58% {
+    opacity: 0;
+    translate: 0 0;
+  }
+  68% {
+    opacity: .82;
+  }
+  86%, 100% {
+    opacity: 0;
+    translate: 360% 0;
+  }
+}
+
+.header-actions {
+  justify-content: flex-end !important;
+}
+
+.header-avatar-login {
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 44px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  font-size: 15px !important;
+  color: #042f2e !important;
+  background:
+    radial-gradient(circle at 35% 25%, #ffffff 0 24%, #bbf7d0 58%, #10b981 100%) !important;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, .22),
+    0 12px 28px rgba(16, 185, 129, .28) !important;
+}
+
+.header-avatar-login span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .5);
+}
+
+.google-auth-button {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 10px;
+  border: 1px solid rgba(203, 213, 225, .92);
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #0f172a;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  font-size: 14px;
+  font-weight: 900;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, .08);
+  touch-action: manipulation;
+}
+
+.google-auth-button[hidden] {
+  display: none !important;
+}
+
+.google-auth-button:active {
+  transform: translateY(1px) scale(.99);
+}
+
+.google-auth-icon {
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.google-auth-icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.address-locate-pin {
+  isolation: isolate;
+}
+
+.address-locate-pin::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(16, 185, 129, .22);
+  opacity: 0;
+  transform: scale(.78);
+}
+
+.address-locate-pin.is-loading {
+  opacity: 1 !important;
+  box-shadow:
+    0 0 0 6px rgba(16, 185, 129, .12),
+    0 12px 26px rgba(16, 185, 129, .32) !important;
+}
+
+.address-locate-pin.is-loading::after {
+  animation: locateSearchRipple 1.05s ease-out infinite;
+}
+
+@keyframes locateSearchRipple {
+  0% {
+    opacity: .78;
+    transform: scale(.78);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.36);
+  }
+}
+
+body[data-client-view="home"] .category-grid.is-expanded {
+  max-height: min(54dvh, 430px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 0 3px 6px 0 !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+body[data-client-view="home"] .category-grid.is-expanded::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+body[data-client-view="home"] .category-grid.is-expanded::-webkit-scrollbar-thumb {
+  background: rgba(37, 99, 235, .28);
+  border-radius: 999px;
+}
+
+body[data-client-view="home"] .client-cms-panel,
+body[data-client-view="home"] .client-cms-faq-panel {
+  margin: 10px 0 !important;
+  padding: 13px 14px !important;
+  gap: 8px !important;
+  border-radius: 18px !important;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, .07) !important;
+}
+
+body[data-client-view="home"] .client-cms-panel {
+  grid-template-columns: minmax(0, 1fr) auto !important;
+}
+
+body[data-client-view="home"] .client-cms-panel .eyebrow,
+body[data-client-view="home"] .client-cms-faq-panel .eyebrow {
+  font-size: 9px !important;
+  letter-spacing: .07em !important;
+}
+
+body[data-client-view="home"] .client-cms-panel h2,
+body[data-client-view="home"] .client-cms-faq-panel h2 {
+  margin: 2px 0 3px !important;
+  font-size: 15px !important;
+  line-height: 1.12 !important;
+}
+
+body[data-client-view="home"] .client-cms-panel p {
+  font-size: 11px !important;
+  line-height: 1.28 !important;
+}
+
+body[data-client-view="home"] .client-cms-panel .btn-secondary {
+  min-height: 34px !important;
+  padding: 0 12px !important;
+  border-radius: 12px !important;
+  font-size: 11px !important;
+}
+
+body[data-client-view="home"] .client-cms-faq-list {
+  gap: 6px !important;
+}
+
+body[data-client-view="home"] .client-cms-faq-list article {
+  padding: 9px 10px !important;
+  border-radius: 13px !important;
+}
+
+body[data-client-view="home"] .client-cms-faq-list strong {
+  font-size: 11px !important;
+}
+
+body[data-client-view="home"] .client-cms-faq-list span {
+  font-size: 10px !important;
+}
+
+@media (max-width: 480px) {
+  .client-header {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    padding: 10px 14px !important;
+  }
+
+  .brand-lockup-image img {
+    width: clamp(128px, 43vw, 162px) !important;
+    max-height: 40px !important;
+  }
+
+  .user-session-card {
+    max-width: 172px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .client-header {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 8px !important;
+  }
+
+  .brand-lockup-image img {
+    width: clamp(116px, 42vw, 148px) !important;
+    max-height: 36px !important;
+  }
+
+  .header-avatar-login {
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+  }
+
+  .google-auth-button {
+    min-height: 46px;
+    border-radius: 14px;
+    font-size: 13px;
+  }
+
+  body[data-client-view="home"] .client-cms-panel {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-height: 760px) {
+  body[data-client-view="home"] .category-grid.is-expanded {
+    max-height: min(46dvh, 330px) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-lockup-image::after,
+  .address-locate-pin.is-loading::after {
+    animation: none !important;
+  }
+}

@@ -604,6 +604,7 @@ function renderStatusBanner(state) {
 function renderAuth(state) {
   const sessionChip = document.getElementById("sessionChip");
   const authPrimaryButton = document.getElementById("authPrimaryButton");
+  const authInlineGoogleButton = document.getElementById("authInlineGoogleButton");
   const authSecondaryButton = document.getElementById("authSecondaryButton");
   const authHint = document.getElementById("authHint");
   const greetingName = document.getElementById("clientGreetingName");
@@ -633,7 +634,12 @@ function renderAuth(state) {
 
   if (authPrimaryButton) {
     authPrimaryButton.hidden = isAuthenticated;
-    authPrimaryButton.textContent = hasBackend ? "Ingresar" : "Demo";
+    authPrimaryButton.innerHTML = `<span aria-hidden="true">${hasBackend ? "M" : "D"}</span>`;
+    authPrimaryButton.setAttribute("aria-label", hasBackend ? "Iniciar sesión" : "Entrar en modo demo");
+  }
+
+  if (authInlineGoogleButton) {
+    authInlineGoogleButton.hidden = isAuthenticated || !hasBackend;
   }
 
   if (userSessionCard) {
@@ -667,7 +673,7 @@ function renderAuth(state) {
     authHint.textContent = isAuthenticated
       ? "Sesión lista para buscar prestadores, cotizar y seguir servicios."
       : hasBackend
-        ? "Ingresa para usar solicitudes reales."
+        ? "Iniciá sesión para enviar solicitudes reales y seguir el servicio."
         : "Demo local activa: podés probar búsqueda, seleccion y seguimiento.";
   }
 }
@@ -811,15 +817,15 @@ function renderCategories(state) {
     } else {
       intentAssist.innerHTML = `
         <div class="intent-assist-head">
-          <strong>Contanos que necesitas resolver</strong>
-          <span>MIMI interpreta la necesidad y sugiere el tipo de prestador.</span>
+          <strong>Describí tu necesidad con tus palabras</strong>
+          <span>MIMI sugiere el rubro más compatible.</span>
         </div>
         <div class="intent-steps" aria-label="Analisis de solicitud">
           <span class="is-active">1. Interpretar</span>
           <span>2. Categoria</span>
           <span>3. Buscar compatibles</span>
         </div>
-        <p>Ejemplos: necesito un psicologo, quiero una nutricionista, se rompio un cano, busco una ninera.</p>
+        <p>Ejemplos: necesito un psicólogo, quiero una nutricionista, se rompió un caño, busco una niñera.</p>
       `;
     }
   }
