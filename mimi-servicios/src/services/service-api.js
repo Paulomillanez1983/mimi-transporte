@@ -128,6 +128,44 @@ export async function invokeFunction(functionName, body = {}) {
 
   return data;
 }
+
+export async function loadClientPhoneStatus() {
+  if (!hasBackend()) {
+    return { ok: false, profile: null };
+  }
+
+  try {
+    return await invokeFunction(appConfig.functions.clientPhoneStatus, {});
+  } catch (error) {
+    console.warn("[service-api] client phone status fallback", error);
+    return { ok: false, profile: null, error: error?.code || error?.message || "phone_status_unavailable" };
+  }
+}
+
+export async function startClientPhoneVerification(input = {}) {
+  if (!hasBackend()) {
+    throw new Error("AUTH_REQUIRED");
+  }
+
+  return invokeFunction(appConfig.functions.clientPhoneStart, {
+    phone_number: input.phoneNumber || input.phone_number,
+    country_code: input.countryCode || input.country_code,
+    country_iso: input.countryIso || input.country_iso
+  });
+}
+
+export async function verifyClientPhoneCode(input = {}) {
+  if (!hasBackend()) {
+    throw new Error("AUTH_REQUIRED");
+  }
+
+  return invokeFunction(appConfig.functions.clientPhoneVerify, {
+    attempt_id: input.attemptId || input.attempt_id,
+    phone_number: input.phoneNumber || input.phone_number,
+    code: input.code || input.otp
+  });
+}
+
 async function fetchTable(tableName, buildQuery) {
   const supabase = getSupabaseClient();
 
@@ -275,6 +313,21 @@ export async function bootstrapSession() {
     role = providerId ? "provider" : "client";
   }
 
+  let clientProfile = null;
+  try {
+    const { data: profileRows, error: profileError } = await supabase
+      .from("svc_client_profiles")
+      .select("id,user_id,phone_number,country_code,phone_verified,phone_verified_at")
+      .eq("user_id", user.id)
+      .limit(1);
+
+    if (!profileError) {
+      clientProfile = profileRows?.[0] ?? null;
+    }
+  } catch (error) {
+    console.warn("[service-api] client profile unavailable", error);
+  }
+
   return {
     isAuthenticated: true,
     userId: user.id,
@@ -289,7 +342,11 @@ export async function bootstrapSession() {
     userAvatar:
       user.user_metadata?.avatar_url ??
       user.user_metadata?.picture ??
-      null
+      null,
+    userPhone: clientProfile?.phone_number ?? null,
+    userPhoneCountryCode: clientProfile?.country_code ?? null,
+    userPhoneVerified: clientProfile?.phone_verified === true,
+    clientProfileId: clientProfile?.id ?? null
   };
 }
 

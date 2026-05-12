@@ -8,6 +8,7 @@ import {
   loadClientServiceHistory,
   loadConversationForRequest,
   loadClientRequestInsights,
+  loadClientPhoneStatus,
   getServicePin,
   loadMessages,
   loadNotifications,
@@ -15,8 +16,10 @@ import {
   resolveServiceIntent,
   searchProviders,
   sendMessage,
+  startClientPhoneVerification,
   submitServiceReview,
-  updateRequestStatus
+  updateRequestStatus,
+  verifyClientPhoneCode
 } from "./services/service-api.js";
 import {
   buscarDireccionServicio,
@@ -52,11 +55,17 @@ import {
 } from "./state/app-state.js";
 import { renderClientScreen } from "./ui/render-client.js";
 import { cancelPayment, createPaymentIntent, getPaymentStatus } from "./payments/payment-api.js";
+import {
+  detectDefaultCountry,
+  loadPhoneCountries,
+  normalizePhoneNumber
+} from "./utils/phone-countries.js";
 
 let addressLookupToken = 0;
 let intentLookupToken = 0;
 let realtimeSubscription = null;
 let authSubscription = null;
+let phoneCollectorAbortController = null;
 
 const CLIENT_ONBOARDING_KEY = "mimi_services_client_onboarding_seen";
 const PWA_INSTALLED_KEY = "mimi_services_pwa_installed";
@@ -2596,6 +2605,16 @@ function bindBasicControls() {
     toggleDrawer("accountDrawer", true);
   });
 
+  document.getElementById("changePhoneButton")?.addEventListener("click", async (event) => {
+    event.preventDefault();
+    closeAllDrawers();
+    try {
+      await setupPhoneCollector({ force: true });
+    } catch (error) {
+      setInfo(null, phoneVerificationErrorText(error));
+    }
+  });
+
   document.querySelectorAll("[data-request-type]").forEach((button) => {
     button.addEventListener("click", (event) => {
       event.preventDefault();
@@ -3190,7 +3209,7 @@ function setupRealtime(
  * Persiste en auth.users.user_metadata.phone (nativo Supabase, sin schema nuevo).
  * Skip queda guardado en localStorage para no molestar en cada login.
  */
-function setupPhoneCollector() {
+function setupLegacyPhoneCollector() {
   const overlay = document.getElementById("phoneCollectOverlay");
   if (!overlay) return;
 
@@ -3222,11 +3241,11 @@ function setupPhoneCollector() {
       patchState("session.userPhone", phoneFromMeta);
       return;
     }
-    openPhoneCollectModal(overlay, supabase);
+    openLegacyPhoneCollectModal(overlay, supabase);
   });
 }
 
-function openPhoneCollectModal(overlay, supabase) {
+function openLegacyPhoneCollectModal(overlay, supabase) {
   const form = overlay.querySelector("#phoneCollectForm");
   const input = overlay.querySelector("#phoneCollectInput");
   const status = overlay.querySelector("#phoneCollectStatus");
@@ -3289,6 +3308,316 @@ function openPhoneCollectModal(overlay, supabase) {
   skip.addEventListener("click", onSkip);
 }
 
+async function setupPhoneCollector(options = {}) {
+  const overlay = document.getElementById("phoneCollectOverlay");
+  if (!overlay || !state.session.userId || !hasSupabaseEnv()) return;
+
+  const forceChange = options.force === true;
+  const phoneStatus = await loadClientPhoneStatus();
+  const profile = phoneStatus?.profile ?? null;
+  const smsConfigured = phoneStatus?.sms_configured !== false;
+
+  if (profile) {
+    patchState("session.clientProfileId", profile.id ?? null);
+    patchState("session.userPhone", profile.phone_number ?? null);
+    patchState("session.userPhoneCountryCode", profile.country_code ?? null);
+    patchState("session.userPhoneVerified", profile.phone_verified === true);
+  }
+
+  if (!forceChange && (profile?.phone_verified === true || state.session.userPhoneVerified === true)) {
+    return;
+  }
+
+  if (!smsConfigured) {
+    if (forceChange) {
+      throw new Error("sms_provider_not_configured");
+    }
+    console.warn("[MIMI Cliente] verificacion SMS pendiente de configuracion; onboarding telefonico pausado.");
+    return;
+  }
+
+  await openVerifiedPhoneCollectModal(overlay, { forceChange, existingProfile: profile });
+}
+
+async function openVerifiedPhoneCollectModal(overlay, { forceChange = false, existingProfile = null } = {}) {
+  const form = overlay.querySelector("#phoneCollectForm");
+  const input = overlay.querySelector("#phoneCollectInput");
+  const otpInput = overlay.querySelector("#phoneOtpInput");
+  const status = overlay.querySelector("#phoneCollectStatus");
+  const submit = overlay.querySelector("#phoneCollectSubmit");
+  const closeButton = overlay.querySelector("#phoneCollectClose");
+  const resendButton = overlay.querySelector("#phoneResendButton");
+  const entryStep = overlay.querySelector("#phoneEntryStep");
+  const otpStep = overlay.querySelector("#phoneOtpStep");
+  const otpTarget = overlay.querySelector("#phoneOtpTarget");
+  const stepLabel = overlay.querySelector("#phoneCollectStep");
+  const title = overlay.querySelector("#phoneCollectTitle");
+  const copy = overlay.querySelector("#phoneCollectCopy");
+  const countryButton = overlay.querySelector("#countryPickerButton");
+  const countryPanel = overlay.querySelector("#countryPickerPanel");
+  const countrySearch = overlay.querySelector("#countrySearchInput");
+  const countryList = overlay.querySelector("#countryList");
+  const countryFlag = overlay.querySelector("#countryPickerFlag");
+  const countryName = overlay.querySelector("#countryPickerName");
+  const countryDial = overlay.querySelector("#countryPickerDial");
+
+  if (!form || !input || !otpInput || !status || !submit || !entryStep || !otpStep) return;
+
+  phoneCollectorAbortController?.abort?.();
+  phoneCollectorAbortController = new AbortController();
+
+  let countries = [];
+  let selectedCountry = null;
+  let currentStep = "entry";
+  let pendingVerification = null;
+  const canClose = forceChange || existingProfile?.phone_verified === true || state.session.userPhoneVerified === true;
+
+  const setStatus = (message = "", type = "neutral") => {
+    status.textContent = message;
+    status.dataset.state = type;
+    status.classList.toggle("is-success", type === "success");
+    status.classList.toggle("is-error", type === "error");
+  };
+
+  const setLoading = (loading, label) => {
+    submit.disabled = Boolean(loading);
+    submit.classList.toggle("is-loading", Boolean(loading));
+    if (label) submit.textContent = label;
+  };
+
+  const renderSelectedCountry = () => {
+    if (!selectedCountry) return;
+    if (countryFlag) countryFlag.textContent = selectedCountry.flag || "";
+    if (countryName) countryName.textContent = selectedCountry.name || selectedCountry.iso;
+    if (countryDial) countryDial.textContent = selectedCountry.dialCode || "";
+  };
+
+  const renderCountryList = (query = "") => {
+    if (!countryList) return;
+    const needle = normalizeSearchText(query);
+    const rows = countries
+      .filter((country) => {
+        if (!needle) return true;
+        return (
+          normalizeSearchText(country.name).includes(needle) ||
+          normalizeSearchText(country.iso).includes(needle) ||
+          normalizeSearchText(country.dialCode).includes(needle)
+        );
+      })
+      .slice(0, 80);
+
+    countryList.innerHTML = rows.map((country) => `
+      <button type="button" class="phone-country-option" data-country-iso="${escapeHtml(country.iso)}">
+        <span>${escapeHtml(country.flag || "")}</span>
+        <b>${escapeHtml(country.name || country.iso)}</b>
+        <small>${escapeHtml(country.dialCode || "")}</small>
+      </button>
+    `).join("");
+  };
+
+  const setStep = (step) => {
+    currentStep = step;
+    const isOtp = step === "otp";
+    entryStep.hidden = isOtp;
+    otpStep.hidden = !isOtp;
+    if (stepLabel) stepLabel.textContent = isOtp ? "Paso 2 de 2" : "Paso 1 de 2";
+    if (title) title.textContent = isOtp ? "Ingresá el código" : (forceChange ? "Cambiá tu número" : "Verificá tu número");
+    if (copy) {
+      copy.textContent = isOtp
+        ? "Te enviamos un SMS. El código vence pronto por seguridad."
+        : "Lo usamos para proteger tu cuenta y avisos importantes del servicio.";
+    }
+    submit.textContent = isOtp ? "Verificar y continuar" : "Enviar código";
+    window.setTimeout(() => (isOtp ? otpInput : input).focus(), 150);
+  };
+
+  const close = (success = false) => {
+    if (!success && !canClose) return;
+    phoneCollectorAbortController?.abort?.();
+    phoneCollectorAbortController = null;
+    overlay.hidden = true;
+    document.body.classList.remove("auth-consent-open");
+    form.removeEventListener("submit", onSubmit);
+    closeButton?.removeEventListener("click", onCloseClick);
+    resendButton?.removeEventListener("click", onResend);
+    countryButton?.removeEventListener("click", onCountryButtonClick);
+    countrySearch?.removeEventListener("input", onCountrySearch);
+    countryList?.removeEventListener("click", onCountrySelect);
+  };
+
+  const startOtp = async () => {
+    const normalized = await normalizePhoneNumber(input.value, selectedCountry);
+    pendingVerification = {
+      phoneNumber: normalized.phoneNumber,
+      countryCode: normalized.countryCode,
+      countryIso: normalized.countryIso
+    };
+
+    const response = await startClientPhoneVerification(pendingVerification);
+    if (response?.already_verified === true) {
+      patchState("session.userPhone", pendingVerification.phoneNumber);
+      patchState("session.userPhoneCountryCode", pendingVerification.countryCode);
+      patchState("session.userPhoneVerified", true);
+      setStatus("Número verificado.", "success");
+      window.setTimeout(() => close(true), 450);
+      return;
+    }
+    pendingVerification.attemptId = response?.attempt_id || response?.attemptId || null;
+    if (otpTarget) otpTarget.textContent = response?.masked_phone || pendingVerification.phoneNumber;
+    setStep("otp");
+    setStatus("Código enviado por SMS.", "success");
+  };
+
+  const verifyOtp = async () => {
+    const code = String(otpInput.value || "").replace(/\D/g, "");
+    if (!/^\d{4,8}$/.test(code)) {
+      otpInput.classList.add("is-invalid");
+      setStatus("Ingresá el código recibido por SMS.", "error");
+      return;
+    }
+
+    otpInput.classList.remove("is-invalid");
+    const response = await verifyClientPhoneCode({
+      attemptId: pendingVerification?.attemptId,
+      phoneNumber: pendingVerification?.phoneNumber,
+      code
+    });
+    const profile = response?.profile ?? null;
+
+    patchState("session.clientProfileId", profile?.id ?? state.session.clientProfileId ?? null);
+    patchState("session.userPhone", profile?.phone_number ?? pendingVerification?.phoneNumber ?? null);
+    patchState("session.userPhoneCountryCode", profile?.country_code ?? pendingVerification?.countryCode ?? null);
+    patchState("session.userPhoneVerified", true);
+
+    setStatus("Número verificado.", "success");
+    window.setTimeout(() => close(true), 450);
+  };
+
+  const onSubmit = async (event) => {
+    event.preventDefault();
+    input.classList.remove("is-invalid");
+    otpInput.classList.remove("is-invalid");
+    setStatus("");
+    setLoading(true, currentStep === "otp" ? "Verificando..." : "Enviando...");
+
+    try {
+      if (currentStep === "otp") {
+        await verifyOtp();
+      } else {
+        await startOtp();
+      }
+    } catch (error) {
+      const target = currentStep === "otp" ? otpInput : input;
+      target.classList.add("is-invalid");
+      setStatus(phoneVerificationErrorText(error), "error");
+    } finally {
+      setLoading(false, currentStep === "otp" ? "Verificar y continuar" : "Enviar código");
+    }
+  };
+
+  const onResend = async () => {
+    if (!pendingVerification?.phoneNumber) {
+      setStep("entry");
+      return;
+    }
+    setStatus("");
+    setLoading(true, "Reenviando...");
+    try {
+      await startOtp();
+    } catch (error) {
+      setStatus(phoneVerificationErrorText(error), "error");
+    } finally {
+      setLoading(false, currentStep === "otp" ? "Verificar y continuar" : "Enviar código");
+    }
+  };
+
+  const onCloseClick = () => close(false);
+  const onCountryButtonClick = () => {
+    const expanded = countryPanel?.hidden === true;
+    if (countryPanel) countryPanel.hidden = !expanded;
+    countryButton?.setAttribute("aria-expanded", String(expanded));
+    if (expanded) {
+      renderCountryList(countrySearch?.value || "");
+      window.setTimeout(() => countrySearch?.focus(), 50);
+    }
+  };
+  const onCountrySearch = () => renderCountryList(countrySearch?.value || "");
+  const onCountrySelect = (event) => {
+    const option = event.target.closest?.("[data-country-iso]");
+    if (!option) return;
+    selectedCountry = countries.find((country) => country.iso === option.dataset.countryIso) || selectedCountry;
+    renderSelectedCountry();
+    if (countryPanel) countryPanel.hidden = true;
+    countryButton?.setAttribute("aria-expanded", "false");
+    input.focus();
+  };
+
+  countries = await loadPhoneCountries();
+  selectedCountry =
+    countries.find((country) => country.dialCode === existingProfile?.country_code) ||
+    detectDefaultCountry(countries);
+  renderSelectedCountry();
+  renderCountryList();
+
+  form.reset();
+  otpStep.hidden = true;
+  entryStep.hidden = false;
+  setStep("entry");
+  setStatus("");
+  if (closeButton) closeButton.hidden = !canClose;
+  if (existingProfile?.phone_number && forceChange) input.placeholder = existingProfile.phone_number;
+  if (countryPanel) countryPanel.hidden = true;
+
+  overlay.hidden = false;
+  document.body.classList.add("auth-consent-open");
+  form.addEventListener("submit", onSubmit);
+  closeButton?.addEventListener("click", onCloseClick);
+  resendButton?.addEventListener("click", onResend);
+  countryButton?.addEventListener("click", onCountryButtonClick);
+  countrySearch?.addEventListener("input", onCountrySearch);
+  countryList?.addEventListener("click", onCountrySelect);
+  window.setTimeout(() => input.focus(), 180);
+}
+
+function normalizeSearchText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function phoneVerificationErrorText(error) {
+  const code = error?.code || error?.message || error?.details?.error || "";
+  if (String(code).startsWith("sms_provider_error")) {
+    return "El proveedor SMS no pudo procesar el envío. Intentá nuevamente.";
+  }
+  const messages = {
+    AUTH_REQUIRED: "Iniciá sesión para verificar tu número.",
+    phone_invalid: "Ingresá un número válido con código de país.",
+    phone_already_used: "Ese número ya está verificado en otra cuenta.",
+    sms_provider_not_configured: "La verificación por SMS todavía no está configurada.",
+    otp_recently_sent: "Ya enviamos un código hace instantes. Esperá un minuto.",
+    otp_rate_limited: "Demasiados intentos. Probá de nuevo en unos minutos.",
+    phone_rate_limited: "Demasiados intentos. Probá de nuevo en unos minutos.",
+    otp_invalid: "El código no coincide. Revisalo e intentá otra vez.",
+    otp_attempts_exceeded: "Se agotaron los intentos. Pedí un código nuevo.",
+    otp_expired_or_missing: "El código venció. Pedí uno nuevo.",
+    otp_not_found_or_expired: "El código venció. Pedí uno nuevo.",
+    otp_send_failed: "No pudimos enviar el SMS. Intentá nuevamente.",
+    otp_verify_failed: "No pudimos validar el código. Intentá nuevamente."
+  };
+  return messages[code] || "No pudimos verificar el número. Intentá nuevamente.";
+}
+
 async function init() {
   exposeClientDebugApi();
   document.body.dataset.clientView = "home";
@@ -3327,7 +3656,7 @@ if (CLIENT_SW_ENABLED && "serviceWorker" in navigator) {
   renderClientScreen(state);
 
   // Tras login, si el cliente no tiene teléfono cargado, pedirlo.
-  setupPhoneCollector();
+  await setupPhoneCollector();
 
   authSubscription =
     subscribeToAuthChanges?.(async (event, session) => {

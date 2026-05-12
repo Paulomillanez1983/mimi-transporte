@@ -59,6 +59,10 @@ const initialState = {
     userEmail: null,
     userName: null,
     userAvatar: null,
+    userPhone: null,
+    userPhoneCountryCode: null,
+    userPhoneVerified: false,
+    clientProfileId: null,
     isAuthenticated: false,
     token: null,
     expiresAt: null

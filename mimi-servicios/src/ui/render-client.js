@@ -634,7 +634,7 @@ function renderAuth(state) {
 
   if (authPrimaryButton) {
     authPrimaryButton.hidden = isAuthenticated;
-    authPrimaryButton.innerHTML = `<span aria-hidden="true">${hasBackend ? "M" : "D"}</span>`;
+    authPrimaryButton.innerHTML = `<span aria-hidden="true">${hasBackend ? "M" : "D"}</span><b>${hasBackend ? "Iniciar sesión" : "Demo"}</b>`;
     authPrimaryButton.setAttribute("aria-label", hasBackend ? "Iniciar sesión" : "Entrar en modo demo");
   }
 

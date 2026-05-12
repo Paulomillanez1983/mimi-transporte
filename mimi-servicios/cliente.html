@@ -43,7 +43,7 @@
   >
   <link rel="stylesheet" href="./styles/app.css">
   <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.10.7">
-  <link rel="stylesheet" href="./styles/client.css?v=2026.05.12.2">
+  <link rel="stylesheet" href="./styles/client.css?v=2026.05.12.4">
 </head>
 <body data-client-view="home">
   <div class="app-shell">
@@ -79,6 +79,7 @@
         </button>
         <button class="login-pill header-avatar-login" id="authPrimaryButton" data-auth-action="login" type="button" aria-label="Iniciar sesión">
           <span aria-hidden="true">M</span>
+          <b>Iniciar sesión</b>
         </button>
         <button
           class="user-session-card"
@@ -439,6 +440,7 @@
         <div class="account-actions-grid">
           <button type="button" data-client-view="services">Buscar servicios</button>
           <button type="button" data-client-view="providers">Ver prestadores</button>
+          <button type="button" id="changePhoneButton">Cambiar número</button>
           <button type="button" data-action="support">Soporte</button>
           <button id="authSecondaryButton" class="danger-action" type="button">Salir</button>
         </div>
@@ -554,52 +556,85 @@
 
   <div class="auth-consent-overlay" id="authConsentOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="authConsentTitle">
     <section class="auth-consent-sheet">
-      <div class="auth-consent-mark" aria-hidden="true">M</div>
-      <span class="eyebrow">Inicio seguro</span>
-      <h2 id="authConsentTitle">Vas a iniciar sesion con Google</h2>
-      <p>MIMI abre Google para validar tu identidad de forma segura. Android puede mostrar un aviso del navegador porque se usa un servicio externo.</p>
-      <div class="auth-consent-domain">
-        <span>Dominio oficial</span>
-        <strong>mimigo.com.ar</strong>
-      </div>
+      <img class="auth-consent-logo" src="./assets/brand/mimigo-client-wordmark.png" alt="MIMI GO">
+      <h2 id="authConsentTitle">Entrá a MIMI GO</h2>
+      <p>Usamos Google para confirmar tu cuenta y mantener tu sesión protegida.</p>
       <div class="auth-consent-actions">
         <button type="button" class="btn-secondary" id="authConsentCancel">Cancelar</button>
-        <button type="button" class="btn-primary" id="authConsentContinue">Continuar con Google</button>
+        <button type="button" class="btn-primary google-consent-button" id="authConsentContinue">
+          <span class="google-auth-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.84z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06L5.84 9.9C6.71 7.3 9.14 5.38 12 5.38z"/>
+            </svg>
+          </span>
+          Continuar con Google
+        </button>
       </div>
-      <small>Si ves un aviso del sistema, corresponde al paso seguro hacia Google. MIMI no accede a otras apps sin tu permiso.</small>
+      <small>Android puede mostrar un aviso del navegador antes de abrir Google.</small>
     </section>
   </div>
 
-  <!-- Modal para pedir teléfono al primer login (registro) -->
+  <!-- Verificación telefónica obligatoria para clientes -->
   <div class="phone-collect-overlay" id="phoneCollectOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="phoneCollectTitle">
     <section class="phone-collect-sheet">
-      <div class="phone-collect-icon" aria-hidden="true">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-        </svg>
+      <div class="phone-collect-header">
+        <img src="./assets/brand/mimigo-client-wordmark.png" alt="MIMI GO">
+        <span id="phoneCollectStep">Paso 1 de 2</span>
       </div>
-      <h2 id="phoneCollectTitle">Tu número de teléfono</h2>
-      <p>Sirve para identificar tu cuenta de forma segura y enviarte avisos importantes del servicio. La comunicación con el prestador es siempre por el chat dentro de la app.</p>
+      <h2 id="phoneCollectTitle">Verificá tu número</h2>
+      <p id="phoneCollectCopy">Lo usamos para proteger tu cuenta y avisos importantes del servicio.</p>
       <form id="phoneCollectForm" novalidate>
-        <label class="phone-collect-field">
-          <span>Teléfono (con código de país)</span>
-          <input
-            id="phoneCollectInput"
-            name="phone"
-            type="tel"
-            placeholder="+54 9 351 1234567"
-            inputmode="tel"
-            autocomplete="tel"
-            required
-            pattern="^\+?[0-9\s\-]{8,20}$"
-            aria-describedby="phoneCollectHint"
-          >
-          <small id="phoneCollectHint">Lo usamos solo internamente. No se comparte con prestadores ni terceros.</small>
-        </label>
+        <div class="phone-entry-step" id="phoneEntryStep">
+          <button class="country-picker-button" id="countryPickerButton" type="button" aria-haspopup="listbox" aria-expanded="false">
+            <span id="countryPickerFlag" aria-hidden="true">🇦🇷</span>
+            <strong id="countryPickerName">Argentina</strong>
+            <b id="countryPickerDial">+54</b>
+          </button>
+          <div class="country-picker-panel" id="countryPickerPanel" hidden>
+            <label class="country-search-field">
+              <span class="sr-only">Buscar país</span>
+              <input id="countrySearchInput" type="search" placeholder="Buscar país o código" autocomplete="off">
+            </label>
+            <div class="country-list" id="countryList" role="listbox" aria-label="Países"></div>
+          </div>
+          <label class="phone-collect-field">
+            <span>Número de teléfono</span>
+            <input
+              id="phoneCollectInput"
+              name="phone"
+              type="tel"
+              placeholder="351 123 4567"
+              inputmode="tel"
+              autocomplete="tel-national"
+              required
+              aria-describedby="phoneCollectHint"
+            >
+            <small id="phoneCollectHint">Te vamos a enviar un código por SMS.</small>
+          </label>
+        </div>
+        <div class="phone-otp-step" id="phoneOtpStep" hidden>
+          <div class="otp-target" id="phoneOtpTarget">Código enviado</div>
+          <label class="phone-collect-field">
+            <span>Código de verificación</span>
+            <input
+              id="phoneOtpInput"
+              name="otp"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="8"
+              placeholder="123456"
+            >
+          </label>
+          <button class="btn-link phone-resend-button" id="phoneResendButton" type="button">Enviar otro código</button>
+        </div>
         <div class="phone-collect-status" id="phoneCollectStatus" aria-live="polite"></div>
         <div class="phone-collect-actions">
-          <button type="button" class="btn-link" id="phoneCollectSkip">Más tarde</button>
-          <button type="submit" class="btn-primary" id="phoneCollectSubmit">Guardar y continuar</button>
+          <button type="button" class="btn-link" id="phoneCollectClose" hidden>Cerrar</button>
+          <button type="submit" class="btn-primary" id="phoneCollectSubmit">Enviar código</button>
         </div>
       </form>
     </section>
@@ -607,6 +642,6 @@
 
   <script src="./env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script type="module" src="./src/main-client.js?v=2026.05.12.1"></script>
+  <script type="module" src="./src/main-client.js?v=2026.05.12.3"></script>
 </body>
 </html>

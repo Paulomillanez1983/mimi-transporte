@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-12-provider-auth-2";
+const APP_VERSION = "2026-05-12-client-phone-1";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [
@@ -40,6 +40,7 @@ const APP_ASSETS = [
   "./src/services/supabase.js",
   "./src/services/mock-data.js",
   "./src/services/push.js",
+  "./src/utils/phone-countries.js",
 
   "./src/state/app-state.js",
 
