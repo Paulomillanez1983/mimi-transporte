@@ -87,6 +87,15 @@ const NON_HOURLY_CATEGORY_MODELS = {
   PINTURA: "SQUARE_METER"
 };
 
+function sanitizeServiceRequestPayload(request = {}) {
+  const clean = { ...(request ?? {}) };
+  delete clean.service_pin_hash;
+  delete clean.service_pin_ciphertext;
+  delete clean.service_pin_attempts;
+  delete clean.service_pin_locked_until;
+  return clean;
+}
+
 const INTENT_CATEGORY_RULES = [
   { code: "PLOMERIA", terms: ["cano", "canio", "caño", "pincho un cano", "caneria", "agua", "perdida", "fuga", "gotea", "griferia", "bano", "baño", "inodoro", "pileta", "cocina", "destapar", "se rompio un cano", "se rompió un caño"] },
   { code: "PINTURA", terms: ["pintar", "pintura", "pintor", "pared", "living", "habitacion", "habitación", "humedad", "techo", "revoque", "casa", "frente", "quiero pintar"] },
@@ -3015,12 +3024,13 @@ function setupRealtime(
     } : null,
     onRequest: ({ new: payload }) => {
       if (!payload) return;
+      const safePayload = sanitizeServiceRequestPayload(payload);
 
       setState((draft) => {
-        if (draft.client.activeRequest?.id === payload.id) {
+        if (draft.client.activeRequest?.id === safePayload.id) {
           draft.client.activeRequest = {
             ...draft.client.activeRequest,
-            ...payload
+            ...safePayload
           };
         }
       });

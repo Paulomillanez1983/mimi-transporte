@@ -1,10 +1,8 @@
 const { test, expect } = require("@playwright/test");
 
-const BASE_URL = "http://127.0.0.1:8765/mimi-servicios/cliente.html";
-
 async function openClient(page, width) {
   await page.setViewportSize({ width, height: 844 });
-  await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
+  await page.goto("/mimi-servicios/cliente.html", { waitUntil: "domcontentloaded" });
 }
 
 for (const width of [360, 390, 430]) {

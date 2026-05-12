@@ -5,6 +5,37 @@ import { MIMI_NEARBY_REFRESH_INTERVAL_MS } from "./runtime-config.js";
 
 const SERVICE_PROVIDER_DOCUMENTS_BUCKET = "service-provider-documents";
 const PROVIDER_DOCUMENT_SELECT = "id,provider_id,document_type,storage_bucket,storage_path,mime_type,file_size_bytes,review_status,review_notes,reviewed_at,metadata_json,created_at,updated_at";
+const SERVICE_REQUEST_SAFE_SELECT = `
+  id,
+  client_user_id,
+  category_id,
+  selected_provider_id,
+  accepted_provider_id,
+  request_type,
+  status,
+  address_text,
+  service_lat,
+  service_lng,
+  scheduled_for,
+  requested_hours,
+  notes,
+  provider_price_snapshot,
+  platform_fee_snapshot,
+  total_price_snapshot,
+  currency,
+  provider_response_deadline_at,
+  metadata_json,
+  accepted_at,
+  en_route_at,
+  arrived_at,
+  started_at,
+  completed_at,
+  cancelled_at,
+  cancelled_by,
+  created_at,
+  updated_at,
+  svc_categories(id,name,code,description)
+`;
 const providerSnapshotCache = new Map();
 
 function hasBackend() {
@@ -59,14 +90,41 @@ export async function invokeFunction(functionName, body = {}) {
     return null;
   }
 
+  const correlationId =
+    crypto.randomUUID?.() ||
+    `mimi-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
   const { data, error } = await supabase.functions.invoke(functionName, {
     body,
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "x-correlation-id": correlationId
     }
   });
 
-  if (error) throw error;
+  if (error) {
+    let payload = null;
+    try {
+      const response = error?.context;
+      if (response && typeof response.clone === "function") {
+        payload = await response.clone().json();
+      }
+    } catch (_) {
+      payload = null;
+    }
+
+    if (payload?.error) {
+      const normalized = new Error(String(payload.error));
+      normalized.code = payload.error;
+      normalized.details = payload;
+      normalized.correlationId = payload.correlation_id || correlationId;
+      normalized.originalError = error;
+      throw normalized;
+    }
+
+    error.correlationId = correlationId;
+    throw error;
+  }
 
   return data;
 }
@@ -697,7 +755,7 @@ export async function loadActiveRequest({ userId = null, providerId = null } = {
 
   let query = getSupabaseClient()
     .from("svc_requests")
-    .select("*")
+    .select(SERVICE_REQUEST_SAFE_SELECT)
     .not("status", "in", '("COMPLETED","CANCELLED","EXPIRED")')
     .order("created_at", { ascending: false })
     .limit(1);

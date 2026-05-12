@@ -1659,6 +1659,11 @@ setTimeout(async () => {
 
     if (activeRequest) {
       actions.setActiveService(this.normalizeServiceForState(activeRequest));
+      this.subscribeActiveRequestRealtime(activeRequest.id);
+    } else {
+      actions.clearActiveService();
+      this.stopLocationTracking();
+      disconnectManagedRealtime("provider-app:job:");
     }
 
     this.renderDrawerProfile();
@@ -1755,34 +1760,44 @@ stats: {
     return String(value ?? "PENDING").trim().toUpperCase();
   }
 
+  sanitizeServicePayload(service = {}) {
+    const clean = { ...(service ?? {}) };
+    delete clean.service_pin_hash;
+    delete clean.service_pin_ciphertext;
+    delete clean.service_pin_attempts;
+    delete clean.service_pin_locked_until;
+    return clean;
+  }
+
   normalizeServiceForState(service = {}) {
-    const details = this.extractServiceDetails(service);
+    const safeService = this.sanitizeServicePayload(service);
+    const details = this.extractServiceDetails(safeService);
     return {
-      id: service.id ?? service.request_id ?? crypto.randomUUID?.() ?? String(Date.now()),
-      requestId: service.request_id ?? service.id ?? null,
-      status: this.normalizeRequestStatus(service.status),
+      id: safeService.id ?? safeService.request_id ?? crypto.randomUUID?.() ?? String(Date.now()),
+      requestId: safeService.request_id ?? safeService.id ?? null,
+      status: this.normalizeRequestStatus(safeService.status),
       serviceType:
         details.category_name ??
-        service.service_type ??
-        service.category_name ??
-        service.title ??
-        service.svc_categories?.name ??
+        safeService.service_type ??
+        safeService.category_name ??
+        safeService.title ??
+        safeService.svc_categories?.name ??
         "Servicio",
       clientName:
-        service.client_name ??
-        service.client?.full_name ??
-        service.svc_clients?.full_name ??
+        safeService.client_name ??
+        safeService.client?.full_name ??
+        safeService.svc_clients?.full_name ??
         "Cliente",
-      clientAvatar: service.client_avatar ?? service.client?.avatar_url ?? null,
-      location: service.address_text ?? service.location ?? "Ubicacin a confirmar",
-      address: service.address_text ?? null,
+      clientAvatar: safeService.client_avatar ?? safeService.client?.avatar_url ?? null,
+      location: safeService.address_text ?? safeService.location ?? "Ubicacin a confirmar",
+      address: safeService.address_text ?? null,
       price:
-        Number(details.provider_price ?? service.provider_price_snapshot ?? service.provider_amount ?? 0),
+        Number(details.provider_price ?? safeService.provider_price_snapshot ?? safeService.provider_amount ?? 0),
       details,
-      scheduledFor: service.scheduled_for ?? null,
-      startedAt: service.started_at ?? null,
-      conversationId: service.conversation_id ?? null,
-      raw: service
+      scheduledFor: safeService.scheduled_for ?? null,
+      startedAt: safeService.started_at ?? null,
+      conversationId: safeService.conversation_id ?? null,
+      raw: safeService
     };
   }
 
@@ -1982,6 +1997,7 @@ stats: {
 
     if (updatedService) {
       actions.setActiveService(this.normalizeServiceForState(updatedService));
+      this.subscribeActiveRequestRealtime(updatedService.id ?? updatedService.request_id);
     }
 
     if (nextProviderStatus) {
@@ -1989,6 +2005,83 @@ stats: {
     }
 
     this.showToast(successMessage, "success");
+  }
+
+  subscribeActiveRequestRealtime(requestId = this.activeServiceRequestId()) {
+    const supabase = getSupabaseClient();
+    if (!supabase?.channel || !requestId) return;
+
+    disconnectManagedRealtime("provider-app:job:");
+
+    this.activeRequestRealtimeChannel = subscribeScopedChannel(
+      `provider-app:job:${requestId}:state`,
+      (count) => supabase
+        .channel(`provider-job:${requestId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "svc_requests",
+            filter: `id=eq.${requestId}`
+          },
+          count((payload) => this.onActiveRequestChange(payload))
+        )
+        .subscribe((status) => {
+          if (window.MIMI_DEBUG_REALTIME) console.log("[MIMI] Active request realtime:", status);
+        }),
+      { critical: true }
+    );
+  }
+
+  onActiveRequestChange(payload) {
+    const row = payload?.new;
+    if (!row?.id) return;
+
+    const status = this.normalizeRequestStatus(row.status);
+    if (["COMPLETED", "CANCELLED", "EXPIRED"].includes(status)) {
+      actions.clearActiveService();
+      this.stopLocationTracking();
+      disconnectManagedRealtime("provider-app:job:");
+      return;
+    }
+
+    actions.setActiveService(this.normalizeServiceForState(row));
+
+    if (status === "IN_PROGRESS") {
+      this.stopLocationTracking();
+      actions.setProviderStatus("IN_SERVICE");
+    }
+  }
+
+  async resyncActiveService(reason = "manual") {
+    const providerId = this.state?.session?.providerId;
+    if (!providerId) return null;
+
+    try {
+      const activeRequest = await loadActiveRequest({ providerId });
+      if (activeRequest) {
+        actions.setActiveService(this.normalizeServiceForState(activeRequest));
+        this.subscribeActiveRequestRealtime(activeRequest.id);
+      } else {
+        actions.clearActiveService();
+        this.stopLocationTracking();
+        disconnectManagedRealtime("provider-app:job:");
+      }
+
+      if (window.MIMI_DEBUG_LIFECYCLE) {
+        console.info("[MIMI lifecycle] resync", {
+          reason,
+          requestId: activeRequest?.id ?? null,
+          status: activeRequest?.status ?? null
+        });
+      }
+
+      return activeRequest;
+    } catch (error) {
+      console.warn("[MIMI lifecycle] resync failed", { reason, error });
+      return null;
+    }
   }
 
   requestServicePin() {
@@ -3037,16 +3130,21 @@ async acceptProviderTerms() {
 
   for (const documentPayload of documents) {
     try {
-      await invokeFunction("accept-legal-document", {
+      const response = await invokeFunction("accept-legal-document", {
         ...documentPayload,
         version: "2026.1.0",
-        acceptance_method: "provider_service_setup"
+        acceptance_method: "checkbox_cta",
+        device_id: getDeviceId()
       });
+      if (response?.ok !== true) {
+        throw new Error(response?.error || "legal_acceptance_not_saved");
+      }
     } catch (err) {
-      console.warn("[MIMI] No se pudo registrar aceptacion legal por Edge Function", {
+      console.error("[MIMI] No se pudo registrar aceptacion legal", {
         document: documentPayload.document_code,
         message: err?.message ?? err
       });
+      throw new Error("No pudimos guardar la aceptacion legal. Reintenta en unos segundos.");
     }
   }
 }
@@ -4188,6 +4286,8 @@ startLocationTracking() {
         actions.setActiveService(this.normalizeServiceForState(service));
       }
 
+      this.subscribeActiveRequestRealtime(service.id ?? service.request_id);
+
       if (this.offerTimer) {
         clearInterval(this.offerTimer);
         this.offerTimer = null;
@@ -4301,7 +4401,35 @@ startLocationTracking() {
       }
     } catch (err) {
       console.error("[MIMI] Error updating service:", err);
-      this.showToast("Error actualizando servicio", "error");
+      const code = String(err?.code || err?.message || "");
+      if (
+        code.includes("request_id_invalid") ||
+        code.includes("invalid_request_status") ||
+        code.includes("request_forbidden") ||
+        code.includes("pin_already_used")
+      ) {
+        await this.resyncActiveService(`lifecycle_error:${code}`);
+      }
+
+      const message =
+        code.includes("request_id_invalid")
+          ? "No pudimos identificar esta solicitud. Actualizamos el estado desde el backend."
+          : code.includes("pin_incorrect")
+          ? "El codigo no coincide. Pedile al cliente que lo revise e intenta de nuevo."
+          : code.includes("pin_temporarily_locked")
+            ? "Hay demasiados intentos incorrectos. Espera unos minutos antes de volver a probar."
+            : code.includes("pin_expired")
+              ? "El codigo vencio. Actualiza el servicio o contacta a soporte."
+              : code.includes("pin_not_ready")
+                ? "El codigo todavia no esta disponible para esta solicitud."
+                : code.includes("pin_already_used")
+                  ? "Este codigo ya fue usado. Actualizamos el estado del servicio."
+                  : code.includes("invalid_request_status")
+                    ? "El estado del servicio cambio. Actualiza la pantalla e intenta de nuevo."
+                    : code.includes("request_forbidden")
+                      ? "Esta solicitud no corresponde a tu perfil de prestador."
+                : "No pudimos actualizar el servicio. Revisa la conexion e intenta otra vez.";
+      this.showToast(message, "error");
     } finally {
       actions.setLoading(false);
     }
@@ -5382,6 +5510,11 @@ if (this.elements.drawerInitials) {
           }),
           { critical: true }
         );
+      }
+
+      const activeRequestId = this.activeServiceRequestId();
+      if (activeRequestId) {
+        this.subscribeActiveRequestRealtime(activeRequestId);
       }
     } catch (err) {
       console.error("[MIMI] Realtime error:", err);
