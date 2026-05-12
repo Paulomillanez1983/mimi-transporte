@@ -61,7 +61,6 @@ import {
   loadPhoneCountries,
   normalizePhoneNumber
 } from "./utils/phone-countries.js";
-import { MIMI_PLAY_STORE_CLIENT_URL } from "./services/runtime-config.js";
 
 let addressLookupToken = 0;
 let intentLookupToken = 0;
@@ -871,6 +870,7 @@ function setInstallButtonVisible(visible) {
 
   const shouldShow =
     Boolean(visible) &&
+    Boolean(state.ui.installPromptEvent) &&
     isMobileAndroidBrowser() &&
     !isInstallDismissed() &&
     localStorage.getItem(PWA_INSTALLED_KEY) !== "true";
@@ -1400,7 +1400,8 @@ function normalizeCategoryForMerge(category) {
     aliases: Array.isArray(category.aliases) ? category.aliases : [],
     search_keywords: Array.isArray(category.search_keywords) ? category.search_keywords : [],
     default_pricing_model: normalizePricingModelForCategory(category.default_pricing_model || category.pricing_model || category.pricingModel),
-    requires_provider_quote: Boolean(category.requires_provider_quote)
+    requires_provider_quote: Boolean(category.requires_provider_quote),
+    source: category.source || ""
   };
 }
 
@@ -1435,7 +1436,7 @@ function mergeCategories(remoteCategories = [], localCategories = []) {
       byCode.set(category.code, {
         ...fallback,
         ...category,
-        id: category.source === "pocketbase_cms" && fallback.id ? fallback.id : category.id,
+        id: shouldKeepTransactionalCategoryId(fallback, category) ? fallback.id : category.id,
         aliases: [
           ...(Array.isArray(fallback.aliases) ? fallback.aliases : []),
           ...(Array.isArray(category.aliases) ? category.aliases : [])
@@ -1444,6 +1445,12 @@ function mergeCategories(remoteCategories = [], localCategories = []) {
     });
 
   return [...byCode.values()].sort((a, b) => a.name.localeCompare(b.name, "es"));
+}
+
+function shouldKeepTransactionalCategoryId(fallback = {}, category = {}) {
+  if (!fallback.id || !isUuid(fallback.id)) return false;
+  if (category.source === "pocketbase_cms") return true;
+  return category.id && !isUuid(category.id);
 }
 
 function rankCategoriesForClient(categories = []) {
@@ -2074,10 +2081,6 @@ function registerInstallPrompt() {
 
   setInstallButtonVisible(false);
 
-  if (isMobileAndroidBrowser() && !isInstallDismissed()) {
-    window.setTimeout(() => setInstallButtonVisible(true), 1200);
-  }
-
   window.addEventListener("beforeinstallprompt", (event) => {
     if (isRunningAsInstalledPwa()) {
       event.preventDefault();
@@ -2098,16 +2101,19 @@ function registerInstallPrompt() {
 
     const promptEvent = state.ui.installPromptEvent;
     if (!promptEvent) {
-      if (MIMI_PLAY_STORE_CLIENT_URL) {
-        window.open(MIMI_PLAY_STORE_CLIENT_URL, "_blank", "noopener,noreferrer");
-        dismissInstallBanner(30);
-      }
+      setInfo("Chrome todavia no habilito la instalacion. Abri el menu del navegador y elegi Instalar app o Agregar a pantalla principal.");
+      setInstallButtonVisible(false);
       return;
     }
 
-    await promptEvent.prompt();
+    const choice = await promptEvent.prompt();
     patchState("ui.installPromptEvent", null);
-    setInstallButtonVisible(false);
+    if (choice?.outcome === "accepted") {
+      localStorage.setItem(PWA_INSTALLED_KEY, "true");
+      setInstallButtonVisible(false);
+    } else {
+      dismissInstallBanner(7);
+    }
   });
 
   document.getElementById("installDismissButton")?.addEventListener("click", () => {
@@ -2194,6 +2200,7 @@ async function handleSearchSubmit(event) {
   }
 
   registerCategoryUsage(state.ui.selectedCategoryId);
+  await ensureSelectedCategoryHasBackendId();
 
   if (hasSupabaseEnv() && !isUuid(state.ui.selectedCategoryId)) {
     const selectedCategory = getSelectedCategory();
@@ -2201,7 +2208,7 @@ async function handleSearchSubmit(event) {
       draft.client.providers = [];
       draft.ui.hasCompletedClientSearch = false;
       draft.meta.error = null;
-      draft.meta.info = `La categoria ${selectedCategory?.name || "elegida"} esta preparada en la app. Para usarla con prestadores reales, ejecuta docs/services-professional-categories.sql en Supabase.`;
+      draft.meta.info = `No pudimos sincronizar ${selectedCategory?.name || "esta categoria"} con el catalogo activo. Actualiza la pantalla y volve a intentar.`;
       draft.meta.lastSearchAt = new Date().toISOString();
     });
     setClientView("providers");
@@ -2257,6 +2264,37 @@ async function handleSearchSubmit(event) {
     );
     clientPendingActions.delete("search-providers");
   }
+}
+
+async function ensureSelectedCategoryHasBackendId() {
+  if (!hasSupabaseEnv() || isUuid(state.ui.selectedCategoryId)) {
+    return getSelectedCategory();
+  }
+
+  const selectedCategory = getSelectedCategory();
+  const selectedCode = selectedCategory?.code;
+
+  if (!selectedCode) return selectedCategory;
+
+  try {
+    const remoteCategories = await loadCategories();
+    appConfig.categories = rankCategoriesForClient(
+      mergeCategories(remoteCategories, appConfig.categories)
+    );
+
+    const matchedCategory = appConfig.categories.find(
+      (category) => category.code === selectedCode && isUuid(category.id)
+    );
+
+    if (matchedCategory?.id) {
+      patchState("ui.selectedCategoryId", matchedCategory.id);
+      return matchedCategory;
+    }
+  } catch (error) {
+    console.warn("[MIMI Go] No se pudo resincronizar categoria", error);
+  }
+
+  return getSelectedCategory();
 }
 
 async function handleProviderSelection(providerId) {
