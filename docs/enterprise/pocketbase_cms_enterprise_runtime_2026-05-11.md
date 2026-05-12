@@ -31,12 +31,19 @@ PocketBase must never store secrets, tokens, payment data, KYC documents, servic
 
 ## Frontend runtime behavior
 
+- MIMI Servicios has two primary CMS-aware experiences:
+  - Client: `/servicios`
+  - Provider: `/prestador`
+- `/servicios` can consume CMS categories, banners, home sections, FAQs and visual flags.
+- `/prestador` consumes CMS flags and uses CMS categories only to enrich existing Supabase categories. It does not let CMS-only categories become transactional provider services.
 - `VITE_POCKETBASE_URL` or `MIMI_POCKETBASE_URL` can override the CMS URL.
 - Local development defaults to `http://127.0.0.1:8090`.
 - Production on `mimigo.com.ar` derives `https://cms.mimigo.com.ar`.
 - Vercel previews and fallback domains keep CMS disabled unless explicitly configured.
+- `mimi-servicios/env.js` currently points production traffic to `https://cms.mimigo.com.ar` with a 2500ms timeout.
 - If PocketBase is down, the app uses local fallback content and cached CMS content when available.
 - PocketBase reads are timeout-bound, non-blocking and never required for auth or service requests.
+- The CMS client supports both the current production schema (`active=true`) and the earlier seed schema (`enabled=true`) for rollback compatibility.
 
 ## Service worker policy
 
@@ -57,6 +64,31 @@ PocketBase must never store secrets, tokens, payment data, KYC documents, servic
 - Daily backups of `pb_data`.
 - Server firewall allows only SSH, HTTP and HTTPS.
 - Health check monitored at `/api/health`.
+
+## Setup command
+
+Run only from a trusted local terminal with admin variables set. Never commit these values.
+
+```powershell
+$env:POCKETBASE_URL="https://cms.mimigo.com.ar"
+$env:POCKETBASE_ADMIN_EMAIL="<admin email>"
+$env:POCKETBASE_ADMIN_PASSWORD="<admin password>"
+node scripts/setup-pocketbase-cms.mjs
+```
+
+Expected public checks after setup:
+
+```powershell
+curl.exe -I https://cms.mimigo.com.ar/_/
+curl.exe -I https://cms.mimigo.com.ar/api/health
+curl.exe -L "https://cms.mimigo.com.ar/api/collections/service_categories/records?perPage=1&filter=active=true"
+```
+
+Public write checks must return unauthorized/forbidden:
+
+```powershell
+curl.exe -X POST "https://cms.mimigo.com.ar/api/collections/banners/records" -H "Content-Type: application/json" -d "{\"slug\":\"public-probe\",\"title\":\"probe\",\"active\":true}"
+```
 
 ## Rollback
 

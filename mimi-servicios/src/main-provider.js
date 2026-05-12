@@ -64,6 +64,10 @@ import {
   MIMI_ACTIVE_JOB_LOCATION_INTERVAL_MS,
   MIMI_PROVIDER_HEARTBEAT_INTERVAL_MS
 } from "./services/runtime-config.js";
+import {
+  loadCmsFeatureFlags,
+  loadCmsServiceCategories
+} from "./services/pocketbase-cms.js";
 import { initObservability, markPerformance } from "./services/observability.js";
 import {
   disconnectRealtime as disconnectManagedRealtime,
@@ -73,6 +77,68 @@ import { ensureMapLibreAssets } from "./services/map.js";
 
 initObservability("provider");
 markPerformance("provider_module_loaded");
+
+function normalizeProviderCategory(category = {}) {
+  return {
+    id: category.id,
+    code: category.code,
+    slug: category.slug ?? null,
+    name: category.name,
+    description: category.description,
+    aliases: category.aliases ?? [],
+    search_keywords: category.search_keywords ?? [],
+    default_pricing_model: category.default_pricing_model ?? "HOURLY",
+    requires_provider_quote: Boolean(category.requires_provider_quote),
+    allowed_service_modes: category.allowed_service_modes ?? ["IN_PERSON"],
+    requires_professional_license: Boolean(category.requires_professional_license),
+    requires_background_check: Boolean(category.requires_background_check),
+    source: category.source ?? null,
+    discovery_status: category.discovery_status ?? null,
+    auto_created: Boolean(category.auto_created)
+  };
+}
+
+function categoryMergeKey(category = {}) {
+  return String(category.code || category.slug || category.name || category.id || "")
+    .trim()
+    .toUpperCase();
+}
+
+function mergeProviderCmsCategories(baseCategories = [], cmsCategories = []) {
+  const byKey = new Map();
+
+  baseCategories
+    .map(normalizeProviderCategory)
+    .filter((category) => category.id && categoryMergeKey(category))
+    .forEach((category) => byKey.set(categoryMergeKey(category), category));
+
+  cmsCategories
+    .filter((category) => category?.id || category?.slug || category?.name)
+    .forEach((category) => {
+      const key = categoryMergeKey(category);
+      const existing = byKey.get(key);
+      if (!existing) return;
+
+      byKey.set(key, {
+        ...existing,
+        name: category.name || existing.name,
+        description: category.description || existing.description,
+        aliases: [
+          ...(Array.isArray(existing.aliases) ? existing.aliases : []),
+          ...(Array.isArray(category.aliases) ? category.aliases : [])
+        ],
+        source: existing.source || "supabase",
+        cms_source: "pocketbase_cms",
+        visual_order: Number(category.visual_order || existing.visual_order || 0)
+      });
+    });
+
+  return [...byKey.values()].sort((a, b) => {
+    const orderDelta = Number(a.visual_order || 0) - Number(b.visual_order || 0);
+    if (orderDelta) return orderDelta;
+    return String(a.name || "").localeCompare(String(b.name || ""), "es");
+  });
+}
 
 // ============================================
 // APP CONTROLLER
@@ -181,26 +247,10 @@ async init() {
     // Fallback: si DB devolvió 0 categorías, usar appConfig.categories (catálogo local)
     const sourceCats = (Array.isArray(cats) && cats.length > 0) ? cats : (appConfig.categories ?? []);
 
-    const normalizedCategories = sourceCats.map((c) => ({
-      id: c.id,
-      code: c.code,
-      slug: c.slug ?? null,
-      name: c.name,
-      description: c.description,
-      aliases: c.aliases ?? [],
-      search_keywords: c.search_keywords ?? [],
-      default_pricing_model: c.default_pricing_model ?? "HOURLY",
-      requires_provider_quote: Boolean(c.requires_provider_quote),
-      allowed_service_modes: c.allowed_service_modes ?? ["IN_PERSON"],
-      requires_professional_license: Boolean(c.requires_professional_license),
-      requires_background_check: Boolean(c.requires_background_check),
-      source: c.source ?? null,
-      discovery_status: c.discovery_status ?? null,
-      auto_created: Boolean(c.auto_created)
-    }));
+    const normalizedCategories = sourceCats.map(normalizeProviderCategory);
 
-    // Sincronizar el módulo appConfig (lo usa render-client.js directamente)
-    appConfig.categories = sourceCats;
+    // Sincronizar el modulo appConfig con rubros reales de Supabase/local.
+    appConfig.categories = normalizedCategories;
 
     actions.updateState({
       appConfig: {
@@ -211,29 +261,18 @@ async init() {
       categories: normalizedCategories
     });
     console.log(`[MIMI] Categories loaded: ${normalizedCategories.length} items (DB: ${cats?.length ?? 0}, fallback: ${normalizedCategories.length - (cats?.length ?? 0)})`);
+    this.loadProviderCmsVisuals(normalizedCategories);
   } catch (catErr) {
     console.error("[MIMI] loadCategories failed:", catErr.message);
     // En error: igual cargar el catálogo local para que la UI nunca quede vacía
     const fallbackCats = appConfig.categories ?? [];
-    appConfig.categories = fallbackCats;
-    const normalizedFallback = fallbackCats.map((c) => ({
-      id: c.id,
-      code: c.code,
-      slug: c.slug ?? null,
-      name: c.name,
-      description: c.description,
-      aliases: c.aliases ?? [],
-      search_keywords: c.search_keywords ?? [],
-      default_pricing_model: c.default_pricing_model ?? "HOURLY",
-      requires_provider_quote: Boolean(c.requires_provider_quote),
-      allowed_service_modes: c.allowed_service_modes ?? ["IN_PERSON"],
-      requires_professional_license: Boolean(c.requires_professional_license),
-      requires_background_check: Boolean(c.requires_background_check),
-    }));
+    const normalizedFallback = fallbackCats.map(normalizeProviderCategory);
+    appConfig.categories = normalizedFallback;
     actions.updateState({
       appConfig: { categories: normalizedFallback, categoriesLoaded: false, categoriesError: catErr.message },
       categories: normalizedFallback
     });
+    this.loadProviderCmsVisuals(normalizedFallback);
   }
 
   this.cacheElements();
@@ -1429,6 +1468,45 @@ container.style.background = "";
     }
   });
 }  
+
+async loadProviderCmsVisuals(baseCategories = []) {
+  const safeBase = Array.isArray(baseCategories) && baseCategories.length
+    ? baseCategories
+    : this.state?.appConfig?.categories ?? appConfig.categories ?? [];
+
+  try {
+    const [cmsCategories, featureFlags] = await Promise.all([
+      loadCmsServiceCategories([]),
+      loadCmsFeatureFlags()
+    ]);
+
+    const mergedCategories = mergeProviderCmsCategories(safeBase, cmsCategories);
+    if (mergedCategories.length) {
+      appConfig.categories = mergedCategories;
+    }
+
+    window.MIMI_CMS_FEATURE_FLAGS = Object.freeze({ ...featureFlags });
+
+    actions.updateState({
+      appConfig: {
+        categories: mergedCategories.length ? mergedCategories : safeBase,
+        categoriesLoaded: true,
+        categoriesError: null
+      },
+      categories: mergedCategories.length ? mergedCategories : safeBase,
+      meta: {
+        ...(this.state?.meta ?? {}),
+        cmsFeatureFlags: featureFlags,
+        cmsLoadedAt: new Date().toISOString(),
+        cmsProviderCategoriesEnriched: Boolean(cmsCategories?.length)
+      }
+    });
+  } catch (error) {
+    if (window.MIMI_DEBUG_CMS) {
+      console.warn("[MIMI CMS] Provider fallback", error?.message || error);
+    }
+  }
+}
   
 renderDrawerProfile() {
   const session = this.state?.session ?? {};
@@ -1602,23 +1680,13 @@ const [categories, workspace, notifications, offers, activeRequest] = await Prom
 ]);
 
 if (Array.isArray(categories) && categories.length) {
+  const normalizedCategories = categories.map(normalizeProviderCategory);
   actions.updateState({
     appConfig: {
-      categories: categories.map((category) => ({
-        id: category.id,
-        code: category.code,
-        name: category.name,
-        description: category.description,
-        aliases: category.aliases ?? [],
-        search_keywords: category.search_keywords ?? [],
-        default_pricing_model: category.default_pricing_model ?? "HOURLY",
-        requires_provider_quote: Boolean(category.requires_provider_quote),
-        allowed_service_modes: category.allowed_service_modes ?? ["IN_PERSON"],
-        requires_professional_license: Boolean(category.requires_professional_license),
-        requires_background_check: Boolean(category.requires_background_check)
-      }))
+      categories: normalizedCategories
     }
   });
+  this.loadProviderCmsVisuals(normalizedCategories);
 }
 setTimeout(async () => {
   try {

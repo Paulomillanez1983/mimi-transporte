@@ -6,78 +6,90 @@ const REQUIRED_ENV = [
   "POCKETBASE_ADMIN_PASSWORD"
 ];
 
-const CMS_RULE = "enabled=true";
+const CMS_RULE_ACTIVE = "active=true";
+const CMS_RULE_LEGACY = "enabled=true";
 
 const COLLECTIONS = {
   app_config: {
     fields: [
       textField("key", { required: true, max: 120 }),
       jsonField("value"),
-      boolField("enabled"),
-      textField("environment", { max: 40 }),
+      textField("description", { max: 240 }),
+      boolField("active"),
       dateField("updated_at")
     ],
     indexes: [
-      "CREATE UNIQUE INDEX idx_app_config_key_environment ON app_config (key, environment)"
+      "CREATE UNIQUE INDEX idx_app_config_key ON app_config (key)"
     ]
   },
   home_sections: {
     fields: [
+      textField("slug", { required: true, max: 120 }),
       textField("title", { required: true, max: 160 }),
       textField("subtitle", { max: 220 }),
       editorField("body"),
-      textField("image", { max: 500 }),
-      textField("route", { max: 160 }),
+      textField("layout", { max: 80 }),
+      jsonField("data"),
       numberField("order"),
-      boolField("enabled"),
-      textField("audience", { max: 40 })
+      boolField("active"),
+      dateField("start_at"),
+      dateField("end_at")
     ],
     indexes: [
-      "CREATE INDEX idx_home_sections_audience_order ON home_sections (audience, enabled, \"order\")"
+      "CREATE UNIQUE INDEX idx_home_sections_slug ON home_sections (slug)",
+      "CREATE INDEX idx_home_sections_active_order ON home_sections (active, \"order\")"
     ]
   },
   service_categories: {
     fields: [
-      textField("name", { required: true, max: 120 }),
       textField("slug", { required: true, max: 120 }),
+      textField("name", { required: true, max: 120 }),
+      textField("description", { max: 600 }),
       textField("icon", { max: 80 }),
       textField("image", { max: 500 }),
-      editorField("description"),
+      textField("parent_slug", { max: 120 }),
       numberField("order"),
-      boolField("enabled"),
-      textField("parent_category", { max: 120 })
+      boolField("active"),
+      boolField("featured"),
+      boolField("online"),
+      numberField("radius_km", { min: 0 }),
+      jsonField("tags")
     ],
     indexes: [
-      "CREATE UNIQUE INDEX idx_service_categories_slug ON service_categories (slug)"
+      "CREATE UNIQUE INDEX idx_service_categories_slug ON service_categories (slug)",
+      "CREATE INDEX idx_service_categories_active_order ON service_categories (active, \"order\")"
     ]
   },
   banners: {
     fields: [
+      textField("slug", { required: true, max: 120 }),
       textField("title", { required: true, max: 160 }),
       textField("subtitle", { max: 240 }),
+      editorField("body"),
       textField("image", { max: 500 }),
       textField("cta_label", { max: 80 }),
-      textField("cta_route", { max: 160 }),
-      textField("audience", { max: 40 }),
+      textField("cta_url", { max: 180 }),
+      textField("placement", { max: 80 }),
       numberField("order"),
-      boolField("enabled"),
-      dateField("starts_at"),
-      dateField("ends_at")
+      boolField("active"),
+      dateField("start_at"),
+      dateField("end_at")
     ],
     indexes: [
-      "CREATE INDEX idx_banners_audience_enabled_dates ON banners (audience, enabled, starts_at, ends_at, \"order\")"
+      "CREATE UNIQUE INDEX idx_banners_slug ON banners (slug)",
+      "CREATE INDEX idx_banners_active_placement_order ON banners (active, placement, \"order\")"
     ]
   },
   faqs: {
     fields: [
       textField("question", { required: true, max: 240 }),
       editorField("answer"),
-      textField("audience", { max: 40 }),
+      textField("category", { max: 80 }),
       numberField("order"),
-      boolField("enabled")
+      boolField("active")
     ],
     indexes: [
-      "CREATE INDEX idx_faqs_audience_order ON faqs (audience, enabled, \"order\")"
+      "CREATE INDEX idx_faqs_active_category_order ON faqs (active, category, \"order\")"
     ]
   },
   feature_flags: {
@@ -85,7 +97,9 @@ const COLLECTIONS = {
       textField("key", { required: true, max: 120 }),
       boolField("enabled"),
       textField("description", { max: 240 }),
-      numberField("rollout_percentage", { min: 0, max: 100 })
+      jsonField("payload"),
+      textField("environment", { max: 40 }),
+      boolField("active")
     ],
     indexes: [
       "CREATE UNIQUE INDEX idx_feature_flags_key ON feature_flags (key)"
@@ -96,60 +110,70 @@ const COLLECTIONS = {
 const SEED = {
   banners: [
     {
+      slug: "client-service-search",
       title: "Servicios confiables cerca tuyo",
       subtitle: "Elegi prestadores verificados y envia una solicitud real desde MIMI.",
+      body: "Contenido visual editable desde PocketBase. Las solicitudes reales siguen en Supabase.",
       image: "",
       cta_label: "Buscar servicio",
-      cta_route: "/mimi-servicios/cliente.html",
-      audience: "client",
+      cta_url: "/servicios",
+      placement: "client",
       order: 10,
-      enabled: true,
-      starts_at: "",
-      ends_at: ""
+      active: true,
+      start_at: "",
+      end_at: ""
     },
     {
+      slug: "provider-workspace",
       title: "Tu panel de trabajo, mas liviano",
       subtitle: "Recibi solicitudes, valida el PIN e inicia servicios sin tracking innecesario.",
+      body: "Optimizacion visual y CMS desacoplado para prestadores.",
       image: "",
       cta_label: "Ir al panel",
-      cta_route: "/mimi-servicios/prestador.html",
-      audience: "provider",
+      cta_url: "/prestador",
+      placement: "provider",
       order: 20,
-      enabled: true,
-      starts_at: "",
-      ends_at: ""
+      active: true,
+      start_at: "",
+      end_at: ""
     }
   ],
   home_sections: [
     {
+      slug: "client-home-intro",
       title: "Pedi ayuda a domicilio",
       subtitle: "MIMI conecta clientes con prestadores independientes.",
       body: "Busca por rubro, compara opciones y envia una solicitud al prestador elegido.",
-      image: "",
-      route: "/mimi-servicios/cliente.html",
+      layout: "compact",
+      data: { route: "/servicios", placement: "client" },
       order: 10,
-      enabled: true,
-      audience: "client"
+      active: true,
+      start_at: "",
+      end_at: ""
     },
     {
+      slug: "provider-home-intro",
       title: "Trabaja con solicitudes reales",
       subtitle: "Recibi pedidos cuando estas online.",
       body: "El prestador decide aceptar o rechazar. El servicio empieza al validar el PIN del cliente.",
-      image: "",
-      route: "/mimi-servicios/prestador.html",
+      layout: "compact",
+      data: { route: "/prestador", placement: "provider" },
       order: 20,
-      enabled: true,
-      audience: "provider"
+      active: true,
+      start_at: "",
+      end_at: ""
     },
     {
+      slug: "admin-cms-intro",
       title: "CMS visual sin tocar produccion",
       subtitle: "Banners, textos y rubros visuales editables desde PocketBase.",
       body: "Supabase conserva auth, pedidos, pagos, KYC y realtime critico.",
-      image: "",
-      route: "",
+      layout: "admin_note",
+      data: { placement: "admin" },
       order: 30,
-      enabled: true,
-      audience: "admin"
+      active: true,
+      start_at: "",
+      end_at: ""
     }
   ],
   service_categories: [
@@ -167,17 +191,21 @@ const SEED = {
     faq("El prestador comparte GPS todo el tiempo?", "No. En MIMI Servicios el tracking se reduce y solo se usa cuando el flujo activo lo necesita.", "provider", 40)
   ],
   feature_flags: [
-    flag("pocketbase_cms_enabled", true, "Habilita lectura de contenido visual desde PocketBase.", 100),
-    flag("realtime_optimized_enabled", true, "Usa canales scoped y pausa realtime no critico.", 100),
-    flag("provider_tracking_optimized", true, "Reduce frecuencia de tracking de prestadores en servicios activos.", 100),
-    flag("nearby_snapshot_cache_enabled", true, "Cachea snapshots de prestadores cercanos por ventana corta.", 100)
+    flag("pocketbase_cms_enabled", true, "Habilita lectura de contenido visual desde PocketBase."),
+    flag("enable_home_banners", true, "Habilita banners visuales no criticos."),
+    flag("enable_dynamic_categories", true, "Habilita rubros visuales desde CMS con fallback local."),
+    flag("enable_faqs", true, "Habilita FAQs visuales desde CMS."),
+    flag("enable_provider_highlights", true, "Habilita destacados visuales para prestadores."),
+    flag("realtime_optimized_enabled", true, "Usa canales scoped y pausa realtime no critico."),
+    flag("provider_tracking_optimized", true, "Reduce frecuencia de tracking de prestadores en servicios activos."),
+    flag("nearby_snapshot_cache_enabled", true, "Cachea snapshots de prestadores cercanos por ventana corta.")
   ],
   app_config: [
     {
       key: "cms_version",
       value: { version: "2026.05.11.1", owner: "mimi-services" },
-      enabled: true,
-      environment: "local",
+      description: "Version logica del contenido CMS visual.",
+      active: true,
       updated_at: new Date().toISOString()
     }
   ]
@@ -206,8 +234,9 @@ async function main() {
     const existing = collections.find((collection) => collection.name === name);
     if (existing) {
       present.push(name);
-      if (needsCmsRulesUpdate(existing)) {
-        await updateCollectionRules(env, auth.token, existing.id || name);
+      const rule = cmsRuleForCollection(existing);
+      if (needsCmsRulesUpdate(existing, rule)) {
+        await updateCollectionRules(env, auth.token, existing.id || name, rule);
         rulesUpdated.push(name);
       }
       continue;
@@ -217,14 +246,17 @@ async function main() {
     created.push(name);
   }
 
+  const finalCollections = await listCollections(env, auth.token);
   const seeded = [];
 
   for (const [collection, records] of Object.entries(SEED)) {
+    const schema = finalCollections.find((item) => item.name === collection);
     for (const record of records) {
-      const exists = await recordExists(env, auth.token, collection, uniqueFilter(collection, record));
+      const adaptedRecord = adaptRecordToSchema(record, schema);
+      const exists = await recordExists(env, auth.token, collection, uniqueFilter(collection, adaptedRecord, schema));
       if (exists) continue;
-      await createRecord(env, auth.token, collection, record);
-      seeded.push(`${collection}:${record.key || record.slug || record.title || record.question}`);
+      await createRecord(env, auth.token, collection, adaptedRecord);
+      seeded.push(`${collection}:${adaptedRecord.key || adaptedRecord.slug || adaptedRecord.title || adaptedRecord.question}`);
     }
   }
 
@@ -280,18 +312,18 @@ async function createCollection(env, token, name, definition) {
     body: {
       name,
       type: "base",
-      ...cmsRulesPayload(),
+      ...cmsRulesPayload(CMS_RULE_ACTIVE),
       fields: definition.fields,
       indexes: definition.indexes || []
     }
   });
 }
 
-async function updateCollectionRules(env, token, collectionIdOrName) {
+async function updateCollectionRules(env, token, collectionIdOrName, rule) {
   return request(env, `/api/collections/${encodeURIComponent(collectionIdOrName)}`, {
     method: "PATCH",
     token,
-    body: cmsRulesPayload()
+    body: cmsRulesPayload(rule)
   });
 }
 
@@ -332,27 +364,36 @@ async function request(env, path, { method = "GET", token, body, allowFailure = 
   return data;
 }
 
-function needsCmsRulesUpdate(collection) {
+function needsCmsRulesUpdate(collection, rule) {
   return (
-    collection?.listRule !== CMS_RULE ||
-    collection?.viewRule !== CMS_RULE ||
+    collection?.listRule !== rule ||
+    collection?.viewRule !== rule ||
     collection?.createRule !== null ||
     collection?.updateRule !== null ||
     collection?.deleteRule !== null
   );
 }
 
-function cmsRulesPayload() {
+function cmsRuleForCollection(collection) {
+  const fields = Array.isArray(collection?.fields) ? collection.fields : [];
+  const hasActive = fields.some((field) => field?.name === "active");
+  const hasEnabled = fields.some((field) => field?.name === "enabled");
+  if (hasActive) return CMS_RULE_ACTIVE;
+  if (hasEnabled) return CMS_RULE_LEGACY;
+  return CMS_RULE_ACTIVE;
+}
+
+function cmsRulesPayload(rule) {
   return {
-    listRule: CMS_RULE,
-    viewRule: CMS_RULE,
+    listRule: rule,
+    viewRule: rule,
     createRule: null,
     updateRule: null,
     deleteRule: null
   };
 }
 
-function uniqueFilter(collection, record) {
+function uniqueFilter(collection, record, schema) {
   if (collection === "app_config" || collection === "feature_flags") {
     return `key="${escapeFilter(record.key)}"`;
   }
@@ -362,7 +403,66 @@ function uniqueFilter(collection, record) {
   if (collection === "faqs") {
     return `question="${escapeFilter(record.question)}"`;
   }
-  return `title="${escapeFilter(record.title)}" && audience="${escapeFilter(record.audience || "")}"`;
+  if (schemaHasField(schema, "slug") && record.slug) {
+    return `slug="${escapeFilter(record.slug)}"`;
+  }
+  if (schemaHasField(schema, "title") && schemaHasField(schema, "audience")) {
+    return `title="${escapeFilter(record.title)}" && audience="${escapeFilter(record.audience || "")}"`;
+  }
+  if (schemaHasField(schema, "title") && schemaHasField(schema, "placement")) {
+    return `title="${escapeFilter(record.title)}" && placement="${escapeFilter(record.placement || "")}"`;
+  }
+  if (schemaHasField(schema, "title")) {
+    return `title="${escapeFilter(record.title)}"`;
+  }
+  return `id="${escapeFilter(record.id || "")}"`;
+}
+
+function adaptRecordToSchema(record, schema) {
+  const fields = new Set((Array.isArray(schema?.fields) ? schema.fields : []).map((field) => field.name));
+  if (!fields.size) return record;
+
+  const adapted = {};
+  for (const [key, value] of Object.entries(record)) {
+    if (fields.has(key)) adapted[key] = value;
+  }
+
+  if (fields.has("enabled") && !fields.has("active") && "active" in record) {
+    adapted.enabled = record.active;
+  }
+  if (fields.has("active") && !("active" in adapted) && "enabled" in record) {
+    adapted.active = record.enabled;
+  }
+  if (fields.has("audience") && !("audience" in adapted) && "placement" in record) {
+    adapted.audience = record.placement;
+  }
+  if (fields.has("placement") && !("placement" in adapted) && "audience" in record) {
+    adapted.placement = record.audience;
+  }
+  if (fields.has("cta_route") && !("cta_route" in adapted) && "cta_url" in record) {
+    adapted.cta_route = record.cta_url;
+  }
+  if (fields.has("cta_url") && !("cta_url" in adapted) && "cta_route" in record) {
+    adapted.cta_url = record.cta_route;
+  }
+  if (fields.has("starts_at") && !("starts_at" in adapted) && "start_at" in record) {
+    adapted.starts_at = record.start_at;
+  }
+  if (fields.has("ends_at") && !("ends_at" in adapted) && "end_at" in record) {
+    adapted.ends_at = record.end_at;
+  }
+  if (fields.has("parent_category") && !("parent_category" in adapted) && "parent_slug" in record) {
+    adapted.parent_category = record.parent_slug;
+  }
+  if (fields.has("category") && !("category" in adapted) && "audience" in record) {
+    adapted.category = record.audience;
+  }
+
+  return adapted;
+}
+
+function schemaHasField(schema, name) {
+  return Array.isArray(schema?.fields) && schema.fields.some((field) => field.name === name);
 }
 
 function escapeFilter(value) {
@@ -402,13 +502,33 @@ function numberField(name, options = {}) {
 }
 
 function category(name, slug, description, order) {
-  return { name, slug, icon: "", image: "", description, order, enabled: true, parent_category: "" };
+  return {
+    slug,
+    name,
+    description,
+    icon: "",
+    image: "",
+    parent_slug: "",
+    order,
+    active: true,
+    featured: order <= 30,
+    online: true,
+    radius_km: 15,
+    tags: []
+  };
 }
 
 function faq(question, answer, audience, order) {
-  return { question, answer, audience, order, enabled: true };
+  return { question, answer, category: audience, order, active: true };
 }
 
-function flag(key, enabled, description, rolloutPercentage) {
-  return { key, enabled, description, rollout_percentage: rolloutPercentage };
+function flag(key, enabled, description) {
+  return {
+    key,
+    enabled,
+    description,
+    payload: {},
+    environment: "production",
+    active: true
+  };
 }

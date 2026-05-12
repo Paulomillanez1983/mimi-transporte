@@ -26,7 +26,8 @@ const DEFAULT_FEATURE_FLAGS = Object.freeze({
 });
 
 export async function loadCmsCollection(collection, {
-  filter = "enabled=true",
+  filter = "active=true",
+  fallbackFilters = ["enabled=true"],
   sort = "order",
   perPage = 50,
   fallback = []
@@ -51,6 +52,7 @@ export async function loadCmsCollection(collection, {
     baseUrl,
     collection,
     filter,
+    fallbackFilters,
     sort,
     perPage,
     cacheKey,
@@ -71,13 +73,52 @@ async function fetchCmsCollection({
   baseUrl,
   collection,
   filter,
+  fallbackFilters,
   sort,
   perPage,
   cacheKey,
   cached,
   fallback
 }) {
-  try {
+  const filters = [filter, ...(Array.isArray(fallbackFilters) ? fallbackFilters : [])]
+    .filter((item, index, list) => item && list.indexOf(item) === index);
+  let lastError = null;
+
+  for (const currentFilter of filters) {
+    try {
+      const items = await requestCmsItems({
+        baseUrl,
+        collection,
+        filter: currentFilter,
+        sort,
+        perPage
+      });
+      writeCache(cacheKey, items);
+      return items;
+    } catch (error) {
+      lastError = error;
+      if (!isRecoverableFilterError(error)) break;
+    }
+  }
+
+  if (cached) return cached;
+  if (window.MIMI_DEBUG_CMS) {
+    console.warn("[MIMI CMS] PocketBase fallback", collection, lastError?.message || lastError);
+  }
+  return cloneFallback(fallback);
+}
+
+async function requestCmsItems({
+  baseUrl,
+  collection,
+  filter,
+  sort,
+  perPage
+}) {
+  const attempts = 2;
+  let lastError = null;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
     const url = new URL(`/api/collections/${collection}/records`, baseUrl);
     url.searchParams.set("perPage", String(clampPerPage(perPage)));
     if (filter) url.searchParams.set("filter", filter);
@@ -86,47 +127,49 @@ async function fetchCmsCollection({
     const controller = new AbortController();
     const timeout = setTimeoutSafe(() => controller.abort(), MIMI_POCKETBASE_TIMEOUT_MS);
 
-    let response;
     try {
-      response = await fetch(url.toString(), {
+      const response = await fetch(url.toString(), {
         signal: controller.signal,
         cache: "no-store",
         credentials: "omit",
         headers: { Accept: "application/json" }
       });
+
+      if (!response.ok) {
+        const error = new Error(`PB_${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
+
+      const data = await response.json();
+      return normalizeCollectionItems(collection, data?.items);
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableRequestError(error) || attempt + 1 >= attempts) throw error;
     } finally {
       clearTimeoutSafe(timeout);
     }
-
-    if (!response.ok) throw new Error(`PB_${response.status}`);
-
-    const data = await response.json();
-    const items = normalizeCollectionItems(collection, data?.items);
-    writeCache(cacheKey, items);
-    return items;
-  } catch (error) {
-    if (cached) return cached;
-    if (window.MIMI_DEBUG_CMS) {
-      console.warn("[MIMI CMS] PocketBase fallback", collection, error?.message || error);
-    }
-    return cloneFallback(fallback);
   }
+
+  throw lastError || new Error("PB_REQUEST_FAILED");
 }
 
 export async function loadCmsServiceCategories(fallback = []) {
   const items = await loadCmsCollection("service_categories", {
+    filter: "active=true",
+    fallbackFilters: ["enabled=true"],
     fallback,
     perPage: 100
   });
 
   return items
-    .filter((item) => item?.enabled !== false)
+    .filter((item) => item?.active !== false)
     .map((item) => ({
       id: item.slug || item.id || slugify(item.name),
       code: item.slug || item.name || item.id,
       name: item.name,
       description: item.description || "",
-      aliases: [],
+      aliases: Array.isArray(item.tags) ? item.tags : [],
       source: "pocketbase_cms",
       visual_order: Number(item.order || 0)
     }));
@@ -138,8 +181,12 @@ export async function loadCmsBanners(audience = "client") {
 
   return loadCmsCollection("banners", {
     filter:
+      `active=true && (placement="${safeAudience}" || placement="all" || placement="")` +
+      ` && (start_at="" || start_at<="${now}") && (end_at="" || end_at>="${now}")`,
+    fallbackFilters: [
       `enabled=true && (audience="${safeAudience}" || audience="all")` +
-      ` && (starts_at="" || starts_at<="${now}") && (ends_at="" || ends_at>="${now}")`,
+        ` && (starts_at="" || starts_at<="${now}") && (ends_at="" || ends_at>="${now}")`
+    ],
     fallback: [],
     perPage: 10
   });
@@ -149,7 +196,8 @@ export async function loadCmsHomeSections(audience = "client", fallback = []) {
   const safeAudience = escapePbFilter(audience || "client");
 
   return loadCmsCollection("home_sections", {
-    filter: `enabled=true && (audience="${safeAudience}" || audience="all")`,
+    filter: `active=true && (placement="${safeAudience}" || placement="all" || placement="")`,
+    fallbackFilters: [`enabled=true && (audience="${safeAudience}" || audience="all")`],
     fallback,
     perPage: 20
   });
@@ -159,7 +207,8 @@ export async function loadCmsFaqs(audience = "client", fallback = []) {
   const safeAudience = escapePbFilter(audience || "client");
 
   return loadCmsCollection("faqs", {
-    filter: `enabled=true && (audience="${safeAudience}" || audience="all")`,
+    filter: `active=true && (category="${safeAudience}" || category="all" || category="")`,
+    fallbackFilters: [`enabled=true && (audience="${safeAudience}" || audience="all")`],
     fallback,
     perPage: 50
   });
@@ -167,6 +216,8 @@ export async function loadCmsFaqs(audience = "client", fallback = []) {
 
 export async function loadCmsFeatureFlags(defaults = DEFAULT_FEATURE_FLAGS) {
   const items = await loadCmsCollection("feature_flags", {
+    filter: "active=true",
+    fallbackFilters: ["enabled=true"],
     fallback: [],
     perPage: 100,
     sort: "key"
@@ -177,6 +228,22 @@ export async function loadCmsFeatureFlags(defaults = DEFAULT_FEATURE_FLAGS) {
     flags[item.key] = Boolean(item.enabled);
     return flags;
   }, { ...DEFAULT_FEATURE_FLAGS, ...(defaults || {}) });
+}
+
+export async function loadCmsAppConfig(defaults = {}) {
+  const items = await loadCmsCollection("app_config", {
+    filter: "active=true",
+    fallbackFilters: ["enabled=true"],
+    fallback: [],
+    perPage: 100,
+    sort: "key"
+  });
+
+  return items.reduce((config, item) => {
+    if (!item?.key) return config;
+    config[item.key] = item.value ?? null;
+    return config;
+  }, { ...(defaults || {}) });
 }
 
 export function isPocketBaseCmsConfigured() {
@@ -234,7 +301,7 @@ function normalizeCollectionItems(collection, items) {
 function normalizeCollectionItem(collection, item) {
   if (!item || typeof item !== "object") return null;
 
-  const enabled = item.enabled !== false;
+  const active = item.active !== false && item.enabled !== false;
 
   if (collection === "service_categories") {
     const name = stringValue(item.name, 120);
@@ -249,8 +316,13 @@ function normalizeCollectionItem(collection, item) {
       image: stringValue(item.image, 500),
       description: stringValue(item.description, 600),
       order: numberValue(item.order),
-      enabled,
-      parent_category: stringValue(item.parent_category, 120)
+      active,
+      enabled: active,
+      featured: Boolean(item.featured),
+      online: Boolean(item.online),
+      radius_km: numberValue(item.radius_km, 0),
+      tags: Array.isArray(item.tags) ? item.tags.map((tag) => stringValue(tag, 80)).filter(Boolean) : [],
+      parent_slug: stringValue(item.parent_slug || item.parent_category, 120)
     };
   }
 
@@ -262,14 +334,21 @@ function normalizeCollectionItem(collection, item) {
       id: stringValue(item.id, 80),
       title,
       subtitle: stringValue(item.subtitle, 240),
+      body: stringValue(item.body, 1200),
+      slug: stringValue(item.slug, 120),
       image: stringValue(item.image, 500),
       cta_label: stringValue(item.cta_label, 80),
-      cta_route: safeRouteValue(item.cta_route),
-      audience: stringValue(item.audience || "all", 40),
+      cta_url: safeRouteValue(item.cta_url || item.cta_route),
+      cta_route: safeRouteValue(item.cta_route || item.cta_url),
+      placement: stringValue(item.placement || item.audience || "all", 40),
+      audience: stringValue(item.audience || item.placement || "all", 40),
       order: numberValue(item.order),
-      enabled,
-      starts_at: stringValue(item.starts_at, 40),
-      ends_at: stringValue(item.ends_at, 40)
+      active,
+      enabled: active,
+      start_at: stringValue(item.start_at || item.starts_at, 40),
+      end_at: stringValue(item.end_at || item.ends_at, 40),
+      starts_at: stringValue(item.starts_at || item.start_at, 40),
+      ends_at: stringValue(item.ends_at || item.end_at, 40)
     };
   }
 
@@ -282,11 +361,18 @@ function normalizeCollectionItem(collection, item) {
       title,
       subtitle: stringValue(item.subtitle, 220),
       body: stringValue(item.body, 1200),
+      slug: stringValue(item.slug, 120),
+      layout: stringValue(item.layout, 80),
+      data: item.data && typeof item.data === "object" ? item.data : null,
       image: stringValue(item.image, 500),
       route: safeRouteValue(item.route),
       order: numberValue(item.order),
-      enabled,
-      audience: stringValue(item.audience || "all", 40)
+      active,
+      enabled: active,
+      placement: stringValue(item.placement || item.audience || "all", 40),
+      audience: stringValue(item.audience || item.placement || "all", 40),
+      start_at: stringValue(item.start_at, 40),
+      end_at: stringValue(item.end_at, 40)
     };
   }
 
@@ -298,9 +384,11 @@ function normalizeCollectionItem(collection, item) {
       id: stringValue(item.id, 80),
       question,
       answer: stringValue(item.answer, 1200),
-      audience: stringValue(item.audience || "all", 40),
+      category: stringValue(item.category || item.audience || "all", 80),
+      audience: stringValue(item.audience || item.category || "all", 40),
       order: numberValue(item.order),
-      enabled
+      active,
+      enabled: active
     };
   }
 
@@ -311,8 +399,11 @@ function normalizeCollectionItem(collection, item) {
     return {
       id: stringValue(item.id, 80),
       key,
-      enabled,
+      enabled: item.enabled !== false,
+      active,
       description: stringValue(item.description, 240),
+      environment: stringValue(item.environment, 40),
+      payload: item.payload && typeof item.payload === "object" ? item.payload : null,
       rollout_percentage: Math.min(100, Math.max(0, numberValue(item.rollout_percentage, 0)))
     };
   }
@@ -325,7 +416,9 @@ function normalizeCollectionItem(collection, item) {
       id: stringValue(item.id, 80),
       key,
       value: item.value ?? null,
-      enabled,
+      active,
+      enabled: active,
+      description: stringValue(item.description, 240),
       environment: stringValue(item.environment, 40),
       updated_at: stringValue(item.updated_at, 40)
     };
@@ -362,6 +455,16 @@ function cloneFallback(fallback) {
 
 function escapePbFilter(value) {
   return String(value ?? "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+function isRecoverableFilterError(error) {
+  return [400, 404].includes(Number(error?.status));
+}
+
+function isRetryableRequestError(error) {
+  if (!error) return false;
+  if (["AbortError", "TypeError"].includes(error.name)) return true;
+  return [408, 429, 500, 502, 503, 504].includes(Number(error.status));
 }
 
 function slugify(value) {
