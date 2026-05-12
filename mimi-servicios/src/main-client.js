@@ -35,7 +35,10 @@ import {
   subscribeToAuthChanges
 } from "./services/supabase.js";
 import { getMimiPushToken } from "./services/push.js";
-import { loadCmsServiceCategories } from "./services/pocketbase-cms.js";
+import {
+  loadCmsFeatureFlags,
+  loadCmsServiceCategories
+} from "./services/pocketbase-cms.js";
 import { initObservability, markPerformance } from "./services/observability.js";
 import {
   patchState,
@@ -1796,6 +1799,16 @@ async function bootstrapAsyncData() {
       );
       setState((draft) => {
         draft.meta.cmsLoadedAt = new Date().toISOString();
+      });
+    })
+    .catch(() => {});
+
+  loadCmsFeatureFlags()
+    .then((featureFlags) => {
+      window.MIMI_CMS_FEATURE_FLAGS = Object.freeze({ ...featureFlags });
+      setState((draft) => {
+        draft.meta.cmsFeatureFlags = featureFlags;
+        draft.meta.cmsFlagsLoadedAt = new Date().toISOString();
       });
     })
     .catch(() => {});

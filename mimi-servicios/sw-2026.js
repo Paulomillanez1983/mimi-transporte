@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-11-client-auth-consent-1";
+const APP_VERSION = "2026-05-11-cms-runtime-1";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [
@@ -99,6 +99,11 @@ self.addEventListener("fetch", (event) => {
   const isNavigation = request.mode === "navigate";
   const isSameOrigin = url.origin === self.location.origin;
   const isStaticAsset = isSameOrigin && isAppAsset(url);
+
+  if (isPocketBaseCmsRequest(url)) {
+    event.respondWith(fetch(request));
+    return;
+  }
 
   if (isNavigation) {
     event.respondWith(networkFirstPage(request));
@@ -300,6 +305,7 @@ function isAppAsset(url) {
 function isCoreUiAsset(url) {
   const pathname = url.pathname;
   return [
+    "/mimi-servicios/env.js",
     "/mimi-servicios/prestador.html",
     "/mimi-servicios/prestador",
     "/mimi-servicios/cliente.html",
@@ -318,4 +324,8 @@ function isCoreUiAsset(url) {
     "/css/mimi-maps.css",
     "/mimi-servicios/sw-2026.js"
   ].some((asset) => pathname.endsWith(asset));
+}
+
+function isPocketBaseCmsRequest(url) {
+  return url.origin !== self.location.origin && url.pathname.startsWith("/api/collections/");
 }
