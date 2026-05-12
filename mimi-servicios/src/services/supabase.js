@@ -158,13 +158,28 @@ function currentEntryMode(explicitMode = null) {
   return "client";
 }
 
-function clearAuthRedirectIntent() {
+export function clearAuthRedirectIntent() {
   try {
     sessionStorage.removeItem(AUTH_REDIRECT_KEY);
     sessionStorage.removeItem(AUTH_INTENT_KEY);
     localStorage.removeItem(AUTH_INTENT_KEY);
   } catch {
     // noop
+  }
+}
+
+export function hasProviderAuthIntent() {
+  try {
+    return (
+      sessionStorage.getItem(AUTH_REDIRECT_KEY) === "prestador.html" ||
+      sessionStorage.getItem(AUTH_REDIRECT_KEY) === "./prestador.html" ||
+      sessionStorage.getItem(AUTH_INTENT_KEY) === "provider" ||
+      localStorage.getItem(AUTH_INTENT_KEY) === "provider" ||
+      sessionStorage.getItem("mimi_services_active_mode") === "provider" ||
+      localStorage.getItem("mimi_services_active_mode") === "provider"
+    );
+  } catch {
+    return false;
   }
 }
 

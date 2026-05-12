@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.10.24";
+const MIMI_PROVIDER_BUILD = "2026.05.12.1";
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -56,6 +56,7 @@ import {
 
 import { renderProviderScreen } from "./ui/render-provider.js";
 import {
+  clearAuthRedirectIntent,
   getSupabaseClient,
   signInWithGoogle
 } from "./services/supabase.js";
@@ -255,6 +256,8 @@ async init() {
   }
 
   // Cargar categorías — si la DB devuelve vacío o falla, usar el catálogo local de config.js
+  clearAuthRedirectIntent();
+
   try {
     console.log("[MIMI] Loading categories...");
     const cats = await loadCategories();

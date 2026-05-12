@@ -28,6 +28,7 @@ import { subscribeToClientRealtime } from "./services/realtime.js";
 import { playNotificationSound } from "./services/sound.js";
 import {
   getSupabaseClient,
+  hasProviderAuthIntent,
   hasSupabaseEnv,
   redirectAfterLoginByRole,
   signInWithGoogle,
@@ -1901,6 +1902,12 @@ function textFromCms(value, maxLength = 180) {
 
 async function bootstrapAsyncData() {
   const session = await bootstrapSession();
+
+  if (session.isAuthenticated && hasProviderAuthIntent()) {
+    window.location.replace("./prestador.html");
+    return;
+  }
+
   let categories = [];
 
   try {
