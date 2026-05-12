@@ -22,4 +22,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://mimi-transporte.vercel.app/sitemap.xml
+Sitemap: https://mimigo.com.ar/sitemap.xml

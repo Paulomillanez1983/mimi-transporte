@@ -13,3 +13,5 @@ pb_migrations/
 backups/
 remote_snapshot.sql
 qa/*.png
+playwright-report/
+test-results/
