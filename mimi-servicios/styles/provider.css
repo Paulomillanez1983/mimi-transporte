@@ -13933,3 +13933,228 @@ body.provider-pin-open { overflow: hidden !important; overscroll-behavior: none 
     transform: translateY(calc(100% - 152px)) !important;
   }
 }
+
+.provider-phone-open {
+  overflow: hidden;
+}
+
+.provider-phone-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: grid;
+  place-items: end center;
+  padding: 20px 16px calc(env(safe-area-inset-bottom, 0px) + 20px);
+  background: rgba(2, 6, 23, 0.62);
+  backdrop-filter: blur(18px);
+}
+
+.provider-phone-overlay[hidden] {
+  display: none !important;
+}
+
+.provider-phone-sheet {
+  width: min(420px, 100%);
+  max-height: calc(100dvh - 44px - env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  border-radius: 26px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #f8fafc;
+  color: #0f172a;
+  box-shadow: 0 28px 80px rgba(2, 6, 23, 0.34);
+  padding: 22px;
+  position: relative;
+}
+
+.provider-phone-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #111827;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.provider-phone-eyebrow {
+  display: inline-flex;
+  margin-bottom: 10px;
+  color: #059669;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.provider-phone-sheet h2 {
+  margin: 0 48px 8px 0;
+  font-size: 28px;
+  line-height: 1.03;
+  letter-spacing: 0;
+}
+
+.provider-phone-sheet p {
+  margin: 0 0 16px;
+  color: #475569;
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 650;
+}
+
+.provider-phone-entry,
+.provider-phone-otp {
+  display: grid;
+  gap: 12px;
+}
+
+.provider-phone-country,
+.provider-phone-field input {
+  width: 100%;
+  min-height: 54px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  background: #fff;
+  color: #0f172a;
+}
+
+.provider-phone-country {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 0 14px;
+  text-align: left;
+}
+
+.provider-phone-country strong,
+.provider-phone-country b {
+  font-size: 14px;
+}
+
+.provider-phone-country-panel {
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  box-shadow: 0 16px 44px rgba(15, 23, 42, 0.14);
+  padding: 10px;
+}
+
+.provider-phone-country-panel input {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  padding: 0 12px;
+}
+
+.provider-phone-country-list {
+  max-height: 190px;
+  overflow-y: auto;
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.provider-phone-country-list button {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  min-height: 40px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #0f172a;
+  text-align: left;
+  padding: 0 8px;
+}
+
+.provider-phone-country-list button:active,
+.provider-phone-country-list button:hover {
+  background: #ecfdf5;
+}
+
+.provider-phone-field {
+  display: grid;
+  gap: 8px;
+}
+
+.provider-phone-field span {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.provider-phone-field input {
+  padding: 0 16px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.provider-phone-field input.is-invalid {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12);
+}
+
+.provider-phone-status {
+  min-height: 22px;
+  margin: 12px 0;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.provider-phone-status[data-state="success"] {
+  color: #059669;
+}
+
+.provider-phone-status[data-state="error"] {
+  color: #dc2626;
+}
+
+.provider-phone-submit {
+  width: 100%;
+  min-height: 54px;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #04130a;
+  font-size: 16px;
+  font-weight: 900;
+  box-shadow: 0 16px 34px rgba(34, 197, 94, 0.28);
+}
+
+.provider-phone-submit:disabled {
+  opacity: 0.72;
+}
+
+.provider-phone-resend {
+  justify-self: start;
+  border: 0;
+  background: transparent;
+  color: #047857;
+  font-weight: 900;
+  padding: 0;
+}
+
+@media (max-width: 430px) {
+  .provider-phone-overlay {
+    align-items: end;
+    padding: 14px 12px calc(env(safe-area-inset-bottom, 0px) + 14px);
+  }
+
+  .provider-phone-sheet {
+    border-radius: 22px;
+    padding: 18px;
+    max-height: calc(100dvh - 34px - env(safe-area-inset-bottom, 0px));
+  }
+
+  .provider-phone-sheet h2 {
+    font-size: 24px;
+  }
+}

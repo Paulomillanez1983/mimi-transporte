@@ -9,6 +9,7 @@ import {
   loadConversationForRequest,
   loadClientRequestInsights,
   loadClientPhoneStatus,
+  evaluateAuthRisk,
   getServicePin,
   loadMessages,
   loadNotifications,
@@ -3316,6 +3317,7 @@ async function setupPhoneCollector(options = {}) {
   const phoneStatus = await loadClientPhoneStatus();
   const profile = phoneStatus?.profile ?? null;
   const smsConfigured = phoneStatus?.sms_configured !== false;
+  let risk = null;
 
   if (profile) {
     patchState("session.clientProfileId", profile.id ?? null);
@@ -3324,8 +3326,14 @@ async function setupPhoneCollector(options = {}) {
     patchState("session.userPhoneVerified", profile.phone_verified === true);
   }
 
-  if (!forceChange && (profile?.phone_verified === true || state.session.userPhoneVerified === true)) {
-    return;
+  if (!forceChange) {
+    risk = await evaluateAuthRisk({ actorRole: "client", purpose: "login_new_device" });
+    const phoneVerified = profile?.phone_verified === true || state.session.userPhoneVerified === true;
+    const trustedOrNoRisk = risk?.ok !== true || risk?.requires_otp !== true;
+
+    if (phoneVerified && trustedOrNoRisk) {
+      return;
+    }
   }
 
   if (!smsConfigured) {
@@ -3336,10 +3344,18 @@ async function setupPhoneCollector(options = {}) {
     return;
   }
 
-  await openVerifiedPhoneCollectModal(overlay, { forceChange, existingProfile: profile });
+  await openVerifiedPhoneCollectModal(overlay, {
+    forceChange,
+    existingProfile: profile,
+    verifyExistingDevice: !forceChange && risk?.requires_otp === true && profile?.phone_verified === true,
+    required: forceChange ? false : true
+  });
 }
 
-async function openVerifiedPhoneCollectModal(overlay, { forceChange = false, existingProfile = null } = {}) {
+async function openVerifiedPhoneCollectModal(
+  overlay,
+  { forceChange = false, existingProfile = null, verifyExistingDevice = false, required = true } = {}
+) {
   const form = overlay.querySelector("#phoneCollectForm");
   const input = overlay.querySelector("#phoneCollectInput");
   const otpInput = overlay.querySelector("#phoneOtpInput");
@@ -3370,7 +3386,7 @@ async function openVerifiedPhoneCollectModal(overlay, { forceChange = false, exi
   let selectedCountry = null;
   let currentStep = "entry";
   let pendingVerification = null;
-  const canClose = forceChange || existingProfile?.phone_verified === true || state.session.userPhoneVerified === true;
+  const canClose = forceChange || (!required && (existingProfile?.phone_verified === true || state.session.userPhoneVerified === true));
 
   const setStatus = (message = "", type = "neutral") => {
     status.textContent = message;
@@ -3421,11 +3437,17 @@ async function openVerifiedPhoneCollectModal(overlay, { forceChange = false, exi
     entryStep.hidden = isOtp;
     otpStep.hidden = !isOtp;
     if (stepLabel) stepLabel.textContent = isOtp ? "Paso 2 de 2" : "Paso 1 de 2";
-    if (title) title.textContent = isOtp ? "Ingresá el código" : (forceChange ? "Cambiá tu número" : "Verificá tu número");
+    if (title) {
+      title.textContent = isOtp
+        ? "Ingresá el código"
+        : (forceChange ? "Cambiá tu número" : "Verificá tu número");
+    }
     if (copy) {
       copy.textContent = isOtp
         ? "Te enviamos un SMS. El código vence pronto por seguridad."
-        : "Lo usamos para proteger tu cuenta y avisos importantes del servicio.";
+        : (verifyExistingDevice
+          ? "Detectamos un dispositivo nuevo. Confirmá tu teléfono una vez para confiar este equipo."
+          : "Lo usamos para proteger tu cuenta y avisos importantes del servicio.");
     }
     submit.textContent = isOtp ? "Verificar y continuar" : "Enviar código";
     window.setTimeout(() => (isOtp ? otpInput : input).focus(), 150);
@@ -3453,7 +3475,12 @@ async function openVerifiedPhoneCollectModal(overlay, { forceChange = false, exi
       countryIso: normalized.countryIso
     };
 
-    const response = await startClientPhoneVerification(pendingVerification);
+    const response = await startClientPhoneVerification({
+      ...pendingVerification,
+      purpose: forceChange
+        ? "phone_change"
+        : (verifyExistingDevice ? "login_new_device" : "signup")
+    });
     if (response?.already_verified === true) {
       patchState("session.userPhone", pendingVerification.phoneNumber);
       patchState("session.userPhoneCountryCode", pendingVerification.countryCode);
@@ -3566,6 +3593,7 @@ async function openVerifiedPhoneCollectModal(overlay, { forceChange = false, exi
   setStatus("");
   if (closeButton) closeButton.hidden = !canClose;
   if (existingProfile?.phone_number && forceChange) input.placeholder = existingProfile.phone_number;
+  if (existingProfile?.phone_number && verifyExistingDevice) input.value = existingProfile.phone_number;
   if (countryPanel) countryPanel.hidden = true;
 
   overlay.hidden = false;
@@ -3606,6 +3634,11 @@ function phoneVerificationErrorText(error) {
     phone_already_used: "Ese número ya está verificado en otra cuenta.",
     sms_provider_not_configured: "La verificación por SMS todavía no está configurada.",
     otp_recently_sent: "Ya enviamos un código hace instantes. Esperá un minuto.",
+    otp_blocked: "Por seguridad bloqueamos temporalmente nuevos códigos.",
+    otp_phone_hour_limited: "Demasiados códigos para este número. Probá más tarde.",
+    otp_phone_day_limited: "Ese número llegó al límite diario de códigos.",
+    otp_ip_day_limited: "Detectamos demasiados pedidos desde esta red.",
+    otp_device_day_limited: "Este dispositivo pidió demasiados códigos hoy.",
     otp_rate_limited: "Demasiados intentos. Probá de nuevo en unos minutos.",
     phone_rate_limited: "Demasiados intentos. Probá de nuevo en unos minutos.",
     otp_invalid: "El código no coincide. Revisalo e intentá otra vez.",

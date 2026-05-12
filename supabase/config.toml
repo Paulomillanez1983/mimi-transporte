@@ -295,6 +295,27 @@ verify_jwt = true
 [functions.communication-mark-read]
 verify_jwt = true
 
+[functions.otp-request]
+verify_jwt = true
+
+[functions.otp-verify]
+verify_jwt = true
+
+[functions.device-trust-check]
+verify_jwt = true
+
+[functions.auth-risk-evaluation]
+verify_jwt = true
+
+[functions.svc-client-phone-status]
+verify_jwt = true
+
+[functions.svc-client-phone-start]
+verify_jwt = true
+
+[functions.svc-client-phone-verify]
+verify_jwt = true
+
 # Multi-factor-authentication is available to Supabase Pro plan.
 [auth.mfa]
 # Control how many MFA factors can be enrolled at once per user.

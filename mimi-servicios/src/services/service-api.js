@@ -63,6 +63,40 @@ async function requireSession() {
 
   return session;
 }
+
+function getAuthDeviceContext(actorRole = "client") {
+  let deviceId = "";
+
+  try {
+    deviceId = localStorage.getItem("mimi_services_device_id") || "";
+    if (!deviceId) {
+      deviceId =
+        crypto.randomUUID?.() ||
+        `device_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+      localStorage.setItem("mimi_services_device_id", deviceId);
+    }
+  } catch (_) {
+    deviceId = `device_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+  }
+
+  const uaPlatform =
+    navigator.userAgentData?.platform ||
+    navigator.platform ||
+    "web";
+
+  return {
+    actor_role: actorRole === "provider" ? "provider" : "client",
+    device_id: deviceId,
+    platform: String(uaPlatform || "web").slice(0, 80),
+    app_version: String(
+      window.MIMI_PROVIDER_BUILD ||
+      window.MIMI_CLIENT_BUILD ||
+      window.MIMI_SERVICES_ENV?.APP_VERSION ||
+      "web"
+    ).slice(0, 80)
+  };
+}
+
 function normalizePricingMode(value) {
   const mode = String(value ?? "").trim().toUpperCase();
 
@@ -142,12 +176,93 @@ export async function loadClientPhoneStatus() {
   }
 }
 
+export async function evaluateAuthRisk(input = {}) {
+  if (!hasBackend()) {
+    return {
+      ok: false,
+      requires_otp: false,
+      trusted_device: false,
+      phone_verified: false,
+      sms_configured: false,
+      error: "backend_unavailable"
+    };
+  }
+
+  try {
+    return await invokeFunction(appConfig.functions.authRiskEvaluation, {
+      ...getAuthDeviceContext(input.actorRole || input.actor_role || "client"),
+      purpose: input.purpose || "login_new_device"
+    });
+  } catch (error) {
+    console.warn("[service-api] auth risk fallback", error);
+    return {
+      ok: false,
+      requires_otp: false,
+      trusted_device: false,
+      phone_verified: false,
+      error: error?.code || error?.message || "auth_risk_unavailable"
+    };
+  }
+}
+
+export async function checkDeviceTrust(input = {}) {
+  if (!hasBackend()) {
+    return { ok: false, trusted_device: false, requires_otp: false };
+  }
+
+  try {
+    return await invokeFunction(appConfig.functions.deviceTrustCheck, {
+      ...getAuthDeviceContext(input.actorRole || input.actor_role || "client")
+    });
+  } catch (error) {
+    console.warn("[service-api] device trust fallback", error);
+    return {
+      ok: false,
+      trusted_device: false,
+      requires_otp: false,
+      error: error?.code || error?.message || "device_trust_unavailable"
+    };
+  }
+}
+
+export async function requestOtp(input = {}) {
+  if (!hasBackend()) {
+    throw new Error("AUTH_REQUIRED");
+  }
+
+  const actorRole = input.actorRole || input.actor_role || "client";
+  return invokeFunction(appConfig.functions.otpRequest, {
+    ...getAuthDeviceContext(actorRole),
+    purpose: input.purpose || "phone_verification",
+    phone_number: input.phoneNumber || input.phone_number,
+    country_code: input.countryCode || input.country_code,
+    country_iso: input.countryIso || input.country_iso,
+    channel: input.channel || "sms"
+  });
+}
+
+export async function verifyOtp(input = {}) {
+  if (!hasBackend()) {
+    throw new Error("AUTH_REQUIRED");
+  }
+
+  const actorRole = input.actorRole || input.actor_role || "client";
+  return invokeFunction(appConfig.functions.otpVerify, {
+    ...getAuthDeviceContext(actorRole),
+    attempt_id: input.attemptId || input.attempt_id,
+    phone_number: input.phoneNumber || input.phone_number,
+    code: input.code || input.otp
+  });
+}
+
 export async function startClientPhoneVerification(input = {}) {
   if (!hasBackend()) {
     throw new Error("AUTH_REQUIRED");
   }
 
-  return invokeFunction(appConfig.functions.clientPhoneStart, {
+  return requestOtp({
+    actorRole: "client",
+    purpose: input.purpose || "phone_verification",
     phone_number: input.phoneNumber || input.phone_number,
     country_code: input.countryCode || input.country_code,
     country_iso: input.countryIso || input.country_iso
@@ -159,7 +274,8 @@ export async function verifyClientPhoneCode(input = {}) {
     throw new Error("AUTH_REQUIRED");
   }
 
-  return invokeFunction(appConfig.functions.clientPhoneVerify, {
+  return verifyOtp({
+    actorRole: "client",
     attempt_id: input.attemptId || input.attempt_id,
     phone_number: input.phoneNumber || input.phone_number,
     code: input.code || input.otp

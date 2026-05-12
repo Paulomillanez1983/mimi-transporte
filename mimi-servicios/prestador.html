@@ -47,7 +47,7 @@
   <!-- Styles -->
   <link rel="stylesheet" href="./styles/app.css">
   <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.10.6">
-  <link rel="stylesheet" href="./styles/provider.css?v=2026.05.10.24">
+  <link rel="stylesheet" href="./styles/provider.css?v=2026.05.12.2">
 
   <!-- Provider map theme: light, clean, professional -->
   <script>
@@ -232,6 +232,42 @@
         </div>
         <div class="provider-pin-status" id="providerPinStatus" role="status" aria-live="polite"></div>
         <button class="provider-pin-submit" id="providerPinSubmit" type="button">Validar e iniciar</button>
+      </section>
+    </div>
+
+    <div class="provider-phone-overlay" id="providerPhoneOverlay" hidden>
+      <section class="provider-phone-sheet" role="dialog" aria-modal="true" aria-labelledby="providerPhoneTitle">
+        <button class="provider-phone-close" id="providerPhoneClose" type="button" aria-label="Cerrar">×</button>
+        <span class="provider-phone-eyebrow">Seguridad de cuenta</span>
+        <h2 id="providerPhoneTitle">Verificá tu teléfono</h2>
+        <p id="providerPhoneCopy">Usamos este número para proteger tu panel y validar dispositivos nuevos.</p>
+        <form id="providerPhoneForm" novalidate>
+          <div class="provider-phone-entry" id="providerPhoneEntryStep">
+            <button class="provider-phone-country" id="providerPhoneCountryButton" type="button" aria-haspopup="listbox" aria-expanded="false">
+              <span id="providerPhoneCountryFlag" aria-hidden="true">🇦🇷</span>
+              <strong id="providerPhoneCountryName">Argentina</strong>
+              <b id="providerPhoneCountryDial">+54</b>
+            </button>
+            <div class="provider-phone-country-panel" id="providerPhoneCountryPanel" hidden>
+              <input id="providerPhoneCountrySearch" type="search" placeholder="Buscar país o código" autocomplete="off">
+              <div class="provider-phone-country-list" id="providerPhoneCountryList" role="listbox"></div>
+            </div>
+            <label class="provider-phone-field">
+              <span>Número con WhatsApp o SMS</span>
+              <input id="providerPhoneInput" type="tel" inputmode="tel" autocomplete="tel" placeholder="351 555 0000">
+            </label>
+          </div>
+          <div class="provider-phone-otp" id="providerPhoneOtpStep" hidden>
+            <p>Código enviado a <strong id="providerPhoneOtpTarget">tu teléfono</strong></p>
+            <label class="provider-phone-field">
+              <span>Código de verificación</span>
+              <input id="providerPhoneCodeInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="one-time-code" placeholder="000000">
+            </label>
+            <button class="provider-phone-resend" id="providerPhoneResend" type="button">Enviar otro código</button>
+          </div>
+          <div class="provider-phone-status" id="providerPhoneStatus" role="status" aria-live="polite"></div>
+          <button class="provider-phone-submit" id="providerPhoneSubmit" type="submit">Enviar código</button>
+        </form>
       </section>
     </div>
 
@@ -477,6 +513,14 @@
           <span>Configuración</span>
         </a>
 
+        <a href="#" class="drawer-link" id="linkPhoneTrust">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="M9 12l2 2 4-4"/>
+          </svg>
+          <span>Teléfono seguro</span>
+        </a>
+
         <a href="#" class="drawer-link" id="linkSupport">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -668,6 +712,6 @@
   <script src="./env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Push notifications are initialized from src/services/push.js. -->
-  <script type="module" src="./src/main-provider.js?v=2026.05.12.1"></script>
+  <script type="module" src="./src/main-provider.js?v=2026.05.12.2"></script>
 </body>
 </html>
