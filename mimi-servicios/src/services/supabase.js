@@ -34,6 +34,10 @@ function authCallbackUrl(mode = "client", targetPage = "cliente.html") {
   const url = new URL(`${servicesBasePath()}${callbackPage}`, window.location.origin);
   const safeTarget = safeMode === "provider" ? "prestador.html" : "cliente.html";
 
+  if (safeMode === "provider") {
+    return url.toString();
+  }
+
   url.searchParams.set("mode", safeMode);
   url.searchParams.set("target", targetPage === "prestador.html" ? "prestador.html" : safeTarget);
 
