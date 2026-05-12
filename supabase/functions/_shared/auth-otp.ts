@@ -349,16 +349,6 @@ export async function createOtpAttemptAndSend(
     return { ok: false, error: "phone_already_used", status: 409 };
   }
 
-  const rate = await enforceOtpRateLimits(admin, {
-    userId: input.context.user.id,
-    phoneNumber: input.phoneNumber,
-    device: input.device,
-    req: input.req,
-  });
-  if (!rate.ok) {
-    return { ok: false, error: rate.error, retry_after_seconds: rate.retry_after_seconds, status: 429 };
-  }
-
   const reusable = await findReusableAttempt(admin, {
     userId: input.context.user.id,
     phoneNumber: input.phoneNumber,
@@ -374,6 +364,16 @@ export async function createOtpAttemptAndSend(
       expires_at: reusable.expires_at,
       channel: reusable.channel,
     };
+  }
+
+  const rate = await enforceOtpRateLimits(admin, {
+    userId: input.context.user.id,
+    phoneNumber: input.phoneNumber,
+    device: input.device,
+    req: input.req,
+  });
+  if (!rate.ok) {
+    return { ok: false, error: rate.error, retry_after_seconds: rate.retry_after_seconds, status: 429 };
   }
 
   const nowIso = new Date().toISOString();

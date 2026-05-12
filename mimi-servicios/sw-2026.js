@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-12-enterprise-otp-1";
+const APP_VERSION = "2026-05-12-ai-orb-install-phone-country-1";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [

@@ -46,6 +46,11 @@ export const MIMI_OBSERVABILITY_SAMPLE_RATE = Math.min(
   Math.max(0, numberFromRuntime("MIMI_OBSERVABILITY_SAMPLE_RATE", 1))
 );
 
+export const MIMI_PLAY_STORE_CLIENT_URL = stringFromRuntime(
+  ["VITE_PLAY_STORE_CLIENT_URL", "MIMI_PLAY_STORE_CLIENT_URL"],
+  "https://play.google.com/store/apps/details?id=com.mimigo.clientes"
+);
+
 function numberFromRuntime(key, fallback) {
   const value =
     window.MIMI_SERVICES_ENV?.[key] ??

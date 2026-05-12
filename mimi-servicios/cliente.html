@@ -43,7 +43,7 @@
   >
   <link rel="stylesheet" href="./styles/app.css">
   <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.10.7">
-  <link rel="stylesheet" href="./styles/client.css?v=2026.05.12.4">
+  <link rel="stylesheet" href="./styles/client.css?v=2026.05.12.5">
 </head>
 <body data-client-view="home">
   <div class="app-shell">
@@ -119,6 +119,24 @@
         aria-live="polite"
       ></div>
 
+      <section
+        class="mimi-install-banner"
+        id="mimiInstallBanner"
+        data-client-screen="home"
+        aria-label="Instalar MIMI GO"
+        hidden
+      >
+        <div class="mimi-install-brand" aria-hidden="true">
+          <img src="./assets/icons/mimigo-client-icon-192.png" alt="">
+        </div>
+        <div class="mimi-install-copy">
+          <strong>Mejor experiencia en la app</strong>
+          <span>MIMI GO disponible para Android.</span>
+        </div>
+        <button class="mimi-install-cta" id="installButton" type="button">Instalar</button>
+        <button class="mimi-install-dismiss" id="installDismissButton" type="button" aria-label="Ocultar sugerencia">x</button>
+      </section>
+
       <section class="search-card" id="clientServicesScreen" data-client-screen="home" aria-label="Buscar prestadores">
         <div class="search-card-top">
           <div>
@@ -139,7 +157,6 @@
           </div>
           <div class="search-card-actions">
             <button class="btn-secondary" id="enterServicesHub" type="button">Entrar</button>
-            <button class="btn-secondary" id="installButton" type="button">Instalar</button>
           </div>
         </div>
 
@@ -188,12 +205,18 @@
             <span id="aiPromptLabel" class="address-block-label ai-question-type" data-label-text="¿Qué necesitás resolver?">¿Qué necesitás resolver?</span>
             <div class="ai-prompt-card">
               <div class="ai-prompt-input-wrap">
-                <span class="ai-prompt-icon" aria-hidden="true">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                    <path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2z"/>
-                    <path d="M19 14l.75 2.25L22 17l-2.25.75L19 20l-.75-2.25L16 17l2.25-.75L19 14z"/>
-                  </svg>
+                <span class="ai-prompt-icon mimi-ai-orb" aria-hidden="true">
+                  <span class="mimi-ai-orb-core"></span>
+                  <span class="mimi-ai-orb-spark">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 3.6l1.35 4.05L17.4 9l-4.05 1.35L12 14.4l-1.35-4.05L6.6 9l4.05-1.35L12 3.6z"/>
+                      <path d="M18.5 14.5l.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7.7-2.1z"/>
+                    </svg>
+                  </span>
+                  <span class="mimi-ai-orb-ring"></span>
                 </span>
+                <div class="ai-prompt-content">
+                  <span class="ai-prompt-kicker">IA MIMI</span>
                 <input
                   id="categorySearchInput"
                   type="search"
@@ -208,7 +231,14 @@
                   aria-label="Describí qué servicio necesitás"
                 >
                 <div id="aiPromptGhost" class="ai-prompt-ghost" aria-hidden="true">Ej: se me rompió un caño...</div>
+                </div>
                 <button type="button" id="categorySearchClear" class="ai-prompt-clear" aria-label="Limpiar" hidden>×</button>
+                <span class="ai-prompt-submit-hint" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14"></path>
+                    <path d="m13 6 6 6-6 6"></path>
+                  </svg>
+                </span>
               </div>
             </div>
             <div class="intent-assist" id="categoryIntentAssist" aria-live="polite">
@@ -642,6 +672,6 @@
 
   <script src="./env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script type="module" src="./src/main-client.js?v=2026.05.12.4"></script>
+  <script type="module" src="./src/main-client.js?v=2026.05.12.6"></script>
 </body>
 </html>

@@ -1951,8 +1951,7 @@ async openProviderPhoneTrustModal({ forceChange = false, existingProfile = null,
       .filter((country) => !needle ||
         normalize(country.name).includes(needle) ||
         normalize(country.iso).includes(needle) ||
-        normalize(country.dialCode).includes(needle))
-      .slice(0, 80);
+        normalize(country.dialCode).includes(needle));
 
     countryList.innerHTML = rows.map((country) => `
       <button type="button" data-provider-phone-country="${this.escapeHtml(country.iso)}">

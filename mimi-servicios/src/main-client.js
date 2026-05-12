@@ -61,6 +61,7 @@ import {
   loadPhoneCountries,
   normalizePhoneNumber
 } from "./utils/phone-countries.js";
+import { MIMI_PLAY_STORE_CLIENT_URL } from "./services/runtime-config.js";
 
 let addressLookupToken = 0;
 let intentLookupToken = 0;
@@ -70,6 +71,7 @@ let phoneCollectorAbortController = null;
 
 const CLIENT_ONBOARDING_KEY = "mimi_services_client_onboarding_seen";
 const PWA_INSTALLED_KEY = "mimi_services_pwa_installed";
+const PWA_INSTALL_DISMISSED_KEY = "mimi_services_install_dismissed_until";
 const CATEGORY_USAGE_KEY = "mimi_services_category_usage_v1";
 
 initObservability("client");
@@ -649,15 +651,32 @@ function requireConfirmedServiceAddress() {
   return false;
 }
 
+function setAiPromptVisualState(nextState, enabled = true) {
+  const card = document.querySelector(".ai-prompt-card");
+  if (!card) return;
+  ["is-typing", "is-resolving", "is-success"].forEach((className) => {
+    if (nextState !== className) card.classList.remove(className);
+  });
+  if (nextState) card.classList.toggle(nextState, Boolean(enabled));
+}
+
 async function resolveCategoryByBackendIntent(value) {
   const query = String(value ?? "").trim();
   const token = ++intentLookupToken;
 
-  if (query.length < 3) return;
+  if (query.length < 3) {
+    setAiPromptVisualState(null);
+    return;
+  }
+
+  setAiPromptVisualState("is-resolving", true);
 
   const result = await resolveServiceIntent(query, { limit: 3 });
 
-  if (token !== intentLookupToken || !result?.ok) return;
+  if (token !== intentLookupToken || !result?.ok) {
+    setAiPromptVisualState("is-resolving", false);
+    return;
+  }
 
   const categoryId = result.top_match?.category_id;
 
@@ -670,6 +689,8 @@ async function resolveCategoryByBackendIntent(value) {
         resolvedAt: new Date().toISOString()
       }
     });
+    setAiPromptVisualState("is-success", true);
+    window.setTimeout(() => setAiPromptVisualState("is-success", false), 900);
     return;
   }
 
@@ -679,6 +700,7 @@ async function resolveCategoryByBackendIntent(value) {
     matches: Array.isArray(result.matches) ? result.matches : [],
     resolvedAt: new Date().toISOString()
   });
+  setAiPromptVisualState("is-resolving", false);
 }
 
 function scheduleBackendIntentResolution(value) {
@@ -688,6 +710,7 @@ function scheduleBackendIntentResolution(value) {
     if (token !== intentLookupToken) return;
 
     resolveCategoryByBackendIntent(value).catch((error) => {
+      setAiPromptVisualState("is-resolving", false);
       console.warn("[client] intent resolver unavailable", error);
     });
   }, 280);
@@ -823,14 +846,45 @@ function isRunningAsInstalledPwa() {
   );
 }
 
-function setInstallButtonVisible(visible) {
-  const installButton = document.getElementById("installButton");
-  if (!installButton) return;
+function isMobileAndroidBrowser() {
+  const ua = navigator.userAgent || "";
+  const isAndroid = /Android/i.test(ua);
+  const isMobile = isAndroid || /Mobi|Mobile|iPhone|iPad|iPod/i.test(ua);
+  return isMobile && !isRunningAsInstalledPwa();
+}
 
-  const shouldShow = Boolean(visible) && !isRunningAsInstalledPwa();
-  installButton.hidden = !shouldShow;
-  installButton.style.display = shouldShow ? "" : "none";
-  installButton.setAttribute("aria-hidden", String(!shouldShow));
+function isInstallDismissed() {
+  const until = Number(localStorage.getItem(PWA_INSTALL_DISMISSED_KEY) || 0);
+  return Number.isFinite(until) && until > Date.now();
+}
+
+function dismissInstallBanner(days = 14) {
+  const until = Date.now() + days * 24 * 60 * 60 * 1000;
+  localStorage.setItem(PWA_INSTALL_DISMISSED_KEY, String(until));
+  setInstallButtonVisible(false);
+}
+
+function setInstallButtonVisible(visible) {
+  const installBanner = document.getElementById("mimiInstallBanner");
+  const installButton = document.getElementById("installButton");
+  if (!installButton && !installBanner) return;
+
+  const shouldShow =
+    Boolean(visible) &&
+    isMobileAndroidBrowser() &&
+    !isInstallDismissed() &&
+    localStorage.getItem(PWA_INSTALLED_KEY) !== "true";
+
+  if (installBanner) {
+    installBanner.hidden = !shouldShow;
+    installBanner.setAttribute("aria-hidden", String(!shouldShow));
+  }
+
+  if (installButton) {
+    installButton.hidden = !shouldShow;
+    installButton.style.display = shouldShow ? "" : "none";
+    installButton.setAttribute("aria-hidden", String(!shouldShow));
+  }
 }
 
 function dismissClientOnboarding() {
@@ -2020,6 +2074,10 @@ function registerInstallPrompt() {
 
   setInstallButtonVisible(false);
 
+  if (isMobileAndroidBrowser() && !isInstallDismissed()) {
+    window.setTimeout(() => setInstallButtonVisible(true), 1200);
+  }
+
   window.addEventListener("beforeinstallprompt", (event) => {
     if (isRunningAsInstalledPwa()) {
       event.preventDefault();
@@ -2039,11 +2097,21 @@ function registerInstallPrompt() {
     }
 
     const promptEvent = state.ui.installPromptEvent;
-    if (!promptEvent) return;
+    if (!promptEvent) {
+      if (MIMI_PLAY_STORE_CLIENT_URL) {
+        window.open(MIMI_PLAY_STORE_CLIENT_URL, "_blank", "noopener,noreferrer");
+        dismissInstallBanner(30);
+      }
+      return;
+    }
 
     await promptEvent.prompt();
     patchState("ui.installPromptEvent", null);
     setInstallButtonVisible(false);
+  });
+
+  document.getElementById("installDismissButton")?.addEventListener("click", () => {
+    dismissInstallBanner(14);
   });
 
   window.addEventListener("appinstalled", () => {
@@ -2053,6 +2121,9 @@ function registerInstallPrompt() {
   });
 
   window.matchMedia?.("(display-mode: standalone)")?.addEventListener?.("change", () => {
+    if (isRunningAsInstalledPwa()) {
+      localStorage.setItem(PWA_INSTALLED_KEY, "true");
+    }
     setInstallButtonVisible(false);
   });
 }
@@ -2511,7 +2582,11 @@ function startCategoryPlaceholderDemo() {
 
   const syncGhostVisibility = () => {
     const hide = Boolean(input.value.trim()) || document.activeElement === input;
-    input.closest(".ai-prompt-input-wrap")?.classList.toggle("has-user-text", hide);
+    const wrap = input.closest(".ai-prompt-input-wrap");
+    wrap?.classList.toggle("has-user-text", hide);
+    const hasText = Boolean(input.value.trim());
+    wrap?.classList.toggle("is-typing", hasText);
+    setAiPromptVisualState("is-typing", hasText);
   };
 
   input.addEventListener("focus", syncGhostVisibility);
@@ -3419,8 +3494,7 @@ async function openVerifiedPhoneCollectModal(
           normalizeSearchText(country.iso).includes(needle) ||
           normalizeSearchText(country.dialCode).includes(needle)
         );
-      })
-      .slice(0, 80);
+      });
 
     countryList.innerHTML = rows.map((country) => `
       <button type="button" class="phone-country-option" data-country-iso="${escapeHtml(country.iso)}">

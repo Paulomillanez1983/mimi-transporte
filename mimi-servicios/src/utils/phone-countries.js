@@ -46,7 +46,7 @@ export async function getPhoneTools() {
   return phoneToolsPromise;
 }
 
-export async function loadPhoneCountries(locale = navigator.language || "es-AR") {
+export async function loadPhoneCountries(locale = getNavigatorLanguage()) {
   const tools = await getPhoneTools();
   const displayNames = safeDisplayNames(locale);
 
@@ -74,16 +74,15 @@ export async function loadPhoneCountries(locale = navigator.language || "es-AR")
 }
 
 export function detectDefaultCountry(countries = []) {
-  const locale = navigator.language || "";
-  const localeRegion = locale.match(/[-_]([A-Z]{2})$/i)?.[1]?.toUpperCase();
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
-  const inferred =
-    localeRegion ||
-    (timeZone.includes("Argentina") || timeZone.includes("Buenos_Aires") ? "AR" : "");
+  const localeRegion = getLocaleRegion();
+  const timeZoneRegion = getTimeZoneRegion();
+  const launchDefault = getRuntimeDefaultCountry();
+  const inferred = timeZoneRegion || launchDefault || localeRegion || "AR";
   return countries.find((country) => country.iso === inferred) ||
+    countries.find((country) => country.iso === launchDefault) ||
     countries.find((country) => country.iso === "AR") ||
     countries[0] ||
-    { iso: "AR", name: "Argentina", dialCode: "+54", flag: "🇦🇷" };
+    { iso: "AR", name: "Argentina", dialCode: "+54", flag: countryFlag("AR") };
 }
 
 export async function normalizePhoneNumber(rawPhone, country) {
@@ -130,6 +129,53 @@ function safeDisplayNames(locale) {
   } catch {
     return null;
   }
+}
+
+function getLocaleRegion() {
+  const navigatorRef = typeof navigator !== "undefined" ? navigator : {};
+  const locales = [
+    ...new Set([
+      ...(Array.isArray(navigatorRef.languages) ? navigatorRef.languages : []),
+      navigatorRef.language
+    ].filter(Boolean))
+  ];
+  for (const locale of locales) {
+    const region = String(locale).match(/[-_]([A-Z]{2})$/i)?.[1]?.toUpperCase();
+    if (region) return region;
+  }
+  return "";
+}
+
+function getNavigatorLanguage() {
+  return (typeof navigator !== "undefined" && navigator.language) || "es-AR";
+}
+
+function getRuntimeDefaultCountry() {
+  const env = typeof window !== "undefined" ? window.MIMI_SERVICES_ENV : null;
+  const configured = env?.MIMI_DEFAULT_PHONE_COUNTRY || env?.VITE_DEFAULT_PHONE_COUNTRY;
+  return String(configured || "AR").trim().toUpperCase();
+}
+
+function getTimeZoneRegion() {
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  const normalized = String(timeZone).toLowerCase();
+  const byTimeZone = [
+    [/argentina|buenos_aires|cordoba|mendoza|ushuaia|catamarca|jujuy|la_rioja|rio_gallegos|salta|san_juan|san_luis|tucuman/i, "AR"],
+    [/montevideo/i, "UY"],
+    [/santiago|punta_arenas/i, "CL"],
+    [/sao_paulo|belem|fortaleza|recife|araguaina|maceio|bahia|campo_grande|cuiaba|manaus|porto_velho|boa_vista|rio_branco|noronha/i, "BR"],
+    [/asuncion/i, "PY"],
+    [/la_paz/i, "BO"],
+    [/lima/i, "PE"],
+    [/bogota/i, "CO"],
+    [/caracas/i, "VE"],
+    [/guayaquil/i, "EC"],
+    [/mexico_city|cancun|monterrey|tijuana|chihuahua|mazatlan|merida/i, "MX"],
+    [/new_york|chicago|denver|los_angeles|phoenix|anchorage|honolulu|detroit|indianapolis|louisville|boise/i, "US"],
+    [/toronto|vancouver|edmonton|winnipeg|halifax|st_johns|regina|whitehorse|yellowknife|iqaluit/i, "CA"],
+    [/madrid|canary|ceuta/i, "ES"]
+  ];
+  return byTimeZone.find(([pattern]) => pattern.test(normalized))?.[1] || "";
 }
 
 function countryFlag(iso) {
