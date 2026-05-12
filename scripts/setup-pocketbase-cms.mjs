@@ -6,6 +6,15 @@ const REQUIRED_ENV = [
   "POCKETBASE_ADMIN_PASSWORD"
 ];
 
+const CLI_FLAGS = new Set(process.argv.slice(2));
+const DRY_RUN = CLI_FLAGS.has("--dry-run") || CLI_FLAGS.has("--check");
+const NO_SEED = CLI_FLAGS.has("--no-seed");
+
+if (CLI_FLAGS.has("--help") || CLI_FLAGS.has("-h")) {
+  printHelp();
+  process.exit(0);
+}
+
 const CMS_RULE_ACTIVE = "active=true";
 const CMS_RULE_LEGACY = "enabled=true";
 
@@ -229,6 +238,8 @@ async function main() {
   const created = [];
   const present = [];
   const rulesUpdated = [];
+  const dryRunMissing = [];
+  const dryRunRuleUpdates = [];
 
   for (const [name, definition] of Object.entries(COLLECTIONS)) {
     const existing = collections.find((collection) => collection.name === name);
@@ -236,9 +247,18 @@ async function main() {
       present.push(name);
       const rule = cmsRuleForCollection(existing);
       if (needsCmsRulesUpdate(existing, rule)) {
+        if (DRY_RUN) {
+          dryRunRuleUpdates.push(name);
+          continue;
+        }
         await updateCollectionRules(env, auth.token, existing.id || name, rule);
         rulesUpdated.push(name);
       }
+      continue;
+    }
+
+    if (DRY_RUN) {
+      dryRunMissing.push(name);
       continue;
     }
 
@@ -246,17 +266,27 @@ async function main() {
     created.push(name);
   }
 
+  if (DRY_RUN) {
+    console.log(`PB_COLLECTIONS_PRESENT=${present.join(",") || "(none)"}`);
+    console.log(`PB_DRY_RUN_MISSING_COLLECTIONS=${dryRunMissing.join(",") || "(none)"}`);
+    console.log(`PB_DRY_RUN_RULE_UPDATES=${dryRunRuleUpdates.join(",") || "(none)"}`);
+    console.log("PB_DRY_RUN_OK");
+    return;
+  }
+
   const finalCollections = await listCollections(env, auth.token);
   const seeded = [];
 
-  for (const [collection, records] of Object.entries(SEED)) {
-    const schema = finalCollections.find((item) => item.name === collection);
-    for (const record of records) {
-      const adaptedRecord = adaptRecordToSchema(record, schema);
-      const exists = await recordExists(env, auth.token, collection, uniqueFilter(collection, adaptedRecord, schema));
-      if (exists) continue;
-      await createRecord(env, auth.token, collection, adaptedRecord);
-      seeded.push(`${collection}:${adaptedRecord.key || adaptedRecord.slug || adaptedRecord.title || adaptedRecord.question}`);
+  if (!NO_SEED) {
+    for (const [collection, records] of Object.entries(SEED)) {
+      const schema = finalCollections.find((item) => item.name === collection);
+      for (const record of records) {
+        const adaptedRecord = adaptRecordToSchema(record, schema);
+        const exists = await recordExists(env, auth.token, collection, uniqueFilter(collection, adaptedRecord, schema));
+        if (exists) continue;
+        await createRecord(env, auth.token, collection, adaptedRecord);
+        seeded.push(`${collection}:${adaptedRecord.key || adaptedRecord.slug || adaptedRecord.title || adaptedRecord.question}`);
+      }
     }
   }
 
@@ -264,8 +294,31 @@ async function main() {
   console.log(`PB_COLLECTIONS_CREATED=${created.join(",") || "(none)"}`);
   console.log(`PB_COLLECTION_RULES_UPDATED=${rulesUpdated.join(",") || "(none)"}`);
   console.log(`PB_RECORDS_SEEDED=${seeded.length}`);
+  if (NO_SEED) console.log("PB_SEED_SKIPPED=1");
   seeded.forEach((item) => console.log(`PB_SEEDED=${item}`));
   console.log("PB_CMS_SETUP_OK");
+}
+
+function printHelp() {
+  console.log(`Usage: node scripts/setup-pocketbase-cms.mjs [options]
+
+Creates or updates public-read CMS collections in PocketBase and seeds safe visual content.
+
+Required environment variables:
+  POCKETBASE_URL
+  POCKETBASE_ADMIN_EMAIL
+  POCKETBASE_ADMIN_PASSWORD
+
+Options:
+  --help, -h    Show this message without connecting to PocketBase.
+  --dry-run     Authenticate and report missing collections/rules without writing.
+  --check       Alias of --dry-run.
+  --no-seed     Create/update collections and rules, but do not seed records.
+
+Security:
+  Do not include angle brackets around env values.
+  Do not commit .env.local or any admin credentials.
+`);
 }
 
 function readEnv() {
@@ -282,22 +335,52 @@ function readEnv() {
 }
 
 async function authenticate(env) {
-  const body = { identity: env.email, password: env.password };
-  const endpoints = [
-    "/api/collections/_superusers/auth-with-password",
-    "/api/admins/auth-with-password"
+  const attempts = [];
+  const adminAttempts = [
+    {
+      label: "superusers:identity",
+      path: "/api/collections/_superusers/auth-with-password",
+      body: { identity: env.email, password: env.password }
+    },
+    {
+      label: "superusers:email",
+      path: "/api/collections/_superusers/auth-with-password",
+      body: { email: env.email, password: env.password }
+    },
+    {
+      label: "admins:identity",
+      path: "/api/admins/auth-with-password",
+      body: { identity: env.email, password: env.password }
+    },
+    {
+      label: "admins:email",
+      path: "/api/admins/auth-with-password",
+      body: { email: env.email, password: env.password }
+    }
   ];
 
-  for (const endpoint of endpoints) {
-    const response = await request(env, endpoint, {
+  for (const attempt of adminAttempts) {
+    const response = await request(env, attempt.path, {
       method: "POST",
-      body,
+      body: attempt.body,
       allowFailure: true
     });
     if (response?.token) return response;
+    attempts.push(authAttemptSummary(attempt.label, response));
   }
 
-  throw new Error("PB_AUTH_FAILED");
+  const userProbe = await request(env, "/api/collections/users/auth-with-password", {
+    method: "POST",
+    body: { identity: env.email, password: env.password },
+    allowFailure: true
+  });
+
+  if (userProbe?.token) {
+    throw new Error(`PB_AUTH_FAILED:credentials_are_for_users_collection_not_superuser:${attempts.join(";")}`);
+  }
+
+  attempts.push(authAttemptSummary("users:identity_probe", userProbe));
+  throw new Error(`PB_AUTH_FAILED:${authFailureHint(attempts)}:${attempts.join(";")}`);
 }
 
 async function listCollections(env, token) {
@@ -342,26 +425,81 @@ async function createRecord(env, token, collection, record) {
 }
 
 async function request(env, path, { method = "GET", token, body, allowFailure = false } = {}) {
-  const response = await fetch(`${env.url}${path}`, {
-    method,
-    headers: {
-      Accept: "application/json",
-      ...(body ? { "Content-Type": "application/json" } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    body: body ? JSON.stringify(body) : undefined
-  });
+  const timeoutMs = Number(process.env.POCKETBASE_SETUP_TIMEOUT_MS || 8000);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  let response;
+
+  try {
+    response = await fetch(`${env.url}${path}`, {
+      method,
+      signal: controller.signal,
+      headers: {
+        Accept: "application/json",
+        ...(body ? { "Content-Type": "application/json" } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: body ? JSON.stringify(body) : undefined
+    });
+  } catch (error) {
+    if (allowFailure) {
+      return {
+        __failed: true,
+        status: error?.name === "AbortError" ? "TIMEOUT" : "NETWORK",
+        message: error?.name === "AbortError" ? `timeout_${timeoutMs}ms` : safeSnippet(error?.message)
+      };
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
+  let data = null;
+
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = { message: safeSnippet(text || "non_json_response") };
+  }
 
   if (!response.ok) {
-    if (allowFailure) return null;
     const message = data?.message || data?.error || response.statusText || "request_failed";
+    if (allowFailure) {
+      return {
+        __failed: true,
+        status: response.status,
+        code: data?.code || null,
+        message: safeSnippet(message)
+      };
+    }
     throw new Error(`PB_${response.status}:${message}`);
   }
 
   return data;
+}
+
+function authAttemptSummary(label, response) {
+  if (!response) return `${label}=no_response`;
+  if (response?.token) return `${label}=ok`;
+  const status = response?.status || "failed";
+  const code = response?.code ? `:${response.code}` : "";
+  const message = response?.message ? `:${response.message}` : "";
+  return `${label}=${status}${code}${message}`;
+}
+
+function authFailureHint(attempts) {
+  const text = attempts.join(";");
+  if (text.includes("TIMEOUT") || text.includes("NETWORK")) {
+    return "cms_unreachable_or_cloudflare_blocking_post";
+  }
+  if (text.includes("404")) {
+    return "admin_auth_endpoint_not_available_or_wrong_pocketbase_url";
+  }
+  if (text.includes("400") || text.includes("401") || text.includes("403")) {
+    return "invalid_superuser_credentials_or_password_not_passed_correctly";
+  }
+  return "unknown_auth_failure";
 }
 
 function needsCmsRulesUpdate(collection, rule) {
@@ -471,10 +609,15 @@ function escapeFilter(value) {
 
 function safeErrorMessage(error) {
   const message = String(error?.message || error || "unknown_error");
-  if (message.includes("PB_AUTH_FAILED")) return "PB_AUTH_FAILED";
   return message
     .replace(String(process.env.POCKETBASE_ADMIN_EMAIL || ""), "[redacted]")
     .replace(String(process.env.POCKETBASE_ADMIN_PASSWORD || ""), "[redacted]");
+}
+
+function safeSnippet(value) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .slice(0, 180);
 }
 
 function textField(name, options = {}) {

@@ -65,7 +65,9 @@ import {
   MIMI_PROVIDER_HEARTBEAT_INTERVAL_MS
 } from "./services/runtime-config.js";
 import {
+  loadCmsBanners,
   loadCmsFeatureFlags,
+  loadCmsHomeSections,
   loadCmsServiceCategories
 } from "./services/pocketbase-cms.js";
 import { initObservability, markPerformance } from "./services/observability.js";
@@ -138,6 +140,18 @@ function mergeProviderCmsCategories(baseCategories = [], cmsCategories = []) {
     if (orderDelta) return orderDelta;
     return String(a.name || "").localeCompare(String(b.name || ""), "es");
   });
+}
+
+function firstActiveCmsItem(items = []) {
+  return (Array.isArray(items) ? items : []).find((item) => item?.active !== false) ?? null;
+}
+
+function textFromCms(value, maxLength = 180) {
+  return String(value ?? "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
 }
 
 // ============================================
@@ -1467,7 +1481,60 @@ container.style.background = "";
       this.showToast("No pudimos iniciar sesin con Google", "error");
     }
   });
+
+  this.loadProviderAuthCmsVisuals().catch((error) => {
+    if (window.MIMI_DEBUG_CMS) {
+      console.warn("[MIMI CMS] Provider auth fallback", error?.message || error);
+    }
+  });
 }  
+
+async loadProviderAuthCmsVisuals() {
+  const [featureFlags, banners, homeSections, cmsCategories] = await Promise.all([
+    loadCmsFeatureFlags(),
+    loadCmsBanners("provider"),
+    loadCmsHomeSections("provider"),
+    loadCmsServiceCategories([])
+  ]);
+
+  if (featureFlags.enable_provider_highlights === false) return;
+
+  const banner = firstActiveCmsItem(banners);
+  const section = firstActiveCmsItem(homeSections);
+  const title = textFromCms(section?.title || banner?.title, 100);
+  const subtitle = textFromCms(section?.subtitle || banner?.subtitle, 160);
+  const body = textFromCms(section?.body || banner?.body || banner?.subtitle, 180);
+
+  const heroTitle = document.querySelector(".provider-auth-copy h1");
+  const heroSubtitle = document.querySelector(".provider-auth-copy p");
+  const cardTitle = document.querySelector(".provider-auth-card-title");
+  const cardSubtitle = document.querySelector(".provider-auth-card-subtitle");
+  const cardCopy = document.querySelector(".provider-auth-card-copy");
+  const serviceCards = [...document.querySelectorAll(".provider-auth-service")];
+
+  if (heroTitle && title) heroTitle.textContent = title;
+  if (heroSubtitle && subtitle) heroSubtitle.textContent = subtitle;
+  if (cardTitle && banner?.title) cardTitle.textContent = textFromCms(banner.title, 80);
+  if (cardSubtitle && banner?.subtitle) cardSubtitle.textContent = textFromCms(banner.subtitle, 120);
+  if (cardCopy && body) cardCopy.textContent = body;
+
+  const visibleCategories = (Array.isArray(cmsCategories) ? cmsCategories : [])
+    .filter((item) => item?.active !== false)
+    .slice(0, 3);
+
+  visibleCategories.forEach((category, index) => {
+    const card = serviceCards[index];
+    if (!card) return;
+    const label = card.querySelector("span");
+    if (label) label.textContent = textFromCms(category.name, 30);
+  });
+
+  const totalCard = serviceCards[3];
+  const totalStrong = totalCard?.querySelector("strong");
+  const totalLabel = totalCard?.querySelector("span");
+  if (totalStrong && cmsCategories?.length) totalStrong.textContent = `+${Math.max(0, cmsCategories.length - 3)}`;
+  if (totalLabel && cmsCategories?.length) totalLabel.textContent = "rubros";
+}
 
 async loadProviderCmsVisuals(baseCategories = []) {
   const safeBase = Array.isArray(baseCategories) && baseCategories.length
@@ -1475,12 +1542,16 @@ async loadProviderCmsVisuals(baseCategories = []) {
     : this.state?.appConfig?.categories ?? appConfig.categories ?? [];
 
   try {
-    const [cmsCategories, featureFlags] = await Promise.all([
+    const [cmsCategories, featureFlags, banners, homeSections] = await Promise.all([
       loadCmsServiceCategories([]),
-      loadCmsFeatureFlags()
+      loadCmsFeatureFlags(),
+      loadCmsBanners("provider"),
+      loadCmsHomeSections("provider")
     ]);
 
-    const mergedCategories = mergeProviderCmsCategories(safeBase, cmsCategories);
+    const mergedCategories = featureFlags.enable_dynamic_categories === false
+      ? safeBase
+      : mergeProviderCmsCategories(safeBase, cmsCategories);
     if (mergedCategories.length) {
       appConfig.categories = mergedCategories;
     }
@@ -1498,7 +1569,11 @@ async loadProviderCmsVisuals(baseCategories = []) {
         ...(this.state?.meta ?? {}),
         cmsFeatureFlags: featureFlags,
         cmsLoadedAt: new Date().toISOString(),
-        cmsProviderCategoriesEnriched: Boolean(cmsCategories?.length)
+        cmsProviderCategoriesEnriched: Boolean(cmsCategories?.length),
+        cmsProviderVisuals: {
+          banners: Array.isArray(banners) ? banners.length : 0,
+          homeSections: Array.isArray(homeSections) ? homeSections.length : 0
+        }
       }
     });
   } catch (error) {

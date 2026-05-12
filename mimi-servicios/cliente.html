@@ -43,7 +43,7 @@
   >
   <link rel="stylesheet" href="./styles/app.css">
   <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.10.7">
-  <link rel="stylesheet" href="./styles/client.css?v=2026.05.10.17">
+  <link rel="stylesheet" href="./styles/client.css?v=2026.05.11.1">
 </head>
 <body data-client-view="home">
   <div class="app-shell">
@@ -249,6 +249,25 @@
             Buscar prestadores
           </button>
         </form>
+      </section>
+
+      <section class="client-cms-panel" id="clientCmsPanel" data-client-screen="home" aria-label="Novedades MIMI" hidden>
+        <div>
+          <span class="eyebrow" id="clientCmsKicker">MIMI Servicios</span>
+          <h2 id="clientCmsTitle">Servicios cerca tuyo</h2>
+          <p id="clientCmsBody">Contenido visual editable desde MIMI CMS.</p>
+        </div>
+        <button class="btn-secondary" id="clientCmsCta" type="button" hidden>Ver mas</button>
+      </section>
+
+      <section class="client-cms-faq-panel" id="clientCmsFaqPanel" data-client-screen="home" aria-label="Preguntas frecuentes" hidden>
+        <div class="section-header">
+          <div>
+            <h2>Preguntas frecuentes</h2>
+            <span>Contenido actualizado desde MIMI CMS</span>
+          </div>
+        </div>
+        <div class="client-cms-faq-list" id="clientCmsFaqList"></div>
       </section>
 
       <section class="flow-guide" id="clientFlowGuide" aria-label="Resumen del flujo">

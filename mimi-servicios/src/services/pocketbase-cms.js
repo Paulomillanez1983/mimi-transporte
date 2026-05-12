@@ -8,6 +8,7 @@ import {
 const CACHE_PREFIX = "mimi_pb_cms:";
 const memoryCache = new Map();
 const inFlightRequests = new Map();
+let missingCmsConfigWarned = false;
 
 const VISUAL_COLLECTIONS = new Set([
   "app_config",
@@ -20,6 +21,10 @@ const VISUAL_COLLECTIONS = new Set([
 
 const DEFAULT_FEATURE_FLAGS = Object.freeze({
   pocketbase_cms_enabled: true,
+  enable_home_banners: true,
+  enable_dynamic_categories: true,
+  enable_faqs: true,
+  enable_provider_highlights: true,
   realtime_optimized_enabled: true,
   provider_tracking_optimized: true,
   nearby_snapshot_cache_enabled: true
@@ -176,42 +181,42 @@ export async function loadCmsServiceCategories(fallback = []) {
 }
 
 export async function loadCmsBanners(audience = "client") {
-  const now = new Date().toISOString();
-  const safeAudience = escapePbFilter(audience || "client");
+  const safeAudience = String(audience || "client").trim() || "client";
 
-  return loadCmsCollection("banners", {
-    filter:
-      `active=true && (placement="${safeAudience}" || placement="all" || placement="")` +
-      ` && (start_at="" || start_at<="${now}") && (end_at="" || end_at>="${now}")`,
-    fallbackFilters: [
-      `enabled=true && (audience="${safeAudience}" || audience="all")` +
-        ` && (starts_at="" || starts_at<="${now}") && (ends_at="" || ends_at>="${now}")`
-    ],
+  const items = await loadCmsCollection("banners", {
+    filter: "active=true",
+    fallbackFilters: ["enabled=true"],
     fallback: [],
     perPage: 10
   });
+
+  return items.filter((item) => matchesAudience(item, safeAudience) && isWithinCmsDateRange(item));
 }
 
 export async function loadCmsHomeSections(audience = "client", fallback = []) {
-  const safeAudience = escapePbFilter(audience || "client");
+  const safeAudience = String(audience || "client").trim() || "client";
 
-  return loadCmsCollection("home_sections", {
-    filter: `active=true && (placement="${safeAudience}" || placement="all" || placement="")`,
-    fallbackFilters: [`enabled=true && (audience="${safeAudience}" || audience="all")`],
+  const items = await loadCmsCollection("home_sections", {
+    filter: "active=true",
+    fallbackFilters: ["enabled=true"],
     fallback,
     perPage: 20
   });
+
+  return items.filter((item) => matchesAudience(item, safeAudience));
 }
 
 export async function loadCmsFaqs(audience = "client", fallback = []) {
-  const safeAudience = escapePbFilter(audience || "client");
+  const safeAudience = String(audience || "client").trim() || "client";
 
-  return loadCmsCollection("faqs", {
-    filter: `active=true && (category="${safeAudience}" || category="all" || category="")`,
-    fallbackFilters: [`enabled=true && (audience="${safeAudience}" || audience="all")`],
+  const items = await loadCmsCollection("faqs", {
+    filter: "active=true",
+    fallbackFilters: ["enabled=true"],
     fallback,
     perPage: 50
   });
+
+  return items.filter((item) => matchesAudience(item, safeAudience));
 }
 
 export async function loadCmsFeatureFlags(defaults = DEFAULT_FEATURE_FLAGS) {
@@ -253,14 +258,27 @@ export function isPocketBaseCmsConfigured() {
 function normalizedBaseUrl() {
   const text = String(MIMI_POCKETBASE_URL || "").trim().replace(/\/+$/, "");
 
-  if (!text) return "";
+  if (!text) {
+    warnMissingCmsConfig();
+    return "";
+  }
 
   try {
     const url = new URL(text);
     return ["http:", "https:"].includes(url.protocol) ? url.toString().replace(/\/+$/, "") : "";
   } catch {
+    warnMissingCmsConfig();
     return "";
   }
+}
+
+function warnMissingCmsConfig() {
+  if (missingCmsConfigWarned) return;
+  missingCmsConfigWarned = true;
+
+  const hostname = window.location?.hostname || "";
+  if (["localhost", "127.0.0.1", "::1"].includes(hostname)) return;
+  console.warn("[MIMI CMS] PocketBase URL no configurada; usando contenido fallback local.");
 }
 
 function readCache(key) {
@@ -355,6 +373,7 @@ function normalizeCollectionItem(collection, item) {
   if (collection === "home_sections") {
     const title = stringValue(item.title, 160);
     if (!title) return null;
+    const data = item.data && typeof item.data === "object" ? item.data : null;
 
     return {
       id: stringValue(item.id, 80),
@@ -363,14 +382,14 @@ function normalizeCollectionItem(collection, item) {
       body: stringValue(item.body, 1200),
       slug: stringValue(item.slug, 120),
       layout: stringValue(item.layout, 80),
-      data: item.data && typeof item.data === "object" ? item.data : null,
+      data,
       image: stringValue(item.image, 500),
-      route: safeRouteValue(item.route),
+      route: safeRouteValue(item.route || data?.route),
       order: numberValue(item.order),
       active,
       enabled: active,
-      placement: stringValue(item.placement || item.audience || "all", 40),
-      audience: stringValue(item.audience || item.placement || "all", 40),
+      placement: stringValue(item.placement || item.audience || data?.placement || "all", 40),
+      audience: stringValue(item.audience || item.placement || data?.placement || "all", 40),
       start_at: stringValue(item.start_at, 40),
       end_at: stringValue(item.end_at, 40)
     };
@@ -443,6 +462,21 @@ function safeRouteValue(value) {
   return "";
 }
 
+function matchesAudience(item, audience) {
+  const target = String(audience || "client").toLowerCase();
+  const value = String(item?.placement || item?.audience || item?.category || "all").toLowerCase();
+  return !value || value === "all" || value === target;
+}
+
+function isWithinCmsDateRange(item) {
+  const now = Date.now();
+  const start = Date.parse(item?.start_at || item?.starts_at || "");
+  const end = Date.parse(item?.end_at || item?.ends_at || "");
+  if (Number.isFinite(start) && start > now) return false;
+  if (Number.isFinite(end) && end < now) return false;
+  return true;
+}
+
 function clampPerPage(value) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return 50;
@@ -451,10 +485,6 @@ function clampPerPage(value) {
 
 function cloneFallback(fallback) {
   return Array.isArray(fallback) ? [...fallback] : [];
-}
-
-function escapePbFilter(value) {
-  return String(value ?? "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
 function isRecoverableFilterError(error) {

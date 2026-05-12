@@ -36,7 +36,10 @@ import {
 } from "./services/supabase.js";
 import { getMimiPushToken } from "./services/push.js";
 import {
+  loadCmsBanners,
+  loadCmsFaqs,
   loadCmsFeatureFlags,
+  loadCmsHomeSections,
   loadCmsServiceCategories
 } from "./services/pocketbase-cms.js";
 import { initObservability, markPerformance } from "./services/observability.js";
@@ -1776,6 +1779,126 @@ async function hydrateLiveContext(activeRequestOverride) {
   setupRealtime(activeRequest?.id ?? null, conversation?.id ?? null);
 }
 
+async function hydrateClientCmsRuntime() {
+  const featureFlags = await loadCmsFeatureFlags();
+
+  window.MIMI_CMS_FEATURE_FLAGS = Object.freeze({ ...featureFlags });
+  setState((draft) => {
+    draft.meta.cmsFeatureFlags = featureFlags;
+    draft.meta.cmsFlagsLoadedAt = new Date().toISOString();
+  });
+
+  if (featureFlags.enable_dynamic_categories !== false) {
+    const cmsCategories = await loadCmsServiceCategories([]);
+    if (Array.isArray(cmsCategories) && cmsCategories.length) {
+      appConfig.categories = rankCategoriesForClient(
+        mergeCategories(cmsCategories, appConfig.categories)
+      );
+      setState((draft) => {
+        draft.meta.cmsLoadedAt = new Date().toISOString();
+      });
+    }
+  }
+
+  await hydrateClientCmsVisuals(featureFlags);
+}
+
+async function hydrateClientCmsVisuals(featureFlags = {}) {
+  const [banners, homeSections, faqs] = await Promise.all([
+    featureFlags.enable_home_banners === false ? [] : loadCmsBanners("client"),
+    loadCmsHomeSections("client"),
+    featureFlags.enable_faqs === false ? [] : loadCmsFaqs("client")
+  ]);
+
+  renderClientCmsVisuals({
+    banners,
+    homeSections,
+    faqs,
+    featureFlags
+  });
+
+  setState((draft) => {
+    draft.meta.cmsClientVisualsLoadedAt = new Date().toISOString();
+    draft.meta.cmsClientVisuals = {
+      banners: Array.isArray(banners) ? banners.length : 0,
+      homeSections: Array.isArray(homeSections) ? homeSections.length : 0,
+      faqs: Array.isArray(faqs) ? faqs.length : 0
+    };
+  });
+}
+
+function renderClientCmsVisuals({ banners = [], homeSections = [], faqs = [] } = {}) {
+  const panel = document.getElementById("clientCmsPanel");
+  const kicker = document.getElementById("clientCmsKicker");
+  const title = document.getElementById("clientCmsTitle");
+  const body = document.getElementById("clientCmsBody");
+  const cta = document.getElementById("clientCmsCta");
+  const faqPanel = document.getElementById("clientCmsFaqPanel");
+  const faqList = document.getElementById("clientCmsFaqList");
+
+  const primary = firstActiveCmsItem(banners) || firstActiveCmsItem(homeSections);
+  const supporting = firstActiveCmsItem(homeSections);
+
+  if (panel && primary) {
+    setElementText(kicker, primary.placement === "provider" ? "MIMI Partners" : "MIMI Servicios");
+    setElementText(title, textFromCms(primary.title, 120));
+    setElementText(
+      body,
+      textFromCms(primary.subtitle || primary.body || supporting?.body || supporting?.subtitle, 220)
+    );
+
+    const route = primary.cta_url || primary.cta_route || primary.route || supporting?.route || "";
+    if (cta && route) {
+      cta.hidden = false;
+      cta.textContent = textFromCms(primary.cta_label || "Ver mas", 40);
+      cta.onclick = () => {
+        window.location.href = route;
+      };
+    } else if (cta) {
+      cta.hidden = true;
+      cta.onclick = null;
+    }
+
+    panel.hidden = false;
+  } else if (panel) {
+    panel.hidden = true;
+  }
+
+  if (faqPanel && faqList) {
+    const safeFaqs = (Array.isArray(faqs) ? faqs : [])
+      .filter((item) => item?.active !== false)
+      .slice(0, 3);
+
+    faqList.replaceChildren(...safeFaqs.map((item) => {
+      const node = document.createElement("article");
+      const question = document.createElement("strong");
+      const answer = document.createElement("span");
+      question.textContent = textFromCms(item.question, 140);
+      answer.textContent = textFromCms(item.answer, 220);
+      node.append(question, answer);
+      return node;
+    }));
+
+    faqPanel.hidden = safeFaqs.length === 0;
+  }
+}
+
+function firstActiveCmsItem(items = []) {
+  return (Array.isArray(items) ? items : []).find((item) => item?.active !== false) ?? null;
+}
+
+function setElementText(element, value) {
+  if (element) element.textContent = value || "";
+}
+
+function textFromCms(value, maxLength = 180) {
+  return String(value ?? "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
 async function bootstrapAsyncData() {
   const session = await bootstrapSession();
   let categories = [];
@@ -1791,27 +1914,11 @@ async function bootstrapAsyncData() {
     mergeCategories(categories, appConfig.categories)
   );
 
-  loadCmsServiceCategories([])
-    .then((cmsCategories) => {
-      if (!Array.isArray(cmsCategories) || !cmsCategories.length) return;
-      appConfig.categories = rankCategoriesForClient(
-        mergeCategories(cmsCategories, appConfig.categories)
-      );
-      setState((draft) => {
-        draft.meta.cmsLoadedAt = new Date().toISOString();
-      });
-    })
-    .catch(() => {});
-
-  loadCmsFeatureFlags()
-    .then((featureFlags) => {
-      window.MIMI_CMS_FEATURE_FLAGS = Object.freeze({ ...featureFlags });
-      setState((draft) => {
-        draft.meta.cmsFeatureFlags = featureFlags;
-        draft.meta.cmsFlagsLoadedAt = new Date().toISOString();
-      });
-    })
-    .catch(() => {});
+  hydrateClientCmsRuntime().catch((error) => {
+    if (window.MIMI_DEBUG_CMS) {
+      console.warn("[MIMI CMS] Client visual fallback", error?.message || error);
+    }
+  });
 
   if (session.isAuthenticated && session.role === "provider") {
     // mismo usuario puede usar ambos modos; no redirigimos automaticamente

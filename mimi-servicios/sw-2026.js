@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-11-cms-runtime-1";
+const APP_VERSION = "2026-05-11-cms-runtime-2";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [
