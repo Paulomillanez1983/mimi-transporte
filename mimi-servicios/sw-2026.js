@@ -1,10 +1,11 @@
-const APP_VERSION = "2026-05-11-cms-runtime-2";
+const APP_VERSION = "2026-05-11-provider-auth-1";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [
   "./",
   "./index.html",
   "./auth-callback.html",
+  "./auth-provider-callback.html",
   "./cliente.html",
   "./prestador.html",
   "./manifest.json",
@@ -306,6 +307,8 @@ function isCoreUiAsset(url) {
   const pathname = url.pathname;
   return [
     "/mimi-servicios/env.js",
+    "/mimi-servicios/auth-callback.html",
+    "/mimi-servicios/auth-provider-callback.html",
     "/mimi-servicios/prestador.html",
     "/mimi-servicios/prestador",
     "/mimi-servicios/cliente.html",
@@ -315,7 +318,9 @@ function isCoreUiAsset(url) {
     "/mimi-servicios/src/main-provider.js",
     "/mimi-servicios/src/main-client.js",
     "/mimi-servicios/src/services/map.js",
+    "/mimi-servicios/src/services/supabase.js",
     "/mimi-servicios/src/services/service-api.js",
+    "/mimi-servicios/src/services/runtime-config.js",
     "/mimi-servicios/src/ui/render-provider.js",
     "/mimi-servicios/src/ui/render-client.js",
     "/js/mimi-maps/map-core.js",
