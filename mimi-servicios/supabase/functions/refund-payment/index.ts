@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders, fail, json, readJson } from "../_shared/payments/http.ts";
 import { getPaymentProvider } from "../_shared/payments/providers.ts";
+import { postRefundLedger } from "../_shared/payments/financial-ledger.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -33,6 +34,8 @@ serve(async (req) => {
 
   const provider = getPaymentProvider(payment.provider_name);
   const providerResult = await provider.refundPayment(payment.provider_payment_id ?? payment.id, amount, reason);
+  const traceId = crypto.randomUUID();
+  const correlationId = `refund:${payment.id}:${Date.now()}`;
 
   const { data: refund, error: refundError } = await supabase
     .from("refunds")
@@ -42,12 +45,41 @@ serve(async (req) => {
       reason,
       status: providerResult.status,
       provider_refund_id: providerResult.providerPaymentId,
-      raw_response: providerResult.rawResponse
+      raw_response: providerResult.rawResponse,
+      refund_key: `refund:${payment.id}:${providerResult.providerPaymentId ?? correlationId}`,
+      environment: "production",
+      is_test: false,
+      fiscal_visibility: "fiscal_reportable",
+      trace_id: traceId,
+      correlation_id: correlationId
     })
     .select("*")
     .single();
 
   if (refundError) return fail("Refund insert failed", 500, refundError);
+
+  try {
+    await postRefundLedger(supabase, payment, refund, {
+      source: "refund_payment",
+      actor_user_id: userId,
+      payment_id: payment.id,
+      provider_id: payment.provider_id ?? null,
+      service_request_id: payment.service_request_id ?? null,
+      trace_id: traceId,
+      correlation_id: correlationId,
+      environment: "production",
+      is_test: false,
+      fiscal_visibility: "fiscal_reportable",
+      metadata: { reason }
+    });
+  } catch (ledgerError) {
+    console.error("[refund-payment] financial ledger post failed", {
+      paymentId: payment.id,
+      refundId: refund.id
+    });
+
+    return fail("FINANCIAL_LEDGER_POST_FAILED", 500, ledgerError);
+  }
 
   const nextStatus = amount >= Number(payment.total_amount) ? "REFUNDED" : "PARTIALLY_REFUNDED";
   const { data: updated, error: updateError } = await supabase
@@ -63,6 +95,17 @@ serve(async (req) => {
     payment_id: payment.id,
     event_type: "payment.refunded",
     payload: { refund, provider: providerResult.rawResponse }
+  });
+
+  await supabase.from("refund_events").insert({
+    refund_id: refund.id,
+    event_type: "refund.created",
+    status: providerResult.status,
+    payload: { reason, amount, provider: providerResult.rawResponse },
+    trace_id: traceId,
+    correlation_id: correlationId,
+    environment: "production",
+    is_test: false
   });
 
   return json({ ok: true, payment: updated, refund });

@@ -1,0 +1,26 @@
+{
+  "client": {
+    "version": "2026.05.13.13",
+    "min_supported_version": "2026.05.13.8",
+    "critical": false,
+    "force_update": false,
+    "message": "Mejoramos estabilidad, velocidad y seguridad."
+  },
+  "provider": {
+    "version": "2026.05.13.26",
+    "min_supported_version": "2026.05.13.8",
+    "critical": false,
+    "force_update": false,
+    "message": "Mejoramos avisos en tiempo real para correcciones de verificacion."
+  },
+  "admin": {
+    "version": "2026.05.13.34",
+    "min_supported_version": "2026.05.13.34",
+    "critical": false,
+    "force_update": false,
+    "message": "Agregamos Finanzas enterprise, ledger y vista contable del administrador."
+  }
+}
+
+
+

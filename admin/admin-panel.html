@@ -1,18 +1,17 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>MIMI Admin Panel</title>
+  <title>MIMI Servicios Admin</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#f5f7fb" />
 <meta name="color-scheme" content="light dark" />
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f7fb" />
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b1220" />
-<meta name="description" content="Panel administrativo de MIMI para operaciones, KYC y monitoreo de choferes en vivo." />
+<meta name="description" content="Panel administrativo de MIMI Servicios para soporte, KYC y revision de prestadores." />
 
   <link rel="icon" href="../assets/icons/logo-mimi.png" type="image/png" />
-  <link rel="preconnect" href="https://unpkg.com" crossorigin />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="preconnect" href="https://xrphpqmutvadjrucqicn.supabase.co" crossorigin />
 <script>
@@ -29,8 +28,7 @@
     }
   })();
 </script>
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css" />
-  <link rel="stylesheet" href="./admin.css?v=2026.04.27.4" />
+  <link rel="stylesheet" href="./admin.css?v=2026.05.13.34" />
 </head>
 <body>
   <a href="#mainContent" class="sr-only sr-only-focusable">Saltar al contenido principal</a>
@@ -48,12 +46,24 @@
       />
 
       <div class="header-copy">
-        <h1>MIMI Admin</h1>
-        <p class="header-subtitle">Operaciones · KYC · Choferes en vivo</p>
+        <h1>MIMI Servicios Admin</h1>
+        <p class="header-subtitle">KYC - Prestadores - Soporte</p>
       </div>
     </div>
 
     <div class="right">
+      <nav class="admin-desktop-tabs" aria-label="Secciones principales">
+        <button class="admin-desktop-tab is-active" type="button" data-admin-mobile-view-target="providers" aria-pressed="true">
+          Prestadores
+        </button>
+        <button class="admin-desktop-tab" type="button" data-admin-mobile-view-target="finance" aria-pressed="false">
+          Finanzas
+        </button>
+        <button class="admin-desktop-tab" type="button" data-admin-mobile-view-target="support" aria-pressed="false">
+          Soporte
+        </button>
+      </nav>
+
       <div class="admin-pill" aria-label="Administrador autenticado">
         <img
           id="avatar"
@@ -70,14 +80,14 @@
         </div>
       </div>
 
-      <button id="logout" type="button" aria-label="Cerrar sesión">
+      <button id="logout" type="button" aria-label="Cerrar sesion">
         Salir
       </button>
     </div>
   </header>
 
   <main id="mainContent" class="admin-main" role="main">
-    <section class="hero-grid" aria-label="Resumen general del panel">
+    <section class="hero-grid" aria-label="Resumen general del panel" hidden>
       <article class="hero-card hero-card-primary admin-mobile-panel admin-mobile-choferes admin-mobile-ai" aria-labelledby="opsCenterTitle">
         <div class="hero-card-head">
           <div>
@@ -90,7 +100,7 @@
           </button>
         </div>
 
-        <div class="hero-stats" aria-label="Métricas principales">
+        <div class="hero-stats" aria-label="Metricas principales">
           <div class="hero-stat">
             <span>Total</span>
             <strong id="metricTotal">0</strong>
@@ -121,7 +131,7 @@
           <div class="hero-chart-head">
             <div>
               <h3>Resumen operativo</h3>
-              <p>Distribución actual de revisión</p>
+              <p>Distribucion actual de revision</p>
             </div>
 
             <span id="liveBadge" class="live-badge" aria-live="polite">
@@ -132,7 +142,7 @@
           <div
             id="reviewChart"
             class="review-chart"
-            aria-label="Gráfico de revisión"
+            aria-label="Grafico de revision"
             role="img"
           ></div>
         </div>
@@ -142,7 +152,7 @@
 <div class="map-card-header">
   <div>
     <h2 id="liveMapTitle">Mapa de choferes en vivo</h2>
-    <p class="map-hint">Online, última ubicación y foco operativo</p>
+    <p class="map-hint">Online, ultima ubicacion y foco operativo</p>
   </div>
 </div>
 
@@ -150,18 +160,18 @@
   <div class="map-canvas-frame">
     <div class="map-floating-controls" aria-label="Controles flotantes del mapa">
   <button id="fitDriversBtn" type="button" class="map-fab map-fab-primary" title="Ver todos los choferes">
-    â¤¢
+    Fit
   </button>
 
-  <button id="locateMeBtn" type="button" class="map-fab" title="Detectar mi ubicación">
-    â—Ž
+  <button id="locateMeBtn" type="button" class="map-fab" title="Detectar mi ubicacion">
+    GPS
   </button>
 
   <button id="focusArgentinaBtn" type="button" class="map-fab" title="Ver Argentina">
     AR
   </button>
 
-  <button id="focusCordobaBtn" type="button" class="map-fab" title="Ver Córdoba">
+  <button id="focusCordobaBtn" type="button" class="map-fab" title="Ver Cordoba">
     CBA
   </button>
 
@@ -177,17 +187,17 @@
       <option value="catamarca">Catamarca</option>
       <option value="chaco">Chaco</option>
       <option value="chubut">Chubut</option>
-      <option value="cordoba">Córdoba</option>
+      <option value="cordoba">Cordoba</option>
       <option value="corrientes">Corrientes</option>
-      <option value="entre_rios">Entre Ríos</option>
+      <option value="entre_rios">Entre Rios</option>
       <option value="formosa">Formosa</option>
       <option value="jujuy">Jujuy</option>
       <option value="la_pampa">La Pampa</option>
       <option value="la_rioja">La Rioja</option>
       <option value="mendoza">Mendoza</option>
       <option value="misiones">Misiones</option>
-      <option value="neuquen">Neuquén</option>
-      <option value="rio_negro">Río Negro</option>
+      <option value="neuquen">Neuquen</option>
+      <option value="rio_negro">Rio Negro</option>
       <option value="salta">Salta</option>
       <option value="san_juan">San Juan</option>
       <option value="san_luis">San Luis</option>
@@ -195,7 +205,7 @@
       <option value="santa_fe">Santa Fe</option>
       <option value="santiago_del_estero">Santiago del Estero</option>
       <option value="tierra_del_fuego">Tierra del Fuego</option>
-      <option value="tucuman">Tucumán</option>
+      <option value="tucuman">Tucuman</option>
     </optgroup>
 
     <optgroup label="Ciudades">
@@ -212,7 +222,7 @@
     <div
       id="driversMap"
       class="drivers-map"
-      aria-label="Mapa con ubicación de choferes"
+      aria-label="Mapa con ubicacion de choferes"
     ></div>
 
   </div>
@@ -233,13 +243,13 @@
       </article>
     </section>
 
-    <section class="toolbar toolbar-pro admin-mobile-panel admin-mobile-choferes" aria-label="Búsqueda y filtros">
+    <section class="toolbar toolbar-pro admin-mobile-panel admin-mobile-choferes" aria-label="Busqueda y filtros" hidden>
       <div class="toolbar-search">
         <label for="searchInput" class="sr-only">Buscar chofer</label>
         <input
           id="searchInput"
           type="text"
-          placeholder="Buscar por nombre, email, teléfono o user_id"
+          placeholder="Buscar por nombre, email, telefono o user_id"
           autocomplete="off"
           inputmode="search"
           enterkeyhint="search"
@@ -266,12 +276,12 @@
       </div>
     </section>
 
-    <section class="ops-grid" aria-label="Panel operativo secundario">
+    <section class="ops-grid" aria-label="Panel operativo secundario" hidden>
       <article class="ops-card admin-mobile-panel admin-mobile-choferes" aria-labelledby="priorityQueueTitle">
         <div class="ops-card-head">
           <div>
             <h3 id="priorityQueueTitle">Cola prioritaria</h3>
-            <p>Choferes que necesitan revisión rápida</p>
+            <p>Choferes que necesitan revision rapida</p>
           </div>
         </div>
 
@@ -282,7 +292,7 @@
         <div class="ops-card-head">
           <div>
             <h3 id="aiSummaryTitle">Resumen IA</h3>
-            <p>Score real de KYC, OCR y validación automática</p>
+            <p>Score real de KYC, OCR y validacion automatica</p>
           </div>
         </div>
 
@@ -293,7 +303,7 @@
   <div class="section-head support-section-head">
     <div>
       <h2>Centro de soporte</h2>
-      <p>Mensajes de clientes y choferes, organizados por conversación y listos para responder</p>
+      <p>Mensajes de clientes y prestadores, organizados por conversacion y listos para responder</p>
     </div>
 
     <div class="support-head-actions">
@@ -331,7 +341,7 @@
           enterkeyhint="search"
           spellcheck="false"
         />
-        <p class="support-search-hint">La bandeja prioriza el Gmail real del cliente o chofer para identificar cada conversación.</p>
+        <p class="support-search-hint">La bandeja prioriza el Gmail real del cliente o prestador para identificar cada conversacion.</p>
       </div>
 
       <div
@@ -340,7 +350,7 @@
         aria-live="polite"
       >
         <div class="support-empty-state">
-          Todavía no hay conversaciones.
+          Todavia no hay conversaciones.
         </div>
       </div>
     </aside>
@@ -348,12 +358,12 @@
     <section
       id="supportThread"
       class="support-thread"
-      aria-label="Detalle de conversación"
+      aria-label="Detalle de conversacion"
     >
       <div id="supportThreadEmpty" class="support-thread-empty">
         <div class="support-thread-empty-icon"></div>
-        <h3>Seleccioná una conversación</h3>
-        <p>Acá vas a ver los mensajes del cliente o chofer y vas a poder responder.</p>
+        <h3>Selecciona una conversacion</h3>
+        <p>Aca vas a ver los mensajes del cliente o prestador y vas a poder responder.</p>
       </div>
 
       <div id="supportThreadPanel" class="support-thread-panel" hidden>
@@ -366,7 +376,7 @@
               hidden
               aria-label="Volver a conversaciones"
             >
-              â†
+              Volver
             </button>
 
             <div class="support-thread-user">
@@ -374,14 +384,14 @@
 
               <div class="support-thread-meta">
                 <strong id="supportThreadName">Usuario</strong>
-                <span id="supportThreadSubmeta">cliente · pendiente</span>
+                <span id="supportThreadSubmeta">cliente - pendiente</span>
               </div>
             </div>
           </div>
 
           <div class="support-thread-actions">
             <button id="supportMarkReadBtn" type="button" class="support-thread-btn">
-              Marcar leído
+              Marcar leido
             </button>
 
             <button id="supportMarkPendingBtn" type="button" class="support-thread-btn">
@@ -405,7 +415,7 @@
            id="supportReplyInput"
            class="support-reply-input"
            rows="3"
-           placeholder="Escribí una respuesta..."
+           placeholder="Escribi una respuesta..."
            enterkeyhint="send"
           ></textarea>
           <input
@@ -417,7 +427,7 @@
           />
 
           <div class="support-composer-hint">
-            Enter envía. Shift + Enter agrega una nueva línea.
+            Enter envia. Shift + Enter agrega una nueva linea.
           </div>
 
           <div class="support-composer-actions">
@@ -438,11 +448,14 @@
   <div class="section-head">
     <div>
       <h2>Prestadores de servicios</h2>
-      <p>Revisión KYC, identidad y documentación de prestadores</p>
+      <p>Cola paginada para KYC, identidad, documentacion y decisiones auditadas</p>
     </div>
+    <button id="providerRefreshBtn" type="button" class="support-head-btn">
+      Recargar cola
+    </button>
   </div>
 
-  <section class="hero-card services-providers-metrics" aria-label="Métricas de prestadores">
+  <section class="hero-card services-providers-metrics" aria-label="Metricas de prestadores">
     <div class="hero-stats">
       <div class="hero-stat">
         <span>Total</span>
@@ -470,17 +483,27 @@
       </div>
     </div>
   </section>
-<section
-  class="toolbar toolbar-pro providers-toolbar"
-  aria-label="Filtros de prestadores"
->
+<section class="toolbar toolbar-pro providers-toolbar" aria-label="Filtros de prestadores">
+  <div class="toolbar-search">
+    <label for="providerSearchInput" class="sr-only">Buscar prestador</label>
+    <input
+      id="providerSearchInput"
+      type="text"
+      placeholder="Buscar por nombre, email o telefono"
+      autocomplete="off"
+      inputmode="search"
+      enterkeyhint="search"
+      spellcheck="false"
+    />
+  </div>
+
   <div class="toolbar-filters" role="tablist" aria-label="Filtros de prestadores">
-    <button class="filter-btn is-active" type="button" data-provider-filter="all" aria-pressed="true">
-      Todos
+    <button class="filter-btn is-active" type="button" data-provider-filter="queue" aria-pressed="true">
+      En revision
     </button>
 
-    <button class="filter-btn" type="button" data-provider-filter="pending" aria-pressed="false">
-      Pendientes
+    <button class="filter-btn" type="button" data-provider-filter="needs_resubmission" aria-pressed="false">
+      Correccion
     </button>
 
     <button class="filter-btn" type="button" data-provider-filter="approved" aria-pressed="false">
@@ -494,16 +517,117 @@
     <button class="filter-btn" type="button" data-provider-filter="blocked" aria-pressed="false">
       Bloqueados
     </button>
+
+    <button class="filter-btn" type="button" data-provider-filter="all" aria-pressed="false">
+      Todos
+    </button>
+  </div>
+
+  <div class="provider-page-size">
+    <label for="providerPageSize">Por pagina</label>
+    <select id="providerPageSize" aria-label="Prestadores por pagina">
+      <option value="20">20</option>
+      <option value="30" selected>30</option>
+      <option value="50">50</option>
+      <option value="80">80</option>
+    </select>
   </div>
 </section>
-  <section
-    id="providersReviewList"
-    class="providers-review-list"
-    aria-live="polite"
-    aria-label="Listado de prestadores"
-  ></section>
+  <section class="provider-review-workbench" aria-label="Mesa de revision de prestadores">
+    <div>
+      <section
+        id="providersReviewList"
+        class="providers-review-list"
+        aria-live="polite"
+        aria-label="Cola de prestadores"
+      ></section>
+
+      <nav class="provider-pagination" aria-label="Paginacion de prestadores" hidden>
+        <button id="providerPrevPage" type="button" class="btn small">Anterior</button>
+        <span id="providerPageLabel">Pagina 1</span>
+        <button id="providerNextPage" type="button" class="btn small">Siguiente</button>
+      </nav>
+    </div>
+
+    <aside
+      id="providerReviewDetail"
+      class="provider-review-detail"
+      aria-live="polite"
+      aria-label="Detalle de revision del prestador"
+    ></aside>
+  </section>
 </section>
-    <section class="section-head admin-mobile-panel admin-mobile-choferes" aria-label="Listado principal">
+<section
+  id="financialAdminModule"
+  class="financial-section admin-mobile-panel admin-mobile-finance"
+  aria-label="Finanzas y contabilidad"
+>
+  <div class="section-head">
+    <div>
+      <h2>Finanzas</h2>
+      <p>Ledger, revenue, liquidaciones, conciliacion y cierres contables</p>
+    </div>
+    <div class="support-head-actions">
+      <label class="financial-test-toggle">
+        <input id="financeIncludeTests" type="checkbox" />
+        Incluir test
+      </label>
+      <button id="financeRefreshBtn" type="button" class="support-head-btn">
+        Recargar
+      </button>
+    </div>
+  </div>
+
+  <section class="financial-kpi-grid" aria-label="Metricas financieras">
+    <article class="financial-kpi financial-kpi-blue">
+      <span>GMV</span>
+      <strong id="financeGmv">$ 0</strong>
+      <small>Pagos reales fiscal reportable</small>
+    </article>
+    <article class="financial-kpi financial-kpi-green">
+      <span>Revenue MIMI</span>
+      <strong id="financeRevenue">$ 0</strong>
+      <small>Comision tecnologica reconocida</small>
+    </article>
+    <article class="financial-kpi financial-kpi-amber">
+      <span>Deuda prestadores</span>
+      <strong id="financeLiability">$ 0</strong>
+      <small>Neto pendiente de liquidar</small>
+    </article>
+    <article class="financial-kpi financial-kpi-red">
+      <span>Refunds</span>
+      <strong id="financeRefunds">$ 0</strong>
+      <small>Movimientos compensatorios</small>
+    </article>
+  </section>
+
+  <section class="financial-workbench" aria-label="Mesa financiera">
+    <article class="financial-panel">
+      <div class="financial-panel-head">
+        <h3>Salud de conciliacion</h3>
+        <span id="financeReconciliationBadge">Sin datos</span>
+      </div>
+      <div id="financeReconciliationList" class="financial-list"></div>
+    </article>
+
+    <article class="financial-panel">
+      <div class="financial-panel-head">
+        <h3>Cierres mensuales</h3>
+        <span id="financeModeBadge">Produccion</span>
+      </div>
+      <div id="financeClosuresList" class="financial-list"></div>
+    </article>
+
+    <article class="financial-panel financial-panel-wide">
+      <div class="financial-panel-head">
+        <h3>Exports contables y fiscales</h3>
+        <span>CSV/XLSX/JSON/PDF</span>
+      </div>
+      <div id="financeExportsList" class="financial-list financial-list-compact"></div>
+    </article>
+  </section>
+</section>
+    <section class="section-head admin-mobile-panel admin-mobile-choferes" aria-label="Listado principal" hidden>
       <div>
         <h2>Choferes</h2>
         <p>Swipe a la derecha para aprobar, a la izquierda para rechazar</p>
@@ -515,19 +639,24 @@
       class="drivers drivers-premium admin-mobile-panel admin-mobile-choferes"
       aria-live="polite"
       aria-label="Listado de choferes"
+      hidden
     ></section>
   </main>
 
-  <nav id="adminMobileDock" class="admin-mobile-dock" aria-label="Navegación principal del panel">
-    <button class="admin-mobile-dock-btn is-active" type="button" data-admin-mobile-view-target="choferes" aria-pressed="true">
+  <nav id="adminMobileDock" class="admin-mobile-dock" aria-label="Navegacion principal del panel">
+    <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="choferes" aria-pressed="false" hidden>
       <span class="admin-mobile-dock-icon">Cho</span>
       <span class="admin-mobile-dock-label">Choferes</span>
     </button>
-    <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="providers" aria-pressed="false">
+    <button class="admin-mobile-dock-btn is-active" type="button" data-admin-mobile-view-target="providers" aria-pressed="true">
       <span class="admin-mobile-dock-icon">Pro</span>
       <span class="admin-mobile-dock-label">Prestadores</span>
     </button>
-    <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="map" aria-pressed="false">
+    <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="finance" aria-pressed="false">
+      <span class="admin-mobile-dock-icon">Fin</span>
+      <span class="admin-mobile-dock-label">Finanzas</span>
+    </button>
+    <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="map" aria-pressed="false" hidden>
       <span class="admin-mobile-dock-icon">Map</span>
       <span class="admin-mobile-dock-label">Mapa</span>
     </button>
@@ -536,7 +665,7 @@
       <span class="admin-mobile-dock-label">Soporte</span>
       <span id="supportDockBadge" class="admin-mobile-dock-badge" hidden>0</span>
     </button>
-    <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="ai" aria-pressed="false">
+    <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="ai" aria-pressed="false" hidden>
       <span class="admin-mobile-dock-icon">IA</span>
       <span class="admin-mobile-dock-label">Resumen IA</span>
     </button>
@@ -573,7 +702,7 @@
     aria-label="Cerrar detalle"
     data-close-modal="true"
   >
-    âœ•
+    X
   </button>
 </div>
       <div class="modal-content">
@@ -593,7 +722,7 @@
         </section>
 
         <section class="modal-section" aria-labelledby="modalMapInfoTitle">
-          <h4 id="modalMapInfoTitle">Ubicación</h4>
+          <h4 id="modalMapInfoTitle">Ubicacion</h4>
           <div id="modalMapInfo" class="modal-map-info"></div>
         </section>
       </div>
@@ -613,7 +742,6 @@
 
 <script src="./admin-env.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
 
 <script type="module">
   import "./supabase-admin-client.js";
@@ -636,17 +764,16 @@ window.getAdminAccessToken = async function getAdminAccessToken() {
     const token = await window.getAdminAccessToken();
 
     if (!token) {
-      throw new Error("No hay sesión admin activa");
+      throw new Error("No hay sesion admin activa");
     }
 
     return true;
 };
 </script>
-  <script type="module" src="./admin.js?v=2026.05.07.1"></script>
-<script type="module" src="./admin-map.js?v=2026.04.27.8"></script>
-<script type="module" src="./admin-support.js?v=2026.05.09.1"></script>
-<script type="module" src="./admin-services-providers.js?v=2026.05.07.1"></script>
-<script type="module" src="./admin-transport.js?v=2026.05.07.1"></script>
+  <script type="module" src="./admin.js?v=2026.05.13.34"></script>
+<script type="module" src="./admin-support.js?v=2026.05.13.34"></script>
+<script type="module" src="./admin-services-providers.js?v=2026.05.13.34"></script>
+<script type="module" src="./admin-finance.js?v=2026.05.13.34"></script>
 </body>
 </html>
 

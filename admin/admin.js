@@ -9,18 +9,20 @@ const moduleSections = Array.from(document.querySelectorAll("[data-admin-section
 const mobileDockButtons = Array.from(document.querySelectorAll("[data-admin-mobile-view-target]"));
 
 const MOBILE_BREAKPOINT = 980;
+const ADMIN_BUILD_VERSION = "2026.05.13.34";
 
 function isAdminMobile() {
   return window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches;
 }
 
-function normalizeMobileView(view = "choferes") {
-  const allowed = new Set(["choferes", "providers", "map", "support", "ai"]);
-  return allowed.has(view) ? view : "choferes";
+function normalizeMobileView(view = "providers") {
+  const allowed = new Set(["choferes", "providers", "finance", "map", "support", "ai"]);
+  return allowed.has(view) ? view : "providers";
 }
 
-function setActiveMobileView(view = "choferes") {
+function setActiveMobileView(view = "providers", options = {}) {
   const nextView = normalizeMobileView(view);
+  const shouldScroll = options.scrollToTop === true;
 
   document.body.setAttribute("data-admin-mobile-view", nextView);
 
@@ -37,7 +39,9 @@ function setActiveMobileView(view = "choferes") {
   );
 
   requestAnimationFrame(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (shouldScroll) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
 
     if (nextView === "map") {
       window.dispatchEvent(new Event("resize"));
@@ -82,7 +86,7 @@ function setupModuleNavigation() {
       event.stopPropagation();
 
       const view = button.dataset.adminMobileViewTarget || "choferes";
-      setActiveMobileView(view);
+      setActiveMobileView(view, { scrollToTop: true });
     });
   });
 }
@@ -126,8 +130,8 @@ function initAdaptiveTheme() {
 function setupMobileViewSync() {
   const sync = () => {
     if (isAdminMobile()) {
-      const current = document.body.getAttribute("data-admin-mobile-view") || "choferes";
-      setActiveMobileView(current);
+      const current = document.body.getAttribute("data-admin-mobile-view") || "providers";
+      setActiveMobileView(current, { scrollToTop: false });
     } else {
       document.body.removeAttribute("data-admin-mobile-view");
     }
@@ -144,7 +148,7 @@ async function bootstrapAdminShell() {
   const result = await supabaseAdminService.waitForActiveAdmin(3200);
 
   if (!result?.ok) {
-    window.location.href = "./admin-login.html";
+    window.location.href = "/admin";
     return;
   }
 
@@ -161,17 +165,53 @@ async function bootstrapAdminShell() {
     };
   }
 
-  setActiveModule("transport");
-  setActiveMobileView("choferes");
+  setActiveModule("services");
+  setActiveMobileView("providers", { scrollToTop: false });
+}
+
+function prioritizeServicesModule() {
+  const providers = document.getElementById("servicesProvidersModule");
+  const support = document.querySelector(".support-section");
+  if (providers && support?.parentNode) {
+    support.parentNode.insertBefore(providers, support);
+  }
 }
 
 logoutBtn?.addEventListener("click", async () => {
   await supabaseAdminService.signOut();
-  window.location.href = "./admin-login.html";
+  window.location.href = "/admin";
 });
 
 initAdaptiveTheme();
+prioritizeServicesModule();
 setupDynamicHeader();
 setupModuleNavigation();
 setupMobileViewSync();
 bootstrapAdminShell();
+
+async function checkAdminVersion() {
+  try {
+    const response = await fetch(`/app-version.json?surface=admin&t=${Date.now()}`, {
+      cache: "no-store"
+    });
+    if (!response.ok) return;
+    const data = await response.json();
+    const latest = data?.admin?.version;
+    if (!latest || latest === ADMIN_BUILD_VERSION) return;
+
+    const banner = document.createElement("div");
+    banner.className = "admin-update-banner";
+    banner.innerHTML = `
+      <span>${data?.admin?.message || "Hay una actualizacion del panel administrativo disponible."}</span>
+      <button type="button">Actualizar</button>
+    `;
+    banner.querySelector("button")?.addEventListener("click", () => {
+      window.location.reload();
+    });
+    document.body.appendChild(banner);
+  } catch (error) {
+    console.info("[admin.version] No se pudo verificar actualizacion", error?.message || error);
+  }
+}
+
+checkAdminVersion();
