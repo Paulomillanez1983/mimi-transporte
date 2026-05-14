@@ -82,7 +82,7 @@ import {
   signOut,
   updateProviderStatus,
   verifyOtp
-  } from "./services/service-api.js?v=2026.05.14.3";
+  } from "./services/service-api.js?v=2026.05.14.4";
 import {
   detectDefaultCountry,
   loadPhoneCountries,
@@ -96,7 +96,7 @@ import {
   forceCleanSession,
   getSupabaseClient,
   signInWithGoogle
-} from "./services/supabase.js";
+} from "./services/supabase.js?v=2026.05.14.4";
 import { getMimiPushToken } from "./services/push.js";
 import {
   MIMI_ACTIVE_JOB_LOCATION_INTERVAL_MS,

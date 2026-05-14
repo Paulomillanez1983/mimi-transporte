@@ -7,11 +7,11 @@
     "message": "Mejoramos estabilidad, velocidad y seguridad."
   },
   "provider": {
-    "version": "2026.05.14.3",
-    "min_supported_version": "2026.05.14.3",
+    "version": "2026.05.14.4",
+    "min_supported_version": "2026.05.14.4",
     "critical": false,
     "force_update": false,
-    "message": "Actualizamos el modulo de servicios del prestador y corregimos carga de version."
+    "message": "Corregimos recuperacion de sesion vencida y limpieza de cache del prestador."
   },
   "admin": {
     "version": "2026.05.14.2",

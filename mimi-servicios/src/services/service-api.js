@@ -4,8 +4,9 @@ import {
   clearAuthRedirectIntent,
   forceCleanSession,
   getSupabaseClient,
+  recoverSessionSafely,
   signOut as signOutFromSupabase
-} from "./supabase.js";
+} from "./supabase.js?v=2026.05.14.4";
 import { buildMockProviders } from "./mock-data.js";
 import { MIMI_NEARBY_REFRESH_INTERVAL_MS } from "./runtime-config.js";
 
@@ -81,11 +82,7 @@ async function requireSession() {
     return null;
   }
 
-  const { data, error } = await supabase.auth.getSession();
-
-  if (error) throw error;
-
-  const session = data?.session ?? null;
+  const session = await recoverSessionSafely();
 
   if (!session?.access_token) {
     const authError = new Error("AUTH_REQUIRED");

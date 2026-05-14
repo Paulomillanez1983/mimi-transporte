@@ -5,10 +5,19 @@ let authSubscription = null;
 
 const AUTH_REDIRECT_KEY = "mimi_services_auth_redirect_in_progress";
 const AUTH_INTENT_KEY = "mimi_services_auth_intent";
+const ACTIVE_MODE_KEY = "mimi_services_active_mode";
+const CLIENT_AUTH_STORAGE_KEY = "mimi_services_client_auth";
+const PROVIDER_AUTH_STORAGE_KEY = "mimi_services_provider_auth";
+const PROVIDER_AUTH_LOCK_KEY = "mimi_services_provider_auth_lock";
+const CLIENT_AUTH_LOCK_KEY = "mimi_services_client_auth_lock";
 
 function currentPageName() {
   const cleanPath = window.location.pathname.replace(/\/+$/, "");
   return cleanPath.split("/").pop() || "";
+}
+
+function safeMode(value = null) {
+  return value === "provider" ? "provider" : "client";
 }
 
 function servicesBasePath() {
@@ -29,17 +38,14 @@ function servicePageUrl(pageName) {
 }
 
 function authCallbackUrl(mode = "client", targetPage = "cliente.html") {
-  const safeMode = mode === "provider" ? "provider" : "client";
-  const callbackPage = safeMode === "provider" ? "auth-provider-callback.html" : "auth-callback.html";
+  const modeName = safeMode(mode);
+  const callbackPage = modeName === "provider" ? "auth-provider-callback.html" : "auth-callback.html";
   const url = new URL(`${servicesBasePath()}${callbackPage}`, window.location.origin);
-  const safeTarget = safeMode === "provider" ? "prestador.html" : "cliente.html";
+  const target = modeName === "provider" ? "prestador.html" : "cliente.html";
 
-  if (safeMode === "provider") {
-    return url.toString();
-  }
-
-  url.searchParams.set("mode", safeMode);
-  url.searchParams.set("target", targetPage === "prestador.html" ? "prestador.html" : safeTarget);
+  url.searchParams.set("appRole", modeName);
+  url.searchParams.set("returnTo", target === "prestador.html" ? "/prestador" : "/servicios");
+  url.searchParams.set("target", targetPage === "prestador.html" && modeName === "provider" ? "prestador.html" : target);
 
   return url.toString();
 }
@@ -52,25 +58,55 @@ function projectRefFromUrl() {
   }
 }
 
-function authStorageKeys() {
+function authStorageKey(mode = currentEntryMode()) {
+  return safeMode(mode) === "provider" ? PROVIDER_AUTH_STORAGE_KEY : CLIENT_AUTH_STORAGE_KEY;
+}
+
+function authStorageKeys(mode = currentEntryMode()) {
   const ref = projectRefFromUrl();
-  if (!ref) return [];
+  const roleStorageKey = authStorageKey(mode);
+  const roleKeys = Array.from(new Set([
+    roleStorageKey,
+    CLIENT_AUTH_STORAGE_KEY,
+    PROVIDER_AUTH_STORAGE_KEY
+  ]));
 
   return [
-    `sb-${ref}-auth-token`,
-    `sb-${ref}-auth-token-code-verifier`
+    ...roleKeys,
+    ...roleKeys.map((key) => `${key}-code-verifier`),
+    ...(ref
+      ? [
+          `sb-${ref}-auth-token`,
+          `sb-${ref}-auth-token-code-verifier`
+        ]
+      : [])
   ];
 }
 
-export function forceCleanSession() {
+export function forceCleanSession(mode = currentEntryMode()) {
   try {
-    authStorageKeys().forEach((key) => localStorage.removeItem(key));
+    authSubscription?.unsubscribe?.();
+    authSubscription = null;
+    authStorageKeys(mode).forEach((key) => {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    });
     sessionStorage.removeItem(AUTH_REDIRECT_KEY);
     sessionStorage.removeItem(AUTH_INTENT_KEY);
     localStorage.removeItem(AUTH_INTENT_KEY);
+    sessionStorage.removeItem(PROVIDER_AUTH_LOCK_KEY);
+    localStorage.removeItem(PROVIDER_AUTH_LOCK_KEY);
+    sessionStorage.removeItem(CLIENT_AUTH_LOCK_KEY);
+    localStorage.removeItem(CLIENT_AUTH_LOCK_KEY);
+    client = null;
   } catch {
     // noop
   }
+}
+
+function isInvalidRefreshTokenError(error) {
+  const message = String(error?.message || error?.name || error || "").toLowerCase();
+  return message.includes("invalid refresh token") || message.includes("refresh token not found");
 }
 
 export function hasSupabaseEnv() {
@@ -90,11 +126,14 @@ export function getSupabaseClient() {
     return null;
   }
 
+  const mode = currentEntryMode();
+
   client = window.supabase.createClient(
     appConfig.supabaseUrl,
     appConfig.supabaseAnonKey,
     {
       auth: {
+        storageKey: authStorageKey(mode),
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
@@ -118,7 +157,18 @@ export async function recoverSessionSafely() {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
 
-  const { data, error } = await supabase.auth.getSession();
+  let result = null;
+  try {
+    result = await supabase.auth.getSession();
+  } catch (error) {
+    if (isInvalidRefreshTokenError(error)) {
+      forceCleanSession();
+      return null;
+    }
+    throw error;
+  }
+
+  const { data, error } = result;
 
   if (error) {
     console.warn("[auth] sesión inválida, limpiando", error);
@@ -150,8 +200,16 @@ function currentEntryMode(explicitMode = null) {
     return explicitMode;
   }
 
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const appRole = params.get("appRole") || params.get("mode");
+    if (appRole === "provider" || appRole === "client") return appRole;
+  } catch {
+    // noop
+  }
+
   const page = currentPageName().toLowerCase();
-  if (page === "prestador" || page === "prestador.html") {
+  if (page === "prestador" || page === "prestador.html" || page === "auth-provider-callback.html") {
     return "provider";
   }
 
@@ -163,6 +221,36 @@ export function clearAuthRedirectIntent() {
     sessionStorage.removeItem(AUTH_REDIRECT_KEY);
     sessionStorage.removeItem(AUTH_INTENT_KEY);
     localStorage.removeItem(AUTH_INTENT_KEY);
+    sessionStorage.removeItem(PROVIDER_AUTH_LOCK_KEY);
+    localStorage.removeItem(PROVIDER_AUTH_LOCK_KEY);
+    sessionStorage.removeItem(CLIENT_AUTH_LOCK_KEY);
+    localStorage.removeItem(CLIENT_AUTH_LOCK_KEY);
+  } catch {
+    // noop
+  }
+}
+
+function setAuthRedirectIntent(mode = currentEntryMode()) {
+  const safe = safeMode(mode);
+  const redirectTarget = safe === "provider" ? "prestador.html" : "cliente.html";
+  const lockKey = safe === "provider" ? PROVIDER_AUTH_LOCK_KEY : CLIENT_AUTH_LOCK_KEY;
+  const oppositeLockKey = safe === "provider" ? CLIENT_AUTH_LOCK_KEY : PROVIDER_AUTH_LOCK_KEY;
+  const lockPayload = JSON.stringify({
+    mode: safe,
+    target: redirectTarget,
+    startedAt: Date.now()
+  });
+
+  try {
+    sessionStorage.setItem(AUTH_REDIRECT_KEY, redirectTarget);
+    sessionStorage.setItem(AUTH_INTENT_KEY, safe);
+    localStorage.setItem(AUTH_INTENT_KEY, safe);
+    localStorage.setItem(ACTIVE_MODE_KEY, safe);
+    sessionStorage.setItem(ACTIVE_MODE_KEY, safe);
+    sessionStorage.setItem(lockKey, lockPayload);
+    localStorage.setItem(lockKey, lockPayload);
+    sessionStorage.removeItem(oppositeLockKey);
+    localStorage.removeItem(oppositeLockKey);
   } catch {
     // noop
   }
@@ -175,8 +263,8 @@ export function hasProviderAuthIntent() {
       sessionStorage.getItem(AUTH_REDIRECT_KEY) === "./prestador.html" ||
       sessionStorage.getItem(AUTH_INTENT_KEY) === "provider" ||
       localStorage.getItem(AUTH_INTENT_KEY) === "provider" ||
-      sessionStorage.getItem("mimi_services_active_mode") === "provider" ||
-      localStorage.getItem("mimi_services_active_mode") === "provider"
+      Boolean(sessionStorage.getItem(PROVIDER_AUTH_LOCK_KEY)) ||
+      Boolean(localStorage.getItem(PROVIDER_AUTH_LOCK_KEY))
     );
   } catch {
     return false;
@@ -193,15 +281,7 @@ export async function signInWithGoogle(options = {}) {
 
   console.log("[MIMI servicios auth] redirectTo:", redirectTo);
 
-  try {
-    sessionStorage.setItem(AUTH_REDIRECT_KEY, redirectTarget);
-    sessionStorage.setItem(AUTH_INTENT_KEY, mode);
-    localStorage.setItem(AUTH_INTENT_KEY, mode);
-    localStorage.setItem("mimi_services_active_mode", mode);
-    sessionStorage.setItem("mimi_services_active_mode", mode);
-  } catch {
-    // noop
-  }
+  setAuthRedirectIntent(mode);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
@@ -221,14 +301,14 @@ export async function signInWithGoogle(options = {}) {
   return data;
 }
 
-export async function signOut() {
+export async function signOut(mode = currentEntryMode()) {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
 
   try {
     await supabase.auth.signOut({ scope: "local" });
   } finally {
-    forceCleanSession();
+    forceCleanSession(mode);
   }
 
   return true;
@@ -282,22 +362,23 @@ export async function resolveSessionRole(session) {
 }
 
 export async function redirectAfterLoginByRole(session) {
+  const entryMode = currentEntryMode();
+  const providerIntent = hasProviderAuthIntent();
   const preferred =
     sessionStorage.getItem(AUTH_REDIRECT_KEY) ||
-    (sessionStorage.getItem(AUTH_INTENT_KEY) === "provider" ||
-    localStorage.getItem(AUTH_INTENT_KEY) === "provider"
+    (providerIntent
       ? "prestador.html"
       : null);
 
   const preferredPage = String(preferred || "").replace(/^\.\//, "");
   const currentPage = currentPageName();
 
-  if (
+  if (entryMode === "provider" || providerIntent || (
     preferredPage === "prestador.html" ||
     preferredPage === "prestador" ||
     currentPage === "prestador.html" ||
     currentPage === "prestador"
-  ) {
+  )) {
     clearAuthRedirectIntent();
 
     if (currentPage !== "prestador.html" && currentPage !== "prestador") {
@@ -307,13 +388,7 @@ export async function redirectAfterLoginByRole(session) {
     return;
   }
 
-  const role = await resolveSessionRole(session);
-
-  let targetPage = role === "provider" ? "prestador.html" : "cliente.html";
-
-  if (preferredPage === "cliente.html") {
-    targetPage = "cliente.html";
-  }
+  let targetPage = "cliente.html";
 
   clearAuthRedirectIntent();
 
