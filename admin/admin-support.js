@@ -1,4 +1,4 @@
-﻿import supabaseAdminService from "./supabase-admin-client.js";
+import supabaseAdminService from "./supabase-admin-client.js?v=2026.05.14.2";
 
 const SUPPORT_API_BASE = "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1";
 const SUPPORT_POLL_MS = 12000;
@@ -223,7 +223,7 @@ function getConversationSecondary(item) {
     parts.push(subject);
   }
 
-  return parts.join(" · ");
+  return parts.join(" - ");
 }
 
 function getMessageText(msg) {
@@ -460,7 +460,7 @@ function renderSupportAuthGate(reason = "no_session") {
   const els = getSupportElements();
   const message = reason === "not_admin"
     ? "Tu usuario no tiene permisos de administrador para ver soporte."
-    : "Ingresá como administrador para ver las conversaciones de soporte.";
+    : "Ingresa como administrador para ver las conversaciones de soporte.";
 
   supportState.conversations = [];
   supportState.filtered = [];
@@ -660,7 +660,7 @@ function renderSelectedConversation() {
       supportFormatDateTime(current.updated_at)
     ].filter(Boolean);
 
-    els.threadSubmeta.textContent = bits.join(" · ");
+    els.threadSubmeta.textContent = bits.join(" - ");
   }
 
   const messages = Array.isArray(current.messages) ? current.messages : [];
@@ -701,7 +701,7 @@ function renderSelectedConversation() {
               ${text ? `<div>${escapeHtmlSupport(text)}</div>` : ""}
               ${attachmentsHtml}
               <div class="support-message-meta">
-                ${escapeHtmlSupport(supportRoleLabel(senderRole))} · ${supportFormatTime(msg.created_at)}
+                ${escapeHtmlSupport(supportRoleLabel(senderRole))} - ${supportFormatTime(msg.created_at)}
                 ${ticks ? `<span class="support-message-ticks">${ticks}</span>` : ""}
               </div>
             </div>
@@ -839,9 +839,9 @@ async function sendSupportReply() {
         sender_role: "admin",
         attachments: uploadedAttachments,
         metadata: {
-          push_title: `Soporte MIMICAR · ${getConversationDisplayName(current)}`,
+          push_title: `Soporte MIMI GO - ${getConversationDisplayName(current)}`,
           push_body: text || "Tenes una nueva respuesta de soporte.",
-          sender_name: "Soporte MIMICAR",
+          sender_name: "Soporte MIMI GO",
           conversation_name: getConversationDisplayName(current),
           unread_count: Number(current.unread_count || 0) + 1
         }
@@ -872,9 +872,9 @@ async function sendSupportReply() {
         body: JSON.stringify({
           ticket_id: current.id,
           message_id: newMessageId,
-          title: `Soporte MIMICAR · ${getConversationDisplayName(current)}`,
+          title: `Soporte MIMI GO - ${getConversationDisplayName(current)}`,
           body: text || "Tenes una nueva respuesta de soporte.",
-          sender_name: "Soporte MIMICAR",
+          sender_name: "Soporte MIMI GO",
           sender_role: "admin",
           conversation_name: getConversationDisplayName(current),
           unread_count: Number(current.unread_count || 0) + 1

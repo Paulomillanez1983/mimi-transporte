@@ -1,4 +1,4 @@
-import supabaseAdminService from "./supabase-admin-client.js";
+import supabaseAdminService from "./supabase-admin-client.js?v=2026.05.14.2";
 
 const loginBtn = document.getElementById("googleLoginBtn");
 const loginError = document.getElementById("loginError");
@@ -37,7 +37,7 @@ function setLoading(isLoading, message = "Procesando...") {
 }
 
 function redirectToPanel() {
-  window.location.href = "./admin-panel.html";
+  window.location.href = "/admin/panel";
 }
 
 async function verifyExistingAccess() {

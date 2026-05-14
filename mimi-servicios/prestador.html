@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <base href="/mimi-servicios/">
-  <title>MIMI GO Partners | Prestadores independientes</title>
-  <meta name="description" content="Recibi solicitudes de clientes y administra tus servicios desde tu panel MIMI GO Partners.">
+  <title>MIMIGO Prestadores | Prestadores independientes</title>
+  <meta name="description" content="Recibi solicitudes de clientes y administra tus servicios desde tu panel MIMIGO.">
   <meta name="theme-color" content="#f8fafc">
   <link rel="canonical" href="https://mimigo.com.ar/prestador">
 
   <!-- Social Preview / Open Graph -->
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="MIMI GO Partners">
+  <meta property="og:site_name" content="MIMIGO Prestadores">
   <meta property="og:locale" content="es_AR">
-  <meta property="og:title" content="MIMI GO Partners | Prestadores independientes">
-  <meta property="og:description" content="Recibi solicitudes de clientes y administra tus servicios desde tu panel MIMI GO Partners.">
+  <meta property="og:title" content="MIMIGO Prestadores | Prestadores independientes">
+  <meta property="og:description" content="Recibi solicitudes de clientes y administra tus servicios desde tu panel MIMIGO.">
   <meta property="og:url" content="https://mimigo.com.ar/prestador">
   <meta property="og:image" content="https://mimigo.com.ar/assets/og/og-mimigo-partners-whatsapp-v5.jpg">
   <meta property="og:image:secure_url" content="https://mimigo.com.ar/assets/og/og-mimigo-partners-whatsapp-v5.jpg">
@@ -23,8 +23,8 @@
 
   <!-- X / Twitter Cards -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="MIMI GO Partners | Prestadores independientes">
-  <meta name="twitter:description" content="Recibi solicitudes de clientes y administra tus servicios desde tu panel MIMI GO Partners.">
+  <meta name="twitter:title" content="MIMIGO Prestadores | Prestadores independientes">
+  <meta name="twitter:description" content="Recibi solicitudes de clientes y administra tus servicios desde tu panel MIMIGO.">
   <meta name="twitter:image" content="https://mimigo.com.ar/assets/og/og-mimigo-partners-whatsapp-v5.jpg">
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
@@ -32,12 +32,12 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <link rel="icon" type="image/png" sizes="32x32" href="./assets/icons/mimigo-partners-icon-32.png?v=branding-v3">
-  <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/mimigo-partners-icon-16.png?v=branding-v3">
-  <link rel="apple-touch-icon" href="./assets/icons/mimigo-partners-apple-touch-icon.png?v=branding-v3">
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/icons/mimigo-partners-icon-32.png?v=2026.05.14.2">
+  <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/mimigo-partners-icon-16.png?v=2026.05.14.2">
+  <link rel="apple-touch-icon" href="./assets/icons/mimigo-partners-apple-touch-icon.png?v=2026.05.14.2">
 
   <!-- PWA -->
-  <link rel="manifest" href="./manifest-prestador.json?v=branding-v3">
+  <link rel="manifest" href="/manifest-partners.json?v=2026.05.14.2">
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -45,9 +45,9 @@
   <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Styles -->
-  <link rel="stylesheet" href="./styles/app.css">
-  <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.10.6">
-  <link rel="stylesheet" href="./styles/provider.css?v=2026.05.12.2">
+  <link rel="stylesheet" href="./styles/app.css?v=2026.05.14.2">
+  <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.14.2">
+  <link rel="stylesheet" href="./styles/provider.css?v=2026.05.14.2">
 
   <!-- Provider map theme: light, clean, professional -->
   <script>
@@ -64,6 +64,33 @@
 <body class="provider-auth-loading">
   <!-- App Shell -->
   <div id="app" class="app-container">
+    <section class="provider-boot-loader" id="providerBootLoader" role="status" aria-live="polite">
+      <div class="provider-boot-card">
+        <div class="provider-boot-brand">MIMIGO</div>
+        <div class="provider-boot-shimmer" aria-hidden="true"></div>
+        <h1 id="providerBootTitle">Preparando tu panel...</h1>
+        <p id="providerBootSubtitle">Estamos cargando tu cuenta de prestador.</p>
+        <article class="provider-boot-marketing" id="providerBootMarketing" aria-live="polite">
+          <span class="provider-boot-marketing-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M13.5 4.8c2.4-.9 4.3-.7 5.1-.5.2.8.4 2.7-.5 5.1-.7 1.9-2.1 3.8-4.2 5.8l-3.1-3.1c2-2.1 3.9-3.5 5.8-4.2Z"/>
+              <path d="M10.8 12.1 7 11.5 5.3 13.2l3.2 1.2"/>
+              <path d="m11.9 13.2.6 3.8-1.7 1.7-1.2-3.2"/>
+              <path d="M8.6 15.4 6.2 17.8"/>
+              <path d="M15.2 8.8h.01"/>
+            </svg>
+          </span>
+          <div class="provider-boot-marketing-copy">
+            <small id="providerBootMarketingEyebrow">MÃƒÂ¡s simple</small>
+            <strong id="providerBootMarketingTitle">Menos vueltas. MÃƒÂ¡s oportunidades.</strong>
+            <p id="providerBootMarketingBody">MIMIGO reduce pasos para que puedas enfocarte en trabajar.</p>
+          </div>
+          <div class="provider-boot-dots" id="providerBootMarketingDots" aria-hidden="true"></div>
+        </article>
+        <button class="provider-boot-retry" id="providerBootRetry" type="button" hidden>Reintentar</button>
+      </div>
+    </section>
+
     <!-- Map Background -->
     <div id="mapContainer" class="map-background">
       <div id="map" class="map-surface" data-map-style="light"></div>
@@ -74,7 +101,7 @@
             <path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 7m0 13V7m0 0L9.553 4.553A1 1 0 009 4.118v.006"/>
           </svg>
           <h3 class="fallback-title">Mapa no disponible</h3>
-          <p class="fallback-text">Seguimos mostrando tu operación</p>
+          <p class="fallback-text">Seguimos mostrando tu operaciÃƒÂ³n</p>
         </div>
       </div>
     </div>
@@ -83,8 +110,10 @@
     <header class="floating-header" id="header">
       <div class="header-glass">
         <div class="header-content">
-          <div class="header-brand">
-            <span class="brand-text">MIMI</span>
+          <div class="header-brand" aria-label="MIMI GO">
+            <span class="brand-text brand-text--mimigo">
+              <span class="brand-text-blue">MIMI</span><span class="brand-text-white">GO</span>
+            </span>
             <span class="brand-badge" id="statusBadge">OFFLINE</span>
           </div>
 
@@ -93,7 +122,7 @@
             <span class="status-text" id="statusText">Desconectado</span>
           </div>
 
-          <button class="menu-button" id="menuButton" type="button" aria-label="Menú">
+          <button class="menu-button" id="menuButton" type="button" aria-label="MenÃƒÂº">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M4 6h16M4 12h16M4 18h16"/>
             </svg>
@@ -110,19 +139,19 @@
 
       <div class="provider-art-stack">
         <div class="provider-art-card card-clean">
-          <span>🧼</span>
+          <span>??</span>
           <small>Limpieza</small>
         </div>
         <div class="provider-art-card card-care">
-          <span>🧑‍⚕️</span>
+          <span>?????</span>
           <small>Cuidado</small>
         </div>
         <div class="provider-art-card card-home">
-          <span>🏠</span>
+          <span>??</span>
           <small>Hogar</small>
         </div>
         <div class="provider-art-card card-wellness">
-          <span>💆</span>
+          <span>??</span>
           <small>Bienestar</small>
         </div>
       </div>
@@ -130,7 +159,7 @@
 
     <section class="provider-login-panel" aria-label="Ingreso de prestadores">
       <div class="provider-login-logo">
-        <img src="./assets/brand/mimigo-partners-wordmark.png" alt="MIMI GO Partners">
+        <span class="provider-login-wordmark provider-login-wordmark--mimigo" aria-label="MIMIGO">MIMIGO</span>
       </div>
 
       <button class="provider-login-google" id="providerGoogleLoginButtonStatic" type="button">
@@ -147,13 +176,13 @@
           <strong>Continuar con Google</strong>
         </span>
 
-        <span class="provider-google-arrow">›</span>
+        <span class="provider-google-arrow">Ã¢â‚¬Âº</span>
       </button>
 
       <div class="provider-login-trust">
-        <span>🔒<small>Sesión segura</small></span>
-        <span>🛠️<small>Verificación profesional</small></span>
-        <span>⚡<small>Servicios reales</small></span>
+        <span>??<small>SesiÃƒÂ³n segura</small></span>
+        <span>???<small>VerificaciÃƒÂ³n profesional</small></span>
+        <span>?<small>Servicios reales</small></span>
       </div>
     </section>
 
@@ -165,8 +194,8 @@
           <span class="offer-timer" id="offerTimer">15s</span>
         </div>
         <div class="offer-body">
-          <div class="offer-service" id="offerService">Plomería</div>
-          <div class="offer-location" id="offerLocation">Nueva Córdoba</div>
+          <div class="offer-service" id="offerService">PlomerÃƒÂ­a</div>
+          <div class="offer-location" id="offerLocation">Nueva CÃƒÂ³rdoba</div>
           <div class="offer-client" id="offerClient">Cliente: Mariana</div>
           <div class="offer-price" id="offerPrice">$18.000 estimado</div>
           <div class="offer-detail-grid" id="offerDetails" aria-live="polite"></div>
@@ -187,7 +216,7 @@
         </div>
         <div class="service-body">
           <div class="service-type" id="activeServiceType">Electricista</div>
-          <div class="service-location" id="activeServiceLocation">Nueva Córdoba</div>
+          <div class="service-location" id="activeServiceLocation">Nueva CÃƒÂ³rdoba</div>
           <div class="service-client" id="activeServiceClient">Mariana</div>
         </div>
         <div class="service-navigation-panel" id="activeServiceNavigation" hidden>
@@ -213,14 +242,14 @@
           <div class="service-nav-mode" id="serviceNavModeLabel">Guia in-app lista</div>
         </div>
         <button class="service-action-btn" id="serviceActionBtn" type="button">
-          Llegué al domicilio
+          LleguÃƒÂ© al domicilio
         </button>
       </div>
     </div>
 
     <div class="provider-pin-overlay" id="providerPinOverlay" hidden>
       <section class="provider-pin-sheet" role="dialog" aria-modal="true" aria-labelledby="providerPinTitle">
-        <button class="provider-pin-close" id="providerPinClose" type="button" aria-label="Cerrar">×</button>
+        <button class="provider-pin-close" id="providerPinClose" type="button" aria-label="Cerrar">Ãƒâ€”</button>
         <span class="provider-pin-eyebrow">Validar servicio</span>
         <h2 id="providerPinTitle">Ingresa el codigo del cliente</h2>
         <p>Pedile al cliente el PIN de 4 digitos para iniciar el servicio.</p>
@@ -237,36 +266,38 @@
 
     <div class="provider-phone-overlay" id="providerPhoneOverlay" hidden>
       <section class="provider-phone-sheet" role="dialog" aria-modal="true" aria-labelledby="providerPhoneTitle">
-        <button class="provider-phone-close" id="providerPhoneClose" type="button" aria-label="Cerrar">×</button>
+        <button class="provider-phone-close" id="providerPhoneClose" type="button" aria-label="Cerrar">Ãƒâ€”</button>
         <span class="provider-phone-eyebrow">Seguridad de cuenta</span>
-        <h2 id="providerPhoneTitle">Verificá tu teléfono</h2>
-        <p id="providerPhoneCopy">Usamos este número para proteger tu panel y validar dispositivos nuevos.</p>
+        <h2 id="providerPhoneTitle">VerificÃƒÂ¡ tu telÃƒÂ©fono</h2>
+        <p id="providerPhoneCopy">Usamos este nÃƒÂºmero para proteger tu panel y validar dispositivos nuevos.</p>
         <form id="providerPhoneForm" novalidate>
           <div class="provider-phone-entry" id="providerPhoneEntryStep">
             <button class="provider-phone-country" id="providerPhoneCountryButton" type="button" aria-haspopup="listbox" aria-expanded="false">
-              <span id="providerPhoneCountryFlag" aria-hidden="true">🇦🇷</span>
+              <span id="providerPhoneCountryFlag" aria-hidden="true">????</span>
               <strong id="providerPhoneCountryName">Argentina</strong>
               <b id="providerPhoneCountryDial">+54</b>
             </button>
             <div class="provider-phone-country-panel" id="providerPhoneCountryPanel" hidden>
-              <input id="providerPhoneCountrySearch" type="search" placeholder="Buscar país o código" autocomplete="off">
+              <input id="providerPhoneCountrySearch" type="search" placeholder="Buscar paÃƒÂ­s o cÃƒÂ³digo" autocomplete="off">
               <div class="provider-phone-country-list" id="providerPhoneCountryList" role="listbox"></div>
             </div>
             <label class="provider-phone-field">
-              <span>Número con WhatsApp o SMS</span>
+              <span>NÃƒÂºmero con WhatsApp o SMS</span>
               <input id="providerPhoneInput" type="tel" inputmode="tel" autocomplete="tel" placeholder="351 555 0000">
             </label>
           </div>
           <div class="provider-phone-otp" id="providerPhoneOtpStep" hidden>
-            <p>Código enviado a <strong id="providerPhoneOtpTarget">tu teléfono</strong></p>
+            <p>CÃƒÂ³digo enviado a <strong id="providerPhoneOtpTarget">tu telÃƒÂ©fono</strong></p>
             <label class="provider-phone-field">
-              <span>Código de verificación</span>
-              <input id="providerPhoneCodeInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="one-time-code" placeholder="000000">
+              <span>CÃƒÂ³digo de verificaciÃƒÂ³n</span>
+              <input id="providerPhoneCodeInput" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="000000">
             </label>
-            <button class="provider-phone-resend" id="providerPhoneResend" type="button">Enviar otro código</button>
+            <button class="provider-phone-resend" id="providerPhoneResend" type="button">Enviar otro cÃƒÂ³digo</button>
+            <button class="provider-phone-change" id="providerPhoneChangeNumber" type="button">Cambiar nÃƒÂºmero</button>
           </div>
           <div class="provider-phone-status" id="providerPhoneStatus" role="status" aria-live="polite"></div>
-          <button class="provider-phone-submit" id="providerPhoneSubmit" type="submit">Enviar código</button>
+          <button class="provider-phone-submit" id="providerPhoneSubmit" type="submit">Enviar cÃƒÂ³digo</button>
+          <button class="provider-phone-switch-account" id="providerPhoneSwitchAccount" type="button">Usar otra cuenta Google</button>
         </form>
       </section>
     </div>
@@ -289,6 +320,7 @@
 
     <!-- Bottom Sheet -->
     <div class="bottom-sheet" id="bottomSheet">
+      <button class="sheet-close-btn" id="sheetCloseBtn" type="button" aria-label="Cerrar pantalla">Ãƒâ€”</button>
       <div class="sheet-handle-container">
         <div class="sheet-handle"></div>
       </div>
@@ -301,14 +333,14 @@
           </div>
 
           <div class="sheet-info" id="sheetInfo">
-            <span class="info-price" id="sheetBasePrice">Base —</span>
-            <span class="info-separator">·</span>
-            <span class="info-mode" id="sheetPricingMode">—</span>
+            <span class="info-price" id="sheetBasePrice">Base Ã¢â‚¬â€</span>
+            <span class="info-separator">Ã‚Â·</span>
+            <span class="info-mode" id="sheetPricingMode">Ã¢â‚¬â€</span>
           </div>
         </div>
 
         <div class="sheet-upcoming" id="sheetUpcoming">
-          <span class="upcoming-label">Próximo:</span>
+          <span class="upcoming-label">PrÃƒÂ³ximo:</span>
           <span class="upcoming-time" id="sheetUpcomingTime">Sin agenda</span>
         </div>
       </div>
@@ -330,41 +362,41 @@
 
             <div class="status-toggle-modern" id="statusToggleModern">
               <button class="toggle-option active" type="button" data-status="OFFLINE">
-                <span class="toggle-icon">⭕</span>
+                <span class="toggle-icon">?</span>
                 <span>Offline</span>
               </button>
               <button class="toggle-option" type="button" data-status="ONLINE_IDLE">
-                <span class="toggle-icon">🟢</span>
+                <span class="toggle-icon">??</span>
                 <span>Online</span>
               </button>
             </div>
           </div>
 
           <div class="panel-section" id="nextServiceSection" hidden>
-            <h3 class="section-title">Próximo servicio</h3>
+            <h3 class="section-title">PrÃƒÂ³ximo servicio</h3>
             <div class="next-service-card" id="nextServiceCard">
               <div class="next-time">Hoy 16:30</div>
               <div class="next-type">Electricista</div>
-              <div class="next-location">Nueva Córdoba</div>
-              <div class="next-distance">A 7.8 km · 18 min</div>
+              <div class="next-location">Nueva CÃƒÂ³rdoba</div>
+              <div class="next-distance">A 7.8 km Ã‚Â· 18 min</div>
             </div>
           </div>
 
           <div class="panel-section">
-            <h3 class="section-title">Acciones rápidas</h3>
+            <h3 class="section-title">Acciones rÃƒÂ¡pidas</h3>
             <div class="quick-actions">
               <button class="quick-btn" id="quickNotifications" type="button">
-                <span class="quick-icon">🔔</span>
+                <span class="quick-icon">??</span>
                 <span>Notificaciones</span>
                 <span class="quick-badge" id="notificationBadge">0</span>
               </button>
               <button class="quick-btn" id="quickChat" type="button">
-                <span class="quick-icon">💬</span>
+                <span class="quick-icon">??</span>
                 <span>Mensajes</span>
                 <span class="quick-badge" id="chatBadge">0</span>
               </button>
               <button class="quick-btn" id="quickSupport" type="button">
-                <span class="quick-icon">🎧</span>
+                <span class="quick-icon">??</span>
                 <span>Soporte</span>
               </button>
             </div>
@@ -385,14 +417,14 @@
         </div>
 
         <div class="tab-panel" id="tabAccount">
-          <div class="panel-section">
-            <h3 class="section-title">Verificación</h3>
+          <div class="panel-section verification-summary-section">
+            <h3 class="section-title">VerificaciÃƒÂ³n</h3>
             <div class="verification-card" id="verificationCard">
               <div class="verification-status" id="verificationStatus">
-                <span class="status-icon">⚠️</span>
+                <span class="status-icon">??</span>
                 <span class="status-text">Pendiente</span>
               </div>
-              <p class="verification-text">Completá tu verificación para recibir servicios</p>
+              <p class="verification-text">CompletÃƒÂ¡ tu verificaciÃƒÂ³n para recibir servicios</p>
               <button class="verification-btn" id="verificationBtn" type="button">Completar ahora</button>
             </div>
           </div>
@@ -407,7 +439,7 @@
           </div>
 
           <div class="panel-section">
-            <h3 class="section-title">Estadísticas</h3>
+            <h3 class="section-title">EstadÃƒÂ­sticas</h3>
             <div class="stats-grid-modern">
               <div class="stat-card">
                 <span class="stat-value" id="statRating">5.0</span>
@@ -510,7 +542,7 @@
             <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
             <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
           </svg>
-          <span>Configuración</span>
+          <span>ConfiguraciÃƒÂ³n</span>
         </a>
 
         <a href="#" class="drawer-link" id="linkPhoneTrust">
@@ -518,7 +550,7 @@
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
             <path d="M9 12l2 2 4-4"/>
           </svg>
-          <span>Teléfono seguro</span>
+          <span>TelÃƒÂ©fono seguro</span>
         </a>
 
         <a href="#" class="drawer-link" id="linkSupport">
@@ -535,7 +567,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
           </svg>
-          <span>Cerrar sesión</span>
+          <span>Cerrar sesiÃƒÂ³n</span>
         </button>
       </div>
     </aside>
@@ -545,7 +577,7 @@
       <div class="drawer-handle"></div>
       <div class="notifications-header">
         <h3>Notificaciones</h3>
-        <button class="mark-read-btn" id="markAllRead" type="button">Marcar leídas</button>
+        <button class="mark-read-btn" id="markAllRead" type="button">Marcar leÃƒÂ­das</button>
       </div>
       <div class="notifications-list" id="notificationsList">
         <!-- Notifications injected via JS -->
@@ -573,7 +605,7 @@
       </div>
       <div class="chat-messages" id="chatMessages"></div>
       <div class="chat-input-area">
-        <input type="text" class="chat-input" id="chatInput" placeholder="Escribí un mensaje...">
+        <input type="text" class="chat-input" id="chatInput" placeholder="EscribÃƒÂ­ un mensaje...">
         <button class="chat-send" id="chatSend" type="button" aria-label="Enviar mensaje">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
@@ -586,7 +618,7 @@
     <div class="modal-overlay" id="verificationModal" hidden>
       <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="verificationTitle">
         <div class="modal-header">
-          <h2 id="verificationTitle">Verificación de perfil</h2>
+          <h2 id="verificationTitle">VerificaciÃƒÂ³n de perfil</h2>
           <button class="modal-close" id="modalClose" type="button" aria-label="Cerrar">&times;</button>
         </div>
 
@@ -600,11 +632,11 @@
 
           <div class="wizard-step active" id="step1">
             <h3>DNI frente</h3>
-            <p>Fotografiá el frente de tu DNI. No podés subir imágenes desde galería.</p>
+            <p>FotografiÃƒÂ¡ el frente de tu DNI. No podÃƒÂ©s subir imÃƒÂ¡genes desde galerÃƒÂ­a.</p>
 
             <button class="upload-zone camera-start-btn" type="button" data-camera-doc="dni_front">
-              <span class="upload-icon">📷</span>
-              <span class="upload-text">Abrir cámara trasera</span>
+              <span class="upload-icon">??</span>
+              <span class="upload-text">Abrir cÃƒÂ¡mara trasera</span>
             </button>
 
             <div class="camera-step-status" id="dniFrontStatus">Pendiente</div>
@@ -612,11 +644,11 @@
 
           <div class="wizard-step" id="step2">
             <h3>DNI dorso</h3>
-            <p>Fotografiá el dorso de tu DNI. Necesitamos que se vean bien los datos y el código.</p>
+            <p>FotografiÃƒÂ¡ el dorso de tu DNI. Necesitamos que se vean bien los datos y el cÃƒÂ³digo.</p>
 
             <button class="upload-zone camera-start-btn" type="button" data-camera-doc="dni_back">
-              <span class="upload-icon">📷</span>
-              <span class="upload-text">Abrir cámara trasera</span>
+              <span class="upload-icon">??</span>
+              <span class="upload-text">Abrir cÃƒÂ¡mara trasera</span>
             </button>
 
             <div class="camera-step-status" id="dniBackStatus">Pendiente</div>
@@ -627,8 +659,8 @@
             <p>Sacate una selfie clara para comparar con el documento.</p>
 
             <button class="upload-zone camera-start-btn" type="button" data-camera-doc="selfie">
-              <span class="upload-icon">🤳</span>
-              <span class="upload-text">Abrir cámara frontal</span>
+              <span class="upload-icon">??</span>
+              <span class="upload-text">Abrir cÃƒÂ¡mara frontal</span>
             </button>
 
             <div class="camera-step-status" id="selfieStatus">Pendiente</div>
@@ -636,19 +668,19 @@
 
           <div class="wizard-step" id="step4">
             <h3>Antecedentes penales</h3>
-            <p>Podés subirlo ahora o dentro de los próximos 15 días. El trámite oficial corresponde al Registro Nacional de Reincidencia.</p>
+            <p>PodÃƒÂ©s subirlo ahora o dentro de los prÃƒÂ³ximos 15 dÃƒÂ­as. El trÃƒÂ¡mite oficial corresponde al Registro Nacional de Reincidencia.</p>
             <button class="upload-zone camera-start-btn" type="button" data-upload="criminal_record_certificate">
-              <span class="upload-icon">📂</span>
+              <span class="upload-icon">??</span>
               <span class="upload-text">Subir PDF o foto</span>
             </button>
             <input type="file" class="hidden-input" data-input="criminal_record_certificate" accept="image/*,application/pdf" />
-            <a class="verification-help-link" href="https://www.argentina.gob.ar/justicia/reincidencia/antecedentespenales" target="_blank" rel="noopener">Ir al trámite oficial</a>
-            <div class="camera-step-status" id="criminalRecordStatus">Opcional por 15 días</div>
+            <a class="verification-help-link" href="https://www.argentina.gob.ar/justicia/reincidencia/antecedentespenales" target="_blank" rel="noopener">Ir al trÃƒÂ¡mite oficial</a>
+            <div class="camera-step-status" id="criminalRecordStatus">Opcional por 15 dÃƒÂ­as</div>
           </div>
 
           <div class="wizard-step verification-result-step" id="step5">
-            <h3>Estado de verificación</h3>
-            <p id="verificationResultText">Tu verificación está pendiente de revisión.</p>
+            <h3>Estado de verificaciÃƒÂ³n</h3>
+            <p id="verificationResultText">Tu verificaciÃƒÂ³n estÃƒÂ¡ pendiente de revisiÃƒÂ³n.</p>
             <div class="verification-result-list" id="verificationResultList"></div>
           </div>
         </div>
@@ -660,21 +692,37 @@
       </div>
     </div>
 
+    <div class="provider-exit-overlay" id="providerExitOverlay" hidden>
+      <section class="provider-exit-dialog" role="dialog" aria-modal="true" aria-labelledby="providerExitTitle">
+        <span class="provider-exit-kicker">Cuenta de prestador</span>
+        <h2 id="providerExitTitle">Cerrar sesiÃƒÂ³n</h2>
+        <p>Vamos a cerrar la sesiÃƒÂ³n actual y volver al login de Prestador.</p>
+        <div class="provider-exit-actions">
+          <button class="provider-exit-secondary" id="providerExitCancel" type="button">Seguir conectado</button>
+          <button class="provider-exit-primary" id="providerExitConfirm" type="button">Cerrar sesiÃƒÂ³n</button>
+        </div>
+      </section>
+    </div>
+
     <!-- Camera Capture Modal -->
     <div class="camera-capture-modal" id="cameraCaptureModal" hidden>
       <div class="camera-shell">
         <div class="camera-topbar">
-          <button class="camera-close-btn" id="cameraCancelBtn" type="button" aria-label="Cerrar cámara">✕</button>
+          <button class="camera-close-btn" id="cameraCancelBtn" type="button" aria-label="Cerrar cÃƒÂ¡mara">?</button>
           <div>
-            <strong id="cameraTitle">Verificación</strong>
-            <span id="cameraHint">Ubicá el documento dentro de la guía</span>
+            <strong id="cameraTitle">VerificaciÃƒÂ³n</strong>
+            <span id="cameraHint">UbicÃƒÂ¡ el documento dentro de la guÃƒÂ­a</span>
           </div>
         </div>
 
         <div class="camera-preview-wrap">
           <video id="cameraVideo" class="camera-video" autoplay playsinline muted></video>
+          <img id="cameraStillPreview" class="camera-still-preview" alt="Vista previa de la foto capturada" hidden>
           <canvas id="cameraCanvas" hidden></canvas>
-          <div class="camera-guide dni" id="cameraGuide"></div>
+          <div class="camera-guide dni" id="cameraGuide" aria-hidden="true">
+            <span class="face-guide-outline"></span>
+            <span class="face-guide-center"></span>
+          </div>
           <div class="camera-busy-overlay" id="cameraBusyOverlay" hidden>
             <span class="button-spinner"></span>
             <strong>Procesando imagen...</strong>
@@ -683,11 +731,12 @@
 
         <div class="camera-actions">
           <button class="camera-secondary" id="cameraRetakeBtn" type="button" hidden>Repetir</button>
-          <button class="camera-primary" id="cameraCaptureBtn" type="button">📸 Capturar</button>
+          <button class="camera-primary" id="cameraCaptureBtn" type="button">Capturar</button>
           <button class="camera-primary" id="cameraUseBtn" type="button" hidden>Usar foto</button>
+          <button class="camera-support" id="cameraSupportBtn" type="button" hidden>Contactar soporte</button>
         </div>
 
-        <p class="camera-status" id="cameraStatus">Cámara lista</p>
+        <p class="camera-status" id="cameraStatus">CÃƒÂ¡mara lista</p>
       </div>
     </div>
 
@@ -696,14 +745,14 @@
 
     <!-- Install Prompt -->
     <div class="install-banner" id="installBanner" hidden>
-      <div class="install-text">Instalá la app para mejor experiencia</div>
+      <div class="install-text">InstalÃƒÂ¡ la app de prestadores para gestionar servicios mÃƒÂ¡s rÃƒÂ¡pido</div>
 
       <button class="install-btn" id="installBtn" type="button">
         Instalar
       </button>
 
       <button class="install-dismiss" id="installDismiss" type="button" aria-label="Cerrar">
-        ×
+        Ãƒâ€”
       </button>
     </div>
   </div>
@@ -712,6 +761,6 @@
   <script src="./env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Push notifications are initialized from src/services/push.js. -->
-  <script type="module" src="./src/main-provider.js?v=2026.05.12.3"></script>
+  <script type="module" src="./src/main-provider.js?v=2026.05.14.2"></script>
 </body>
 </html>

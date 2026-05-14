@@ -7,18 +7,18 @@
     "message": "Mejoramos estabilidad, velocidad y seguridad."
   },
   "provider": {
-    "version": "2026.05.13.26",
-    "min_supported_version": "2026.05.13.8",
+    "version": "2026.05.14.2",
+    "min_supported_version": "2026.05.14.2",
     "critical": false,
     "force_update": false,
-    "message": "Mejoramos avisos en tiempo real para correcciones de verificacion."
+    "message": "Actualizamos la app de prestadores y limpiamos cache anterior para evitar pantallas antiguas."
   },
   "admin": {
-    "version": "2026.05.14.1",
-    "min_supported_version": "2026.05.14.1",
+    "version": "2026.05.14.2",
+    "min_supported_version": "2026.05.14.2",
     "critical": false,
     "force_update": false,
-    "message": "Agregamos motores reales de liquidacion, conciliacion, payouts y cierre contable."
+    "message": "Mejoramos seguridad del panel admin y actualizamos el modulo financiero."
   }
 }
 

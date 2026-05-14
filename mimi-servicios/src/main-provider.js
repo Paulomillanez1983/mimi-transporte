@@ -3,7 +3,29 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.12.2";
+const MIMI_PROVIDER_BUILD = "2026.05.14.2";
+const PARTNER_PWA_INSTALLED_KEY = "mimi_go_partner_pwa_installed";
+const PARTNER_INSTALL_DISMISSED_KEY = "mimi_go_partner_install_dismissed_until";
+const PARTNER_INSTALL_SESSION_KEY = "mimi_go_partner_install_shown_session";
+const LEGACY_SW_PATHS = [
+  "/mimi-servicios/sw-2026.js",
+  "/service-worker.js",
+  "/service-worker-clientes.js"
+];
+const PROVIDER_LEGAL_REQUIREMENT_FALLBACKS = [
+  {
+    document_code: "terms_providers",
+    actor_type: "provider",
+    accept_actor_type: "provider",
+    version: "2026.1.0"
+  },
+  {
+    document_code: "privacy_policy",
+    actor_type: "all",
+    accept_actor_type: "provider",
+    version: "2026.1.0"
+  }
+];
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -14,7 +36,11 @@ try {
   if (previousBuild && previousBuild !== MIMI_PROVIDER_BUILD && !sessionStorage.getItem(reloadFlag)) {
     sessionStorage.setItem(reloadFlag, "1");
     caches?.keys?.()
-      ?.then((keys) => Promise.all(keys.filter((key) => key.startsWith("mimi-servicios-provider-")).map((key) => caches.delete(key))))
+      ?.then((keys) => Promise.all(
+        keys
+          .filter((key) => key.startsWith("mimi-go-partner-") || key.startsWith("mimi-servicios-provider-"))
+          .map((key) => caches.delete(key))
+      ))
       ?.finally(() => location.reload());
   }
 
@@ -43,11 +69,13 @@ import {
   loadOffers,
   loadProviderWorkspace,
   getProviderDashboard,
+  approveSecurityChallenge,
   registerDevice,
   requestOtp,
   resolveServiceIntent,
   saveProviderWorkspace,
   sendMessage,
+  startSecurityVerification,
   touchProviderPresence,
   uploadProviderAvatar,
   uploadProviderDocument,
@@ -65,6 +93,7 @@ import {
 import { renderProviderScreen } from "./ui/render-provider.js";
 import {
   clearAuthRedirectIntent,
+  forceCleanSession,
   getSupabaseClient,
   signInWithGoogle
 } from "./services/supabase.js";
@@ -88,6 +117,35 @@ import { ensureMapLibreAssets } from "./services/map.js";
 
 initObservability("provider");
 markPerformance("provider_module_loaded");
+
+async function removeConflictingServiceWorkers(expectedScopePath) {
+  if (!("serviceWorker" in navigator) || !navigator.serviceWorker.getRegistrations) return;
+
+  try {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(
+      registrations.map(async (registration) => {
+        const scopePath = new URL(registration.scope).pathname;
+        const scriptPath = new URL(
+          registration.active?.scriptURL ||
+          registration.waiting?.scriptURL ||
+          registration.installing?.scriptURL ||
+          "",
+          window.location.origin
+        ).pathname;
+
+        const isExpected = scopePath === expectedScopePath && scriptPath === "/sw-partner.js";
+        const isLegacy = LEGACY_SW_PATHS.includes(scriptPath) || scopePath === "/mimi-servicios/";
+
+        if (!isExpected && isLegacy) {
+          await registration.unregister();
+        }
+      })
+    );
+  } catch (error) {
+    console.warn("[MIMI Partner] No se pudieron limpiar service workers previos:", error);
+  }
+}
 
 function normalizeProviderCategory(category = {}) {
   return {
@@ -163,6 +221,56 @@ function textFromCms(value, maxLength = 180) {
     .slice(0, maxLength);
 }
 
+const partnerLoadingMessages = [
+  {
+    eyebrow: "Más libertad",
+    title: "Trabajá cuando querés, donde querés.",
+    body: "Organizá tus servicios desde un solo lugar."
+  },
+  {
+    eyebrow: "Cerca tuyo",
+    title: "Tus próximos clientes pueden estar cerca.",
+    body: "Mostrá tu disponibilidad y prepará tu perfil."
+  },
+  {
+    eyebrow: "Más simple",
+    title: "Menos vueltas. Más oportunidades.",
+    body: "MIMIGO reduce pasos para que puedas enfocarte en trabajar."
+  },
+  {
+    eyebrow: "MIMIGO Partner",
+    title: "La herramienta que menos trabajo te da para conseguir trabajo.",
+    body: "Publicá, recibí solicitudes y administrá tu disponibilidad."
+  },
+  {
+    eyebrow: "Tus servicios",
+    title: "Publicá tus servicios y empezá a recibir solicitudes.",
+    body: "Ordená precios, zonas y horarios con claridad."
+  },
+  {
+    eyebrow: "Tu tiempo",
+    title: "Tu tiempo vale. MIMIGO te ayuda a organizarlo.",
+    body: "Tené tu panel listo para responder mejor."
+  },
+  {
+    eyebrow: "Visibilidad",
+    title: "Más visibilidad para trabajadores independientes.",
+    body: "Una presencia clara ayuda a que te elijan."
+  },
+  {
+    eyebrow: "Tu perfil",
+    title: "Prepará tu perfil. Tus clientes te están esperando.",
+    body: "Completá tus datos y mostrá tus servicios con confianza."
+  }
+];
+
+const partnerLoadingMicrocopy = [
+  "Sincronizando tu cuenta...",
+  "Preparando tus servicios...",
+  "Verificando tu estado...",
+  "Cargando oportunidades..."
+];
+
 // ============================================
 // APP CONTROLLER
 // ============================================
@@ -181,6 +289,9 @@ class MimiProviderApp {
     this.offerTimer = null;
     this.trackingInterval = null;
     this.presenceHeartbeatInterval = null;
+    this.partnerLoadingCarouselInterval = null;
+    this.partnerLoadingRenderTimeout = null;
+    this.partnerLoadingSlideIndex = 0;
     this.notificationsInterval = null;
     this.realtimeChannel = null;
     this.offerRealtimeChannel = null;
@@ -201,6 +312,14 @@ class MimiProviderApp {
     this.lastProviderTrackingRequestId = null;
     this.providerTrackingMinDistanceMeters = 1000;
     this.providerTrackingHeartbeatMs = MIMI_PROVIDER_HEARTBEAT_INTERVAL_MS;
+    this.providerBootTimeout = null;
+    this.sheetHistoryOpen = false;
+    this.backGuardReady = false;
+    this.allowProviderBackExit = false;
+    this.providerExitConfirmResolver = null;
+    this.sheetReturnTab = null;
+    this.verificationReturnStep = null;
+    this.installPromptSetupDone = false;
     
     // DOM Elements cache
     this.elements = {};
@@ -238,6 +357,11 @@ async init() {
   initState();
 
   this.cacheElements();
+  this.showProviderBootLoader();
+  this.startProviderBootTimeout();
+  this.setupProviderUpdateManager();
+  this.setupSecurityChallengeListeners();
+  this.setupInstallPrompt();
 
   let earlySession = null;
   try {
@@ -307,8 +431,6 @@ this.unsubscribe = subscribe((state) => {
   this.render();
 });
 
-this.setupInstallPrompt();
-
 const canBootProviderPanel = await this.loadInitialData();
   
 if (!canBootProviderPanel) {
@@ -343,7 +465,12 @@ async registerProviderPushToken({ prompt = false } = {}) {
       console.info("[MIMI Push] sin token, no registramos device para push");
       return;
     }
-    await registerDevice(token);
+    await registerDevice({
+      role: "provider",
+      pushToken: token,
+      notificationsEnabled: Boolean(token),
+      deviceLabel: navigator.userAgentData?.platform || navigator.platform || "Web"
+    });
     console.log("[MIMI Push] device registrado con FCM token");
   } catch (err) {
     console.warn("[MIMI Push] no se pudo registrar device:", err?.message ?? err);
@@ -386,6 +513,10 @@ async registerProviderPushToken({ prompt = false } = {}) {
       providerPhoneSubmit: document.getElementById("providerPhoneSubmit"),
       providerPhoneClose: document.getElementById("providerPhoneClose"),
       providerPhoneResend: document.getElementById("providerPhoneResend"),
+      providerPhoneChangeNumber: document.getElementById("providerPhoneChangeNumber"),
+      providerPhoneSwitchAccount: document.getElementById("providerPhoneSwitchAccount"),
+      providerPhoneTitle: document.getElementById("providerPhoneTitle"),
+      providerPhoneCopy: document.getElementById("providerPhoneCopy"),
       providerPhoneEntryStep: document.getElementById("providerPhoneEntryStep"),
       providerPhoneOtpStep: document.getElementById("providerPhoneOtpStep"),
       providerPhoneOtpTarget: document.getElementById("providerPhoneOtpTarget"),
@@ -396,11 +527,21 @@ async registerProviderPushToken({ prompt = false } = {}) {
       providerPhoneCountryFlag: document.getElementById("providerPhoneCountryFlag"),
       providerPhoneCountryName: document.getElementById("providerPhoneCountryName"),
       providerPhoneCountryDial: document.getElementById("providerPhoneCountryDial"),
+      providerBootLoader: document.getElementById("providerBootLoader"),
+      providerBootTitle: document.getElementById("providerBootTitle"),
+      providerBootSubtitle: document.getElementById("providerBootSubtitle"),
+      providerBootMarketing: document.getElementById("providerBootMarketing"),
+      providerBootMarketingEyebrow: document.getElementById("providerBootMarketingEyebrow"),
+      providerBootMarketingTitle: document.getElementById("providerBootMarketingTitle"),
+      providerBootMarketingBody: document.getElementById("providerBootMarketingBody"),
+      providerBootMarketingDots: document.getElementById("providerBootMarketingDots"),
+      providerBootRetry: document.getElementById("providerBootRetry"),
       acceptOffer: document.getElementById('acceptOffer'),
       rejectOffer: document.getElementById('rejectOffer'),
       cameraCaptureModal: document.getElementById("cameraCaptureModal"),
 cameraVideo: document.getElementById("cameraVideo"),
 cameraCanvas: document.getElementById("cameraCanvas"),
+cameraStillPreview: document.getElementById("cameraStillPreview"),
 cameraGuide: document.getElementById("cameraGuide"),
 cameraBusyOverlay: document.getElementById("cameraBusyOverlay"),
 cameraTitle: document.getElementById("cameraTitle"),
@@ -410,6 +551,7 @@ cameraCancelBtn: document.getElementById("cameraCancelBtn"),
 cameraCaptureBtn: document.getElementById("cameraCaptureBtn"),
 cameraRetakeBtn: document.getElementById("cameraRetakeBtn"),
 cameraUseBtn: document.getElementById("cameraUseBtn"),
+cameraSupportBtn: document.getElementById("cameraSupportBtn"),
 dniFrontStatus: document.getElementById("dniFrontStatus"),
 dniBackStatus: document.getElementById("dniBackStatus"),
 selfieStatus: document.getElementById("selfieStatus"),
@@ -441,6 +583,7 @@ verificationResultList: document.getElementById("verificationResultList"),
       
       // Bottom sheet
       bottomSheet: document.getElementById('bottomSheet'),
+      sheetCloseBtn: document.getElementById("sheetCloseBtn"),
       sheetHandle: document.querySelector('.sheet-handle-container'),
       sheetStatus: document.getElementById('sheetStatus'),
       sheetStatusDot: document.getElementById('sheetStatusDot'),
@@ -521,6 +664,9 @@ verificationResultList: document.getElementById("verificationResultList"),
       wizardProgress: document.getElementById('wizardProgress'),
       wizardNext: document.getElementById('wizardNext'),
       wizardPrev: document.getElementById('wizardPrev'),
+      providerExitOverlay: document.getElementById("providerExitOverlay"),
+      providerExitCancel: document.getElementById("providerExitCancel"),
+      providerExitConfirm: document.getElementById("providerExitConfirm"),
       
       // Toast
       toastContainer: document.getElementById('toastContainer'),
@@ -663,9 +809,13 @@ this.map.on("load", () => {
   setTimeout(() => {
     forceResize();
           try {
+            const currentLocation = this.state?.location?.current;
+            const hasCurrentLocation = this.isValidLatLng(currentLocation);
             this.map.easeTo({
-              center: [-64.19, -31.42],
-              zoom: esMobile ? 11.8 : 12.4,
+              center: hasCurrentLocation
+                ? [Number(currentLocation.lng), Number(currentLocation.lat)]
+                : [-64.19, -31.42],
+              zoom: hasCurrentLocation ? Math.max(this.map.getZoom(), 13) : (esMobile ? 11.8 : 12.4),
               duration: 500
             });
           } catch (err) {
@@ -871,7 +1021,7 @@ setTimeout(() => {
     const offerRequest = this.state?.activeOffer?.raw?.svc_requests ?? this.state?.activeOffer?.raw?.request ?? {};
     const offerDetails = this.state?.activeOffer?.details ?? {};
 
-    return {
+    const position = {
       lat:
         activeService?.raw?.service_lat ??
         activeService?.raw?.lat ??
@@ -885,12 +1035,21 @@ setTimeout(() => {
         offerDetails?.service_lng ??
         null
     };
+
+    return this.isValidServiceLatLng(position) ? position : { lat: null, lng: null };
   }
 
-  isValidLatLng(position) {
+  isValidLatLng(position, { allowZeroZero = true } = {}) {
     const lat = Number(position?.lat);
     const lng = Number(position?.lng);
-    return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+    if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return false;
+    if (!allowZeroZero && lat === 0 && lng === 0) return false;
+    return true;
+  }
+
+  isValidServiceLatLng(position) {
+    return this.isValidLatLng(position, { allowZeroZero: false });
   }
 
   createRouteMarker(type) {
@@ -961,7 +1120,7 @@ setTimeout(() => {
     if (!this.map || !window.maplibregl) return;
 
     const hasProvider = this.isValidLatLng(providerPosition);
-    const hasService = this.isValidLatLng(servicePosition);
+    const hasService = this.isValidServiceLatLng(servicePosition);
 
     if (!hasProvider && !hasService) return;
 
@@ -971,19 +1130,34 @@ setTimeout(() => {
     }
 
     if (hasProvider) {
+      try {
+        this.map.resize?.();
+      } catch (_) {}
+
       const providerLngLat = [Number(providerPosition.lng), Number(providerPosition.lat)];
       if (!this.markers.provider) {
-        this.markers.provider = this.createRouteMarker("provider").addTo(this.map);
+        this.markers.provider = this.createRouteMarker("provider")
+          .setLngLat(providerLngLat)
+          .addTo(this.map);
+      } else {
+        this.markers.provider.setLngLat(providerLngLat);
       }
-      this.markers.provider.setLngLat(providerLngLat);
+
+      window.requestAnimationFrame(() => {
+        if (!this.map || !this.markers.provider) return;
+        this.markers.provider.setLngLat(providerLngLat);
+      });
     }
 
     if (hasService) {
       const serviceLngLat = [Number(servicePosition.lng), Number(servicePosition.lat)];
       if (!this.markers.service) {
-        this.markers.service = this.createRouteMarker("service").addTo(this.map);
+        this.markers.service = this.createRouteMarker("service")
+          .setLngLat(serviceLngLat)
+          .addTo(this.map);
+      } else {
+        this.markers.service.setLngLat(serviceLngLat);
       }
-      this.markers.service.setLngLat(serviceLngLat);
     } else if (this.markers.service) {
       this.markers.service.remove();
       this.markers.service = null;
@@ -1042,11 +1216,29 @@ setTimeout(() => {
     this.updateProviderNavigationPanel({ providerPosition, servicePosition: null });
 
     if (hasProvider) {
+      const center = [Number(providerPosition.lng), Number(providerPosition.lat)];
       this.map.easeTo({
-        center: [Number(providerPosition.lng), Number(providerPosition.lat)],
+        center,
         zoom: Math.max(this.map.getZoom(), 13),
-        duration: 350
+        duration: 350,
+        essential: true
       });
+
+      window.setTimeout(() => {
+        if (!this.map || !this.markers.provider) return;
+        try {
+          this.map.resize?.();
+          this.markers.provider.setLngLat(center);
+          this.map.easeTo({
+            center,
+            zoom: Math.max(this.map.getZoom(), 13),
+            duration: 180,
+            essential: true
+          });
+        } catch (error) {
+          console.warn("[MIMI] No se pudo recentrar marcador de prestador:", error);
+        }
+      }, 260);
     }
   }
 
@@ -1056,7 +1248,7 @@ setTimeout(() => {
       lng: service?.raw?.service_lng ?? service?.raw?.lng ?? service?.service_lng ?? null
     };
 
-    if (this.isValidLatLng(servicePosition)) {
+    if (this.isValidServiceLatLng(servicePosition)) {
       return "Ruta activa en el mapa";
     }
 
@@ -1259,7 +1451,7 @@ setTimeout(() => {
   }
 
   updateProviderRoadRoute({ providerPosition, servicePosition }) {
-    if (!this.isValidLatLng(providerPosition) || !this.isValidLatLng(servicePosition)) return;
+    if (!this.isValidLatLng(providerPosition) || !this.isValidServiceLatLng(servicePosition)) return;
 
     const routeKey = [
       Number(providerPosition.lat).toFixed(4),
@@ -1300,7 +1492,7 @@ setTimeout(() => {
     const panel = this.elements.activeServiceNavigation;
     if (!panel) return;
 
-    if (!this.state?.activeService || !this.isValidLatLng(servicePosition)) {
+    if (!this.state?.activeService || !this.isValidServiceLatLng(servicePosition)) {
       panel.hidden = true;
       return;
     }
@@ -1346,7 +1538,7 @@ setTimeout(() => {
 
   openExternalNavigation() {
     const destination = this.servicePositionFromState();
-    if (!this.isValidLatLng(destination)) {
+    if (!this.isValidServiceLatLng(destination)) {
       this.showToast("Todavia no tenemos la ubicacion del cliente", "warning");
       return;
     }
@@ -1370,6 +1562,7 @@ showProviderLoginGate() {
 
   document.body.classList.add("provider-auth-required");
   document.body.classList.remove("provider-auth-loading", "provider-authenticated");
+  this.hideProviderBootLoader();
 
   if (this.elements.bottomSheet) this.elements.bottomSheet.style.display = "none";
   if (this.elements.header) this.elements.header.style.display = "none";
@@ -1396,88 +1589,115 @@ container.style.transform = "none";
 container.style.background = "";
 
   container.innerHTML = `
-<section class="provider-auth-shell" aria-label="Acceso para prestadores MIMI">
-  <div class="provider-auth-stage">
-    <div class="provider-auth-hero">
-      <div class="provider-auth-topbar">
-        <div class="provider-auth-logo provider-auth-logo-image" aria-label="MIMI GO Partners">
-          <img src="./assets/brand/mimigo-partners-wordmark.png" alt="MIMI GO Partners">
-        </div>
-        <div class="provider-auth-status-pill">Plataforma Operativa</div>
-      </div>
+<section class="provider-auth-shell provider-splash" aria-label="Acceso para prestadores MIMI GO">
+  <div class="provider-splash-bg" aria-hidden="true">
+    <span class="provider-splash-glow provider-splash-glow--main"></span>
+    <span class="provider-splash-glow provider-splash-glow--low"></span>
+  </div>
 
-      <div class="provider-auth-copy">
-        <h1>Eleg&iacute; c&oacute;mo, cu&aacute;ndo y d&oacute;nde <span>trabajar.</span></h1>
-        <p>Oportunidades a tu tiempo.</p>
-      </div>
-
-<div class="provider-auth-hero-bg" aria-hidden="true">
-  <img
-    src="./assets/brand/mimigo-partners-workspace-hero-1600x1100.png"
-    alt=""
-    loading="eager"
-    decoding="async"
-  >
-</div>
-</div>
-
-<div class="provider-auth-card">
-  <div class="provider-auth-card-header">
-    <div>
-      <h2 class="provider-auth-card-title">MIMI SERVICIOS</h2>
-      <p class="provider-auth-card-subtitle">Para prestadores</p>
+  <div class="provider-splash-stage">
+    <div class="mimigo-logo-motion" aria-label="MIMIGO">
+      <span class="mimigo-word" aria-hidden="true">
+        <span class="mimigo-letter mimigo-letter--m1">M</span>
+        <span class="mimigo-letter mimigo-letter--i1">I</span>
+        <span class="mimigo-letter mimigo-letter--m2">M</span>
+        <span class="mimigo-letter mimigo-letter--i2">I</span>
+      </span>
+      <span class="mimigo-go-mark" aria-hidden="true">
+        <span class="mimigo-letter mimigo-letter--g">G</span>
+        <span class="mimigo-letter mimigo-letter--o">O<span class="sun-glow"></span></span>
+      </span>
     </div>
-    <div class="provider-auth-card-badge">Acceso Seguro</div>
-  </div>
 
-  <div class="provider-auth-divider"></div>
+    <div class="provider-splash-divider" aria-hidden="true"></div>
 
-  <p class="provider-auth-card-copy">
-    Ofrec&eacute; tus servicios.<br>
-    <span>Lleg&aacute; a m&aacute;s personas.</span>
-  </p>
+    <p class="provider-splash-tagline" aria-label="La herramienta que menos trabajo te da para conseguir trabajo.">
+      <span>La herramienta</span>
+      <span>que <strong>menos trabajo</strong> te da</span>
+      <span>para conseguir trabajo.</span>
+      <span class="sr-only">La herramienta que menos trabajo te da para conseguir trabajo.</span>
+    </p>
 
-  <div class="provider-auth-services">
-    <article class="provider-auth-service"><strong></strong><span>Hogar</span></article>
-    <article class="provider-auth-service"><strong></strong><span>Salud</span></article>
-    <article class="provider-auth-service"><strong></strong><span>Bienestar</span></article>
-    <article class="provider-auth-service"><strong>+12</strong><span>categor&iacute;as</span></article>
-  </div>
+    <div class="provider-splash-mini-divider" aria-hidden="true">
+      <span></span><i></i><span></span>
+    </div>
 
-  <div class="provider-auth-login-label">
-    <span>Inici&aacute; sesi&oacute;n para continuar</span>
-  </div>
+    <div class="provider-splash-system" aria-hidden="true">
+      <span class="system-particle system-particle--a"></span>
+      <span class="system-particle system-particle--b"></span>
+      <span class="system-particle system-particle--c"></span>
+      <span class="system-particle system-particle--d"></span>
+      <div class="system-orbit system-orbit--outer"></div>
+      <div class="system-orbit system-orbit--middle"></div>
+      <div class="system-orbit system-orbit--inner"></div>
+      <div class="system-arrows">
+        <svg viewBox="0 0 240 240">
+          <path d="M54 116c16-45 58-72 108-62"></path>
+          <path d="M168 55l13 4-10 10"></path>
+          <path d="M186 124c-13 48-54 78-105 69"></path>
+          <path d="M75 192l-13-5 10-9"></path>
+        </svg>
+      </div>
+      <div class="system-core">
+        <span class="system-core-ring"></span>
+        <svg viewBox="0 0 24 24">
+          <path d="M6.4 12.2l3.6 3.6 7.8-8.1"></path>
+        </svg>
+      </div>
+      <div class="system-node system-node--top">
+        <svg viewBox="0 0 24 24">
+          <path d="M8 7V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1"></path>
+          <path d="M5 8h14v10H5z"></path>
+          <path d="M9 12h6"></path>
+        </svg>
+      </div>
+      <div class="system-node system-node--right">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="8" r="3"></circle>
+          <path d="M6.5 19c1-3 2.9-4.5 5.5-4.5s4.5 1.5 5.5 4.5"></path>
+        </svg>
+      </div>
+      <div class="system-node system-node--bottom">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 4l2.3 4.7 5.2.8-3.8 3.7.9 5.2-4.6-2.5-4.6 2.5.9-5.2-3.8-3.7 5.2-.8z"></path>
+        </svg>
+      </div>
+      <div class="system-node system-node--left">
+        <svg viewBox="0 0 24 24">
+          <path d="M20 4L4 11.2l6.8 2.3L13.2 20z"></path>
+          <path d="M20 4l-9.2 9.5"></path>
+        </svg>
+      </div>
+      <div class="system-floor"></div>
+    </div>
 
-  <button class="provider-auth-google" id="providerGoogleLoginButton" type="button">
-    <span class="provider-auth-google-icon" aria-hidden="true">
-      <svg viewBox="0 0 48 48">
-        <path fill="#EA4335" d="M24 9.5c3.4 0 6.4 1.2 8.8 3.2l6.5-6.5C35.3 2.6 30 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.8 6.1C12.3 13.4 17.7 9.5 24 9.5z"/>
-        <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-2.8-.4-4.1H24v7.8h12.7c-.3 2-1.6 5-4.4 7l6.9 5.3c4-3.7 6.3-9.2 6.3-16z"/>
-        <path fill="#FBBC05" d="M10.4 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.2.8-4.6l-7.8-6.1C.9 16.6 0 20.2 0 24s.9 7.4 2.6 10.7l7.8-6.1z"/>
-        <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-6.9-5.3c-1.9 1.3-4.5 2.2-9 2.2-6.3 0-11.7-3.9-13.6-9.4l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/>
+    <p class="provider-splash-subheadline">
+      Conectamos prestadores con personas<br>
+      que necesitan <span>servicios reales.</span>
+    </p>
+
+    <button class="provider-auth-google google-login-primary" id="providerGoogleLoginButton" type="button">
+      <span class="provider-auth-google-icon" aria-hidden="true">
+        <svg viewBox="0 0 48 48">
+          <path fill="#EA4335" d="M24 9.5c3.4 0 6.4 1.2 8.8 3.2l6.5-6.5C35.3 2.6 30 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.8 6.1C12.3 13.4 17.7 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-2.8-.4-4.1H24v7.8h12.7c-.3 2-1.6 5-4.4 7l6.9 5.3c4-3.7 6.3-9.2 6.3-16z"/>
+          <path fill="#FBBC05" d="M10.4 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.2.8-4.6l-7.8-6.1C.9 16.6 0 20.2 0 24s.9 7.4 2.6 10.7l7.8-6.1z"/>
+          <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-6.9-5.3c-1.9 1.3-4.5 2.2-9 2.2-6.3 0-11.7-3.9-13.6-9.4l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/>
+        </svg>
+      </span>
+      <span class="provider-auth-google-copy"><strong>Continuar con Google</strong></span>
+    </button>
+
+    <p class="provider-splash-security">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M7 10V8a5 5 0 0 1 10 0v2"></path>
+        <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+        <path d="M12 14v2.5"></path>
       </svg>
-    </span>
-
-    <span class="provider-auth-google-copy">
-      <strong>Continuar con Google</strong>
-    </span>
-
-    <span class="provider-auth-google-arrow"></span>
-  </button>
-
-  <div class="provider-auth-trust">
-    <span>Acceso seguro</span>
-    <span>Validaci&oacute;n en tiempo real</span>
-  </div>
-
-  <p class="provider-auth-legal">
-    Al continuar, acept&aacute;s nuestros <span>T&eacute;rminos y Condiciones</span><br>
-    y la <span>Pol&iacute;tica de Privacidad</span>.
-  </p>
-</div>
+      <span>Plataforma simple y segura<br>para los <b>prestadores.</b></span>
+    </p>
   </div>
 </section>
-
 `;
 
   const installBanner =
@@ -1519,6 +1739,8 @@ container.style.background = "";
 }  
 
 async loadProviderAuthCmsVisuals() {
+  if (document.querySelector(".provider-splash")) return;
+
   const [featureFlags, banners, homeSections, cmsCategories] = await Promise.all([
     loadCmsFeatureFlags(),
     loadCmsBanners("provider"),
@@ -1701,8 +1923,132 @@ dismissInstallBanner(event = null) {
   }
 
   try {
-    localStorage.setItem("mimi_services_install_banner_dismissed", "true");
+    localStorage.removeItem(PARTNER_INSTALL_DISMISSED_KEY);
   } catch (_) {}
+}
+
+showProviderBootLoader({ title = "Preparando tu panel", subtitle = "Sincronizando tu cuenta, tus servicios y tu estado de verificación.", error = false } = {}) {
+  const loader = this.elements.providerBootLoader;
+  if (!loader) return;
+
+  loader.hidden = false;
+  loader.removeAttribute("aria-hidden");
+  loader.dataset.state = error ? "error" : "loading";
+
+  if (this.elements.providerBootTitle) this.elements.providerBootTitle.textContent = title;
+  if (this.elements.providerBootSubtitle) this.elements.providerBootSubtitle.textContent = subtitle;
+  if (this.elements.providerBootRetry) {
+    this.elements.providerBootRetry.hidden = !error;
+    this.elements.providerBootRetry.onclick = () => window.location.reload();
+  }
+
+  if (this.elements.providerBootMarketing) {
+    this.elements.providerBootMarketing.hidden = Boolean(error);
+  }
+
+  if (error) {
+    this.stopPartnerLoadingCarousel();
+  } else {
+    this.startPartnerLoadingCarousel();
+  }
+}
+
+hideProviderBootLoader() {
+  this.clearProviderBootTimeout();
+  this.stopPartnerLoadingCarousel();
+
+  const loader = this.elements.providerBootLoader;
+  if (!loader) return;
+
+  loader.hidden = true;
+  loader.setAttribute("aria-hidden", "true");
+}
+
+renderPartnerLoadingMarketing(index = 0) {
+  const slides = partnerLoadingMessages;
+  const slide = slides[index % slides.length] || slides[0];
+  const microcopy = partnerLoadingMicrocopy[index % partnerLoadingMicrocopy.length] || "";
+  const marketing = this.elements.providerBootMarketing;
+  if (!marketing || !slide) return;
+
+  marketing.classList.remove("is-visible");
+  marketing.hidden = false;
+
+  if (this.partnerLoadingRenderTimeout) {
+    window.clearTimeout(this.partnerLoadingRenderTimeout);
+  }
+
+  this.partnerLoadingRenderTimeout = window.setTimeout(() => {
+    this.partnerLoadingRenderTimeout = null;
+    if (!document.body.classList.contains("provider-auth-loading") || this.elements.providerBootLoader?.hidden) return;
+    if (this.elements.providerBootMarketingEyebrow) this.elements.providerBootMarketingEyebrow.textContent = slide.eyebrow;
+    if (this.elements.providerBootMarketingTitle) this.elements.providerBootMarketingTitle.textContent = slide.title;
+    if (this.elements.providerBootMarketingBody) this.elements.providerBootMarketingBody.textContent = slide.body;
+    if (this.elements.providerBootSubtitle) this.elements.providerBootSubtitle.textContent = microcopy;
+
+    if (this.elements.providerBootMarketingDots) {
+      this.elements.providerBootMarketingDots.innerHTML = slides
+        .map((_, dotIndex) => `<span class="${dotIndex === index % slides.length ? "is-active" : ""}"></span>`)
+        .join("");
+    }
+
+    marketing.classList.add("is-visible");
+  }, 120);
+}
+
+startPartnerLoadingCarousel() {
+  const loader = this.elements.providerBootLoader;
+  if (!loader || loader.hidden) return;
+
+  this.stopPartnerLoadingCarousel();
+  this.partnerLoadingSlideIndex = this.partnerLoadingSlideIndex || 0;
+  this.renderPartnerLoadingMarketing(this.partnerLoadingSlideIndex);
+
+  const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
+  if (reducedMotion) return;
+
+  this.partnerLoadingCarouselInterval = window.setInterval(() => {
+    if (!document.body.classList.contains("provider-auth-loading") || loader.hidden) {
+      this.stopPartnerLoadingCarousel();
+      return;
+    }
+
+    this.partnerLoadingSlideIndex = (this.partnerLoadingSlideIndex + 1) % partnerLoadingMessages.length;
+    this.renderPartnerLoadingMarketing(this.partnerLoadingSlideIndex);
+  }, 3200);
+}
+
+stopPartnerLoadingCarousel() {
+  if (this.partnerLoadingCarouselInterval) {
+    window.clearInterval(this.partnerLoadingCarouselInterval);
+    this.partnerLoadingCarouselInterval = null;
+  }
+
+  if (this.partnerLoadingRenderTimeout) {
+    window.clearTimeout(this.partnerLoadingRenderTimeout);
+    this.partnerLoadingRenderTimeout = null;
+  }
+}
+
+startProviderBootTimeout() {
+  this.clearProviderBootTimeout();
+
+  this.providerBootTimeout = window.setTimeout(() => {
+    if (!document.body.classList.contains("provider-auth-loading")) return;
+
+    this.showProviderBootLoader({
+      title: "Seguimos preparando tu panel",
+      subtitle: "La conexión está tardando más de lo normal. Podés esperar unos segundos o reintentar.",
+      error: true
+    });
+  }, 14000);
+}
+
+clearProviderBootTimeout() {
+  if (!this.providerBootTimeout) return;
+
+  window.clearTimeout(this.providerBootTimeout);
+  this.providerBootTimeout = null;
 }
   
   /**
@@ -1735,36 +2081,20 @@ async loadInitialData() {
       return false;
     }
 
-document.body.classList.remove("provider-auth-loading", "provider-auth-required");
-document.body.classList.add("provider-authenticated");
+    document.body.classList.add("provider-auth-loading");
+    document.body.classList.remove("provider-auth-required", "provider-authenticated");
+    this.showProviderBootLoader();
 
-if (this.elements.onlineButtonContainer) {
-  this.elements.onlineButtonContainer.hidden = true;
-  this.elements.onlineButtonContainer.classList.add("hidden");
-  this.elements.onlineButtonContainer.style.display = "none";
-  this.elements.onlineButtonContainer.innerHTML = "";
-}
+    if (this.elements.onlineButtonContainer) {
+      this.elements.onlineButtonContainer.hidden = true;
+      this.elements.onlineButtonContainer.classList.add("hidden");
+      this.elements.onlineButtonContainer.style.display = "none";
+      this.elements.onlineButtonContainer.innerHTML = "";
+    }
 
-if (this.elements.bottomSheet) this.elements.bottomSheet.style.display = "";
-if (this.elements.header) this.elements.header.style.display = "";
-if (this.elements.mapContainer) this.elements.mapContainer.style.display = "";
-    const installDismissed =
-  localStorage.getItem("mimi_services_install_banner_dismissed") === "true";
-
-if (
-  this.elements.installBanner &&
-  this.deferredInstallPrompt &&
-  !installDismissed &&
-  !this.isRunningAsInstalledPwa()
-) {
-  this.elements.installBanner.hidden = false;
-  this.elements.installBanner.style.display = "";
-  this.elements.installBanner.style.opacity = "1";
-  this.elements.installBanner.style.pointerEvents = "auto";
-  this.elements.installBanner.removeAttribute("aria-hidden");
-} else {
-  this.hideInstallBanner();
-}
+    if (this.elements.bottomSheet) this.elements.bottomSheet.style.display = "none";
+    if (this.elements.header) this.elements.header.style.display = "none";
+    if (this.elements.mapContainer) this.elements.mapContainer.style.display = "none";
     
     if (!session?.providerId) {
       this.showToast("No se encontr un perfil de prestador para esta cuenta", "error");
@@ -1790,7 +2120,6 @@ if (Array.isArray(categories) && categories.length) {
       categories: normalizedCategories
     }
   });
-  this.loadProviderCmsVisuals(normalizedCategories);
 }
 setTimeout(async () => {
   try {
@@ -1838,11 +2167,34 @@ setTimeout(async () => {
       disconnectManagedRealtime("provider-app:job:");
     }
 
-    await this.setupProviderPhoneTrust().catch((err) => {
-      console.warn("[MIMI Provider] phone trust skipped:", err?.message ?? err);
-    });
-
     this.renderDrawerProfile();
+    this.hideProviderBootLoader();
+
+    document.body.classList.remove("provider-auth-loading", "provider-auth-required");
+    document.body.classList.add("provider-authenticated");
+    this.ensureProviderBackGuard();
+    this.checkProviderAppVersion();
+
+    if (this.elements.bottomSheet) this.elements.bottomSheet.style.display = "";
+    if (this.elements.header) this.elements.header.style.display = "";
+    if (this.elements.mapContainer) this.elements.mapContainer.style.display = "";
+
+    if (
+      this.elements.installBanner &&
+      localStorage.getItem(PARTNER_PWA_INSTALLED_KEY) !== "true" &&
+      !this.isRunningAsInstalledPwa()
+    ) {
+      this.showInstallBanner({ sessionEntry: true });
+    } else {
+      this.hideInstallBanner();
+    }
+
+    window.setTimeout(() => {
+      this.setupProviderPhoneTrust().catch((err) => {
+        console.warn("[MIMI Provider] phone trust skipped:", err?.message ?? err);
+      });
+    }, 0);
+
     return true;
   } catch (err) {
     console.error("[MIMI] Error cargando datos iniciales:", err);
@@ -1850,10 +2202,14 @@ setTimeout(async () => {
     actions.setError?.(err?.message ?? "No pudimos cargar tu panel de prestador");
     this.showToast("No pudimos cargar tus datos reales", "error");
 
-    document.body.classList.remove("provider-auth-loading", "provider-authenticated");
-    document.body.classList.add("provider-auth-required");
+    document.body.classList.add("provider-auth-loading");
+    document.body.classList.remove("provider-authenticated", "provider-auth-required");
+    this.showProviderBootLoader({
+      title: "No pudimos cargar tu panel",
+      subtitle: "Revisá tu conexión e intentá nuevamente. Si el problema sigue, volvé a iniciar sesión.",
+      error: true
+    });
 
-    this.showProviderLoginGate();
     return false;
   } finally {
     actions.setLoading(false);
@@ -1872,8 +2228,8 @@ async setupProviderPhoneTrust({ forceChange = false } = {}) {
   if (!risk?.ok) return;
 
   if (risk.sms_configured === false) {
-    console.warn("[MIMI Provider] SMS Verify no configurado; no se bloquea el panel.");
-    if (forceChange) this.showToast("La verificación SMS todavía no está configurada", "warning");
+    console.warn("[MIMI Provider] Twilio Verify no configurado; no se bloquea el panel.");
+    if (forceChange) this.showToast("La verificación todavía no está configurada", "warning");
     return;
   }
 
@@ -1897,6 +2253,10 @@ async openProviderPhoneTrustModal({ forceChange = false, existingProfile = null,
     providerPhoneSubmit: submit,
     providerPhoneClose: closeButton,
     providerPhoneResend: resendButton,
+    providerPhoneChangeNumber: changeNumberButton,
+    providerPhoneSwitchAccount: switchAccountButton,
+    providerPhoneTitle: title,
+    providerPhoneCopy: copy,
     providerPhoneEntryStep: entryStep,
     providerPhoneOtpStep: otpStep,
     providerPhoneOtpTarget: otpTarget,
@@ -1918,6 +2278,8 @@ async openProviderPhoneTrustModal({ forceChange = false, existingProfile = null,
     detectDefaultCountry(countries);
   let pendingVerification = null;
   let currentStep = "entry";
+  let resendTimer = null;
+  let resendCooldownRemaining = 0;
   const canClose = forceChange || !required;
 
   const normalize = (value) => String(value || "")
@@ -1934,7 +2296,89 @@ async openProviderPhoneTrustModal({ forceChange = false, existingProfile = null,
   const setLoading = (loading, label) => {
     submit.disabled = Boolean(loading);
     submit.classList.toggle("is-loading", Boolean(loading));
+    submit.setAttribute("aria-busy", String(Boolean(loading)));
     if (label) submit.textContent = label;
+  };
+
+  const otpDeliveryMessage = (response = {}) => (
+    response?.channel === "sms" || response?.fallback === true
+      ? "No pudimos enviarlo por WhatsApp. Te enviamos un SMS de respaldo."
+      : "Te enviamos un código por WhatsApp."
+  );
+
+  const fallbackActions = document.createElement("div");
+  fallbackActions.className = "provider-phone-fallback-actions";
+  fallbackActions.hidden = true;
+  status.insertAdjacentElement("afterend", fallbackActions);
+
+  const isFallbackRequired = (response = {}) => (
+    response?.status === "fallback_required" ||
+    response?.reason === "whatsapp_not_enabled" ||
+    response?.code === "whatsapp_channel_disabled" ||
+    response?.error === "whatsapp_channel_disabled"
+  );
+
+  const fallbackCopy = (response = {}) => (
+    response?.message ||
+    "WhatsApp todavia no esta disponible para esta verificacion. Podes continuar por otro metodo."
+  );
+
+  const fallbackList = (response = {}) => {
+    const list = response?.available_fallbacks || response?.fallbacks || [];
+    return Array.isArray(list) ? list : [];
+  };
+
+  const clearFallbackOptions = () => {
+    fallbackActions.hidden = true;
+    fallbackActions.innerHTML = "";
+  };
+
+  const renderFallbackOptions = (response = {}) => {
+    const methods = fallbackList(response);
+    const smsAvailable = response?.sms_available === true || methods.includes("sms");
+    const emailAvailable = response?.email_available === true || methods.includes("email");
+
+    fallbackActions.innerHTML = `
+      <p>Podes seguir sin esperar la habilitacion de WhatsApp.</p>
+      <div class="provider-phone-fallback-row">
+        ${emailAvailable ? `<button type="button" class="provider-phone-fallback-btn is-secondary" data-provider-phone-fallback="email">Verificar por email</button>` : ""}
+        ${smsAvailable ? `<button type="button" class="provider-phone-fallback-btn is-primary" data-provider-phone-fallback="sms">Enviar SMS</button>` : ""}
+        <button type="button" class="provider-phone-fallback-btn is-ghost" data-provider-phone-fallback="whatsapp">Intentar WhatsApp de nuevo</button>
+      </div>
+    `;
+    fallbackActions.hidden = false;
+  };
+
+  const updateResendButton = () => {
+    if (!resendButton) return;
+
+    const coolingDown = resendCooldownRemaining > 0;
+    resendButton.disabled = coolingDown;
+    resendButton.textContent = coolingDown
+      ? `Enviar otro código (${resendCooldownRemaining}s)`
+      : "Enviar otro código";
+  };
+
+  const clearResendCooldown = () => {
+    if (resendTimer) window.clearInterval(resendTimer);
+    resendTimer = null;
+    resendCooldownRemaining = 0;
+    updateResendButton();
+  };
+
+  const startResendCooldown = (seconds = 45) => {
+    clearResendCooldown();
+    resendCooldownRemaining = seconds;
+    updateResendButton();
+
+    resendTimer = window.setInterval(() => {
+      resendCooldownRemaining -= 1;
+      if (resendCooldownRemaining <= 0) {
+        clearResendCooldown();
+        return;
+      }
+      updateResendButton();
+    }, 1000);
   };
 
   const renderCountry = () => {
@@ -1965,9 +2409,23 @@ async openProviderPhoneTrustModal({ forceChange = false, existingProfile = null,
   const setStep = (step) => {
     currentStep = step;
     const isOtp = step === "otp";
+    const target = otpTarget?.textContent || "tu teléfono";
+
+    overlay.dataset.step = step;
     entryStep.hidden = isOtp;
     otpStep.hidden = !isOtp;
+    entryStep.style.display = isOtp ? "none" : "";
+    otpStep.style.display = isOtp ? "" : "none";
+    if (resendButton) resendButton.hidden = !isOtp;
+    if (changeNumberButton) changeNumberButton.hidden = !isOtp;
+    if (title) title.textContent = isOtp ? "Ingresá el código" : "Verificá tu teléfono";
+    if (copy) {
+      copy.textContent = isOtp
+        ? `Te enviamos un código por WhatsApp al ${target}.`
+        : "Usamos este número para proteger tu cuenta y validar dispositivos nuevos.";
+    }
     submit.textContent = isOtp ? "Verificar y continuar" : "Enviar código";
+    submit.textContent = isOtp ? "Verificar código" : "Enviar código";
     window.setTimeout(() => (isOtp ? codeInput : phoneInput).focus(), 120);
   };
 
@@ -1975,15 +2433,29 @@ async openProviderPhoneTrustModal({ forceChange = false, existingProfile = null,
     if (!success && !canClose) return;
     overlay.hidden = true;
     document.body.classList.remove("provider-phone-open");
+    clearResendCooldown();
     form.removeEventListener("submit", onSubmit);
     closeButton?.removeEventListener("click", onClose);
     resendButton?.removeEventListener("click", onResend);
+    fallbackActions.removeEventListener("click", onFallbackAction);
+    fallbackActions.remove();
+    changeNumberButton?.removeEventListener("click", onChangeNumber);
+    switchAccountButton?.removeEventListener("click", onSwitchAccount);
     countryButton?.removeEventListener("click", onCountryButton);
     countrySearch?.removeEventListener("input", onCountrySearch);
     countryList?.removeEventListener("click", onCountrySelect);
   };
 
-  const startOtp = async () => {
+  const startOtp = async (channel = "whatsapp") => {
+    clearFallbackOptions();
+    const rawDigits = String(phoneInput.value || "").replace(/\D/g, "");
+    if (rawDigits.length < 8) {
+      phoneInput.classList.add("is-invalid");
+      setStatus("Ingresá un teléfono válido antes de pedir el código.", "error");
+      return;
+    }
+
+    phoneInput.classList.remove("is-invalid");
     const normalized = await normalizePhoneNumber(phoneInput.value, selectedCountry);
     pendingVerification = {
       phoneNumber: normalized.phoneNumber,
@@ -1996,8 +2468,15 @@ async openProviderPhoneTrustModal({ forceChange = false, existingProfile = null,
       purpose: forceChange
         ? "phone_change"
         : (verifyExistingDevice ? "login_new_device" : "signup"),
+      channel,
       ...pendingVerification
     });
+
+    if (isFallbackRequired(response)) {
+      renderFallbackOptions(response);
+      setStatus(fallbackCopy(response), "neutral");
+      return;
+    }
 
     if (response?.already_trusted === true) {
       setStatus("Dispositivo confiable.", "success");
@@ -2006,15 +2485,19 @@ async openProviderPhoneTrustModal({ forceChange = false, existingProfile = null,
     }
 
     pendingVerification.attemptId = response?.attempt_id || response?.attemptId || null;
+    pendingVerification.channel = response?.channel || "whatsapp";
+    pendingVerification.fallback = response?.fallback === true;
     if (otpTarget) otpTarget.textContent = response?.masked_phone || pendingVerification.phoneNumber;
     setStep("otp");
-    setStatus("Código enviado. Revisá tu teléfono.", "success");
+    if (copy) copy.textContent = otpDeliveryMessage(response);
+    startResendCooldown(45);
+    setStatus(otpDeliveryMessage(response), "success");
   };
 
   const verifyProviderOtp = async () => {
     const code = String(codeInput.value || "").replace(/\D/g, "");
-    if (!/^\d{4,8}$/.test(code)) {
-      setStatus("Ingresá el código recibido.", "error");
+    if (!/^\d{6}$/.test(code)) {
+      setStatus("Ingresá el código de 6 dígitos recibido por WhatsApp o SMS.", "error");
       codeInput.classList.add("is-invalid");
       return;
     }
@@ -2042,26 +2525,90 @@ async openProviderPhoneTrustModal({ forceChange = false, existingProfile = null,
         await startOtp();
       }
     } catch (error) {
-      setStatus(this.phoneVerificationErrorText(error), "error");
+      const fallbackResponse = error?.details || { code: error?.code || error?.message };
+      if (currentStep !== "otp" && isFallbackRequired(fallbackResponse)) {
+        renderFallbackOptions(fallbackResponse);
+        setStatus(fallbackCopy(fallbackResponse), "neutral");
+      } else {
+        setStatus(this.phoneVerificationErrorText(error), "error");
+      }
     } finally {
       setLoading(false, currentStep === "otp" ? "Verificar y continuar" : "Enviar código");
     }
   };
 
+  const onFallbackAction = async (event) => {
+    const button = event.target.closest?.("[data-provider-phone-fallback]");
+    if (!button) return;
+    const method = button.dataset.providerPhoneFallback;
+    setLoading(true, method === "sms" ? "Enviando SMS..." : method === "email" ? "Enviando email..." : "Reintentando...");
+    try {
+      if (method === "sms") {
+        setStatus("Te vamos a enviar un codigo por SMS. Usalo si no podes verificar por WhatsApp.", "neutral");
+        await startOtp("sms");
+        return;
+      }
+      if (method === "email") {
+        const result = await startSecurityVerification({
+          actorRole: "provider",
+          purpose: verifyExistingDevice ? "login_new_device" : "phone_verification",
+          preferredChannel: "email"
+        });
+        setStatus(
+          result?.channel === "email"
+            ? "Te enviamos una verificacion por email para proteger tu cuenta. Para validar este telefono, usa WhatsApp o SMS."
+            : "No pudimos enviar el email ahora. Proba por SMS o intenta nuevamente.",
+          result?.channel === "email" ? "success" : "neutral"
+        );
+        return;
+      }
+      await startOtp("whatsapp");
+    } catch (error) {
+      const fallbackResponse = error?.details || { code: error?.code || error?.message };
+      if (isFallbackRequired(fallbackResponse)) {
+        renderFallbackOptions(fallbackResponse);
+        setStatus(fallbackCopy(fallbackResponse), "neutral");
+      } else {
+        setStatus(this.phoneVerificationErrorText(error), "error");
+      }
+    } finally {
+      setLoading(false, currentStep === "otp" ? "Verificar y continuar" : "Enviar codigo");
+    }
+  };
+
   const onClose = () => close(false);
   const onResend = async () => {
+    if (resendCooldownRemaining > 0) return;
     if (!pendingVerification?.phoneNumber) {
       setStep("entry");
       return;
     }
     setLoading(true, "Reenviando...");
     try {
-      await startOtp();
+      await startOtp(pendingVerification?.channel || "whatsapp");
     } catch (error) {
-      setStatus(this.phoneVerificationErrorText(error), "error");
+      const fallbackResponse = error?.details || { code: error?.code || error?.message };
+      if (isFallbackRequired(fallbackResponse)) {
+        renderFallbackOptions(fallbackResponse);
+        setStatus(fallbackCopy(fallbackResponse), "neutral");
+      } else {
+        setStatus(this.phoneVerificationErrorText(error), "error");
+      }
     } finally {
       setLoading(false, currentStep === "otp" ? "Verificar y continuar" : "Enviar código");
     }
+  };
+  const onChangeNumber = () => {
+    pendingVerification = null;
+    codeInput.value = "";
+    codeInput.classList.remove("is-invalid");
+    phoneInput.classList.remove("is-invalid");
+    clearResendCooldown();
+    setStatus("");
+    setStep("entry");
+  };
+  const onSwitchAccount = () => {
+    this.confirmProviderAccountSwitch();
   };
   const onCountryButton = () => {
     const expanded = countryPanel?.hidden === true;
@@ -2089,6 +2636,8 @@ async openProviderPhoneTrustModal({ forceChange = false, existingProfile = null,
   renderCountry();
   renderCountryList();
   if (closeButton) closeButton.hidden = !canClose;
+  if (resendButton) resendButton.hidden = true;
+  if (changeNumberButton) changeNumberButton.hidden = true;
   if (existingProfile?.phone_number && forceChange) phoneInput.placeholder = existingProfile.phone_number;
   if (existingProfile?.phone_number && verifyExistingDevice) phoneInput.value = existingProfile.phone_number;
   if (countryPanel) countryPanel.hidden = true;
@@ -2098,6 +2647,9 @@ async openProviderPhoneTrustModal({ forceChange = false, existingProfile = null,
   form.addEventListener("submit", onSubmit);
   closeButton?.addEventListener("click", onClose);
   resendButton?.addEventListener("click", onResend);
+  fallbackActions.addEventListener("click", onFallbackAction);
+  changeNumberButton?.addEventListener("click", onChangeNumber);
+  switchAccountButton?.addEventListener("click", onSwitchAccount);
   countryButton?.addEventListener("click", onCountryButton);
   countrySearch?.addEventListener("input", onCountrySearch);
   countryList?.addEventListener("click", onCountrySelect);
@@ -2109,7 +2661,13 @@ phoneVerificationErrorText(error) {
   const map = {
     phone_invalid: "Ingresá un número válido con código de país.",
     phone_already_used: "Ese número ya está verificado en otra cuenta.",
-    sms_provider_not_configured: "La verificación SMS todavía no está configurada.",
+    sms_provider_not_configured: "No pudimos verificarte en este momento. Proba mas tarde o contacta soporte.",
+    whatsapp_channel_disabled: "WhatsApp todavia no esta disponible para esta verificacion. Podes continuar por otro metodo.",
+    sms_channel_disabled: "SMS todavia no esta disponible. Proba por email o intenta mas tarde.",
+    sms_recipient_unverified: "No pudimos enviar el código a este número. Contactá soporte si el problema continúa.",
+    sms_provider_error: "No pudimos enviar el código por WhatsApp ni por SMS. Revisá el número e intentá nuevamente.",
+    otp_provider_timeout: "La verificación tardó demasiado. Intentá nuevamente.",
+    otp_rate_limited: "Demasiados intentos. Probá de nuevo en unos minutos.",
     otp_recently_sent: "Ya enviamos un código hace instantes. Esperá un minuto.",
     otp_phone_hour_limited: "Demasiados códigos para este número. Probá más tarde.",
     otp_phone_day_limited: "Ese número llegó al límite diario de códigos.",
@@ -2120,6 +2678,7 @@ phoneVerificationErrorText(error) {
     otp_not_found_or_expired: "El código venció. Pedí uno nuevo.",
     auth_risk_blocked: "Por seguridad bloqueamos temporalmente esta acción."
   };
+  if (String(code || "").startsWith("sms_provider_error")) return map.sms_provider_error;
   return map[code] || "No pudimos verificar el teléfono. Intentá nuevamente.";
 }
 
@@ -2404,13 +2963,130 @@ stats: {
   normalizeNotifications(items = []) {
     return (items ?? []).map((item) => ({
       id: item.id ?? crypto.randomUUID?.() ?? String(Date.now()),
-      title: item.title ?? "Nueva notificacin",
+      title: item.title ?? "Nueva notificacion",
       text: item.body ?? item.message ?? "",
       timestamp: item.created_at ?? new Date().toISOString(),
       unread: !item.read_at,
       icon: item.icon ?? "",
       raw: item
     }));
+  }
+
+  notificationData(item = {}) {
+    const raw = item.raw || item;
+    return raw?.data_json || raw?.data || {};
+  }
+
+  isKycReviewNotification(item = {}) {
+    const raw = item.raw || item;
+    const data = this.notificationData(item);
+    const action = String(data?.action || "").toLowerCase();
+    return raw?.type === "PROVIDER_KYC_REVIEW" ||
+      data?.type === "PROVIDER_KYC_REVIEW" ||
+      ["needs_resubmission", "request_document_correction", "reject", "block", "approve"].includes(action);
+  }
+
+  latestKycAdminNotice() {
+    const items = this.state?.notifications?.items || [];
+    return items
+      .filter((item) => this.isKycReviewNotification(item))
+      .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0))[0] || null;
+  }
+
+  playNotificationSound(kind = "info") {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+
+      const context = this.notificationAudioContext || new AudioContext();
+      this.notificationAudioContext = context;
+      if (context.state === "suspended") {
+        context.resume().catch(() => {});
+      }
+
+      const now = context.currentTime;
+      const gain = context.createGain();
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(kind === "kyc" ? 0.12 : 0.07, now + 0.025);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+      gain.connect(context.destination);
+
+      [660, kind === "kyc" ? 880 : 740].forEach((frequency, index) => {
+        const osc = context.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(frequency, now + index * 0.12);
+        osc.connect(gain);
+        osc.start(now + index * 0.12);
+        osc.stop(now + 0.36 + index * 0.08);
+      });
+    } catch (error) {
+      if (window.MIMI_DEBUG_NOTIFICATIONS) console.warn("[MIMI] notification sound skipped:", error);
+    }
+  }
+
+  showKycRealtimeAlert(item) {
+    const message = item?.text || "El equipo MIMI dejo una observacion sobre tu verificacion.";
+    this.showToast(`${item?.title || "Verificacion"}: ${message}`, "warning");
+    this.playNotificationSound("kyc");
+    this.renderKycAdminNotice();
+
+    const card = this.elements.verificationCard;
+    if (card) {
+      card.classList.add("kyc-attention-pulse");
+      window.setTimeout(() => card.classList.remove("kyc-attention-pulse"), 1800);
+    }
+  }
+
+  renderKycAdminNotice() {
+    const card = this.elements.verificationCard;
+    if (!card) return;
+
+    let notice = card.querySelector("[data-kyc-admin-notice]");
+    const item = this.latestKycAdminNotice();
+    const data = item ? this.notificationData(item) : {};
+    const action = String(data?.action || "").toLowerCase();
+    const status = String(this.state?.provider?.verificationStatus || "").toLowerCase();
+    const needsAttention =
+      item &&
+      (status === "rejected" ||
+        ["needs_resubmission", "request_document_correction", "reject", "block"].includes(action));
+
+    if (!needsAttention) {
+      notice?.remove();
+      return;
+    }
+
+    if (!notice) {
+      notice = document.createElement("section");
+      notice.setAttribute("data-kyc-admin-notice", "");
+      notice.className = "kyc-admin-notice";
+      card.appendChild(notice);
+    }
+
+    const severity = ["reject", "block"].includes(action) ? "danger" : "warning";
+    notice.className = `kyc-admin-notice ${severity}`;
+    notice.innerHTML = `
+      <div>
+        <strong>${this.escapeHtml(item.title || "Observacion de verificacion")}</strong>
+        <span>${this.escapeHtml(item.text || "El equipo MIMI dejo una observacion sobre tu verificacion.")}</span>
+      </div>
+      <div class="kyc-admin-notice-actions">
+        <button type="button" data-kyc-notice-action="review">Revisar</button>
+        <button type="button" data-kyc-notice-action="support">Soporte</button>
+      </div>
+    `;
+
+    notice.querySelector('[data-kyc-notice-action="review"]')?.addEventListener("click", () => {
+      actions.openModal("verification");
+      this.showVerificationEntry(true);
+    });
+
+    notice.querySelector('[data-kyc-notice-action="support"]')?.addEventListener("click", () => {
+      actions.closeModal();
+      const supportPanel = document.getElementById("providerSupportPanel");
+      supportPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
+      this.showToast("Escribinos a soporte y mencionanos tu verificacion.", "info");
+    });
   }
 
   normalizeRequestStatus(status) {
@@ -2678,9 +3354,11 @@ stats: {
       support: { tab: "account", target: "providerSupportPanel" }
     }[section] ?? { tab: "account", target: null };
 
+    this.captureSheetReturnTab();
     this.switchTab(route.tab);
     this.setBottomSheetState("expanded");
     actions.closeDrawer();
+    this.syncOnlineButtonVisibility();
 
     window.requestAnimationFrame(() => {
       const target = route.target ? document.getElementById(route.target) : null;
@@ -2725,22 +3403,66 @@ stats: {
       this.elements.verificationResultList.innerHTML = required
         .map(([type, title, rule]) => {
           const doc = this.documentByType(type);
-          const missingLabel =
-            accountApproved && type !== "criminal_record_certificate"
-              ? "Aprobado por admin"
-              : "Pendiente";
+          const meta = this.verificationDocumentMeta(type, doc, accountApproved);
+          const tag = meta.actionable ? "button" : "article";
           return `
-            <article class="verification-result-item ${doc ? "has-doc" : "missing-doc"}">
+            <${tag}
+              class="verification-result-item ${meta.className}"
+              ${meta.actionable ? `type="button" data-verification-doc="${type}" aria-label="${meta.actionLabel}"` : ""}
+            >
               <div>
                 <strong>${title}</strong>
                 <span>${rule}</span>
               </div>
-              <span>${doc ? statusLabel(doc.review_status) : missingLabel}</span>
-            </article>
+              <span>${meta.label}</span>
+            </${tag}>
           `;
         })
         .join("");
     }
+  }
+
+  verificationDocumentMeta(type, doc, accountApproved = false) {
+    if (!doc) {
+      const approvedByAdmin = accountApproved && type !== "criminal_record_certificate";
+      return {
+        label: approvedByAdmin ? "Aprobado por admin" : "Pendiente",
+        className: approvedByAdmin ? "is-approved" : "missing-doc is-actionable",
+        actionable: !approvedByAdmin,
+        actionLabel: `Cargar ${this.verificationDocumentTitle(type)}`
+      };
+    }
+
+    const status = String(doc.review_status || "PENDING").toUpperCase();
+    if (status === "APPROVED") {
+      return { label: "Aprobado", className: "has-doc is-approved", actionable: false };
+    }
+    if (status === "REJECTED") {
+      return {
+        label: "Corregir",
+        className: "has-doc is-rejected is-actionable",
+        actionable: true,
+        actionLabel: `Corregir ${this.verificationDocumentTitle(type)}`
+      };
+    }
+    if (status === "NEEDS_RESUBMISSION") {
+      return {
+        label: "Reenviar",
+        className: "has-doc is-rejected is-actionable",
+        actionable: true,
+        actionLabel: `Reenviar ${this.verificationDocumentTitle(type)}`
+      };
+    }
+    return { label: "En revisión", className: "has-doc is-review", actionable: false };
+  }
+
+  verificationDocumentTitle(type) {
+    return {
+      dni_front: "DNI frente",
+      dni_back: "DNI dorso",
+      selfie: "selfie",
+      criminal_record_certificate: "antecedentes penales"
+    }[type] || "documento";
   }
 
   /**
@@ -2782,13 +3504,36 @@ this.elements.tabButtons.forEach((btn) => {
 
     if (isSameTab) {
       this.setBottomSheetState("peek");
+      this.restoreSheetReturnTab();
       return;
     }
 
+    this.captureSheetReturnTab();
     this.switchTab(tab);
     this.setBottomSheetState("expanded");
   });
 });
+
+    this.elements.sheetCloseBtn?.addEventListener("click", () => {
+      this.closeExpandedSheet({ fromHistory: false });
+    });
+
+    window.addEventListener("popstate", (event) => {
+      if (this.handleProviderBackStep()) {
+        return;
+      }
+
+      if (
+        this.isBottomSheetExpanded() ||
+        event.state?.mimiProviderSheet === "expanded" ||
+        this.sheetHistoryOpen
+      ) {
+        this.closeExpandedSheet({ fromHistory: true });
+        return;
+      }
+
+      this.handleProviderBackExit();
+    });
     // Status toggle
     this.elements.statusToggleModern?.addEventListener('click', (e) => {
       const option = e.target.closest('.toggle-option');
@@ -2908,6 +3653,26 @@ this.elements.verificationBtn?.addEventListener('click', () => {
       this.handleWizardPrev();
     });
 
+    this.elements.verificationResultList?.addEventListener("click", (event) => {
+      const button = event.target?.closest?.("[data-verification-doc]");
+      if (!button) return;
+      this.openVerificationDocumentStep(button.dataset.verificationDoc);
+    });
+
+    this.elements.providerExitCancel?.addEventListener("click", () => {
+      this.resolveProviderExitConfirm(false);
+    });
+
+    this.elements.providerExitConfirm?.addEventListener("click", () => {
+      this.resolveProviderExitConfirm(true);
+    });
+
+    this.elements.providerExitOverlay?.addEventListener("click", (event) => {
+      if (event.target === this.elements.providerExitOverlay) {
+        this.resolveProviderExitConfirm(false);
+      }
+    });
+
     // Logout
     this.elements.logoutBtn?.addEventListener('click', () => {
       this.handleLogout();
@@ -3009,6 +3774,11 @@ this.elements.cameraUseBtn?.addEventListener("click", () => {
   this.confirmCameraCapture();
 });
 
+this.elements.cameraSupportBtn?.addEventListener("click", () => {
+  this.closeCameraCapture();
+  this.openProviderSupportChat();
+});
+
 document.addEventListener("submit", (event) => {
   if (event.target?.id === "providerBusinessForm") {
     this.handleProviderBusinessSubmit(event);
@@ -3046,6 +3816,11 @@ document.addEventListener("change", (event) => {
   }
   if (target?.matches?.("[name='providerProvince']")) {
     this.updateProviderCityOptions(target);
+  }
+  if (target?.matches?.("[name='providerLegalGateAccepted']")) {
+    const gate = target.closest("[data-provider-legal-gate]");
+    const button = gate?.querySelector?.("[data-provider-business-action='accept-provider-legal-gate']");
+    if (button) button.disabled = !target.checked;
   }
 });
     // Keyboard shortcuts
@@ -3104,19 +3879,30 @@ document.addEventListener("change", (event) => {
         // Dragging up
         sheet.classList.add('expanded');
         sheet.classList.remove('collapsed');
+        document.body.dataset.providerSheet = "expanded";
+        this.syncOnlineButtonVisibility();
       } else if (delta < -50) {
         // Dragging down
         if (sheet.classList.contains('expanded')) {
           sheet.classList.remove('expanded');
+          document.body.dataset.providerSheet = "peek";
         } else {
           sheet.classList.add('collapsed');
+          document.body.dataset.providerSheet = "collapsed";
         }
+        this.syncOnlineButtonVisibility();
       }
     };
 
     const onTouchEnd = () => {
       this.touchState.isDragging = false;
       sheet.style.transition = '';
+      document.body.dataset.providerSheet = sheet.classList.contains("expanded")
+        ? "expanded"
+        : sheet.classList.contains("collapsed")
+          ? "collapsed"
+          : "peek";
+      this.syncOnlineButtonVisibility();
     };
 
     handle.addEventListener('touchstart', onTouchStart, { passive: true });
@@ -3137,6 +3923,7 @@ document.addEventListener("change", (event) => {
     if (!sheet) return;
 
     sheet.classList.remove('collapsed', 'expanded');
+    document.body.dataset.providerSheet = state;
     
     switch (state) {
       case 'collapsed':
@@ -3151,12 +3938,295 @@ document.addEventListener("change", (event) => {
     }
     
     actions.setBottomSheetState(state);
+    this.syncOnlineButtonVisibility();
+    this.syncSheetHistory(state);
+  }
+
+  isBottomSheetExpanded() {
+    return (
+      document.body.dataset.providerSheet === "expanded" ||
+      this.elements.bottomSheet?.classList.contains("expanded") ||
+      this.state?.ui?.bottomSheetState === "expanded"
+    );
+  }
+
+  closeExpandedSheet({ fromHistory = false } = {}) {
+    if (!this.elements.bottomSheet) return;
+
+    this.setBottomSheetState("peek");
+    this.restoreSheetReturnTab();
+    if (this.elements.sheetContent) this.elements.sheetContent.scrollTop = 0;
+    this.sheetHistoryOpen = false;
+
+    if (!fromHistory && history.state?.mimiProviderSheet === "expanded") {
+      try {
+        const nextState = { ...(history.state || {}) };
+        delete nextState.mimiProviderSheet;
+        history.replaceState(nextState, "", window.location.href);
+      } catch (_) {
+        history.replaceState({ ...(history.state || {}), mimiProviderSheet: null }, "", window.location.href);
+      }
+    }
+  }
+
+  currentProviderTab() {
+    return document.body.dataset.providerTab || this.state?.ui?.activeTab || "now";
+  }
+
+  captureSheetReturnTab() {
+    this.sheetReturnTab = this.currentProviderTab() || "now";
+  }
+
+  restoreSheetReturnTab() {
+    const targetTab = this.sheetReturnTab || "now";
+    this.sheetReturnTab = null;
+
+    if (targetTab && targetTab !== this.currentProviderTab()) {
+      this.switchTab(targetTab);
+    }
+  }
+
+  syncSheetHistory(state) {
+    if (state === "expanded") {
+      if (!this.sheetHistoryOpen && history.state?.mimiProviderSheet !== "expanded") {
+        try {
+          history.pushState({ ...(history.state || {}), mimiProviderSheet: "expanded" }, "", window.location.href);
+          this.sheetHistoryOpen = true;
+        } catch (_) {
+          this.sheetHistoryOpen = false;
+        }
+      }
+      return;
+    }
+
+    if (state !== "expanded") {
+      this.sheetHistoryOpen = false;
+    }
+  }
+
+  ensureProviderBackGuard() {
+    if (this.backGuardReady || !window.history?.pushState) return;
+
+    try {
+      history.replaceState(
+        { ...(history.state || {}), mimiProviderRoot: true },
+        "",
+        window.location.href
+      );
+      history.pushState(
+        { ...(history.state || {}), mimiProviderBackGuard: true },
+        "",
+        window.location.href
+      );
+      this.backGuardReady = true;
+    } catch (_) {
+      this.backGuardReady = false;
+    }
+  }
+
+  async handleProviderBackExit() {
+    if (this.allowProviderBackExit || !document.body.classList.contains("provider-authenticated")) {
+      return;
+    }
+
+    this.setProviderExitDialogText({
+      kicker: "Cuenta de prestador",
+      title: "Cerrar sesion",
+      message: "Vamos a cerrar la sesion actual y volver al login de Prestador para que puedas entrar con otra cuenta Google.",
+      cancel: "Seguir conectado",
+      confirm: "Cerrar sesion"
+    });
+    const wantsLogout = await this.showProviderExitConfirm();
+    if (wantsLogout) {
+      await this.abortProviderAuthAttempt();
+      return;
+    }
+
+    this.backGuardReady = false;
+    this.ensureProviderBackGuard();
+  }
+
+  showProviderExitConfirm() {
+    const overlay = this.elements.providerExitOverlay;
+    if (!overlay) {
+      return Promise.resolve(window.confirm("Cerrar sesión de MIMIGO Prestadores?"));
+    }
+
+    overlay.hidden = false;
+    overlay.removeAttribute("aria-hidden");
+    document.body.classList.add("provider-exit-open");
+    window.setTimeout(() => this.elements.providerExitCancel?.focus?.(), 30);
+
+    return new Promise((resolve) => {
+      this.providerExitConfirmResolver = resolve;
+    });
+  }
+
+  setProviderExitDialogText({ kicker, title, message, cancel, confirm } = {}) {
+    const overlay = this.elements.providerExitOverlay;
+    if (!overlay) return;
+
+    const kickerEl = overlay.querySelector(".provider-exit-kicker");
+    const titleEl = overlay.querySelector("#providerExitTitle");
+    const messageEl = overlay.querySelector("p");
+
+    if (kickerEl && kicker) kickerEl.textContent = kicker;
+    if (titleEl && title) titleEl.textContent = title;
+    if (messageEl && message) messageEl.textContent = message;
+    if (this.elements.providerExitCancel && cancel) this.elements.providerExitCancel.textContent = cancel;
+    if (this.elements.providerExitConfirm && confirm) this.elements.providerExitConfirm.textContent = confirm;
+  }
+
+  resolveProviderExitConfirm(value) {
+    const overlay = this.elements.providerExitOverlay;
+    if (overlay) {
+      overlay.hidden = true;
+      overlay.setAttribute("aria-hidden", "true");
+    }
+    document.body.classList.remove("provider-exit-open");
+
+    const resolver = this.providerExitConfirmResolver;
+    this.providerExitConfirmResolver = null;
+    resolver?.(Boolean(value));
+  }
+
+  handleProviderBackStep() {
+    if (this.elements.providerExitOverlay && !this.elements.providerExitOverlay.hidden) {
+      this.resolveProviderExitConfirm(false);
+      this.rearmProviderBackGuard();
+      return true;
+    }
+
+    if (this.elements.providerPhoneOverlay && !this.elements.providerPhoneOverlay.hidden) {
+      this.confirmProviderAccountSwitch();
+      this.rearmProviderBackGuard();
+      return true;
+    }
+
+    const verificationOpen = this.elements.verificationModal && !this.elements.verificationModal.hidden;
+    const activeVerificationStep = document.querySelector(".wizard-step.active");
+    const activeStepNumber = Number(activeVerificationStep?.id?.replace("step", "") || 0);
+
+    if (verificationOpen && this.verificationReturnStep && activeStepNumber !== this.verificationReturnStep) {
+      this.showWizardStep(this.verificationReturnStep);
+      this.verificationReturnStep = null;
+      this.rearmProviderBackGuard();
+      return true;
+    }
+
+    if (verificationOpen || this.state?.ui?.modalOpen) {
+      actions.closeModal();
+      this.verificationReturnStep = null;
+      this.rearmProviderBackGuard();
+      return true;
+    }
+
+    if (this.state?.ui?.drawerOpen) {
+      actions.closeDrawer();
+      if (this.isBottomSheetExpanded()) {
+        this.closeExpandedSheet({ fromHistory: true });
+      }
+      this.rearmProviderBackGuard();
+      return true;
+    }
+
+    if (this.state?.ui?.notificationDrawerOpen) {
+      actions.closeNotifications();
+      this.syncOnlineButtonVisibility();
+      this.rearmProviderBackGuard();
+      return true;
+    }
+
+    if (this.state?.ui?.chatDrawerOpen) {
+      actions.closeChat();
+      this.syncOnlineButtonVisibility();
+      this.rearmProviderBackGuard();
+      return true;
+    }
+
+    return false;
+  }
+
+  rearmProviderBackGuard() {
+    this.backGuardReady = false;
+    this.ensureProviderBackGuard();
+  }
+
+  async confirmProviderAccountSwitch() {
+    this.setProviderExitDialogText({
+      kicker: "Cambiar cuenta Google",
+      title: "¿Querés salir de esta cuenta?",
+      message: "Vamos a cerrar este intento de registro y volver al login de Prestador para que elijas otra cuenta Google.",
+      cancel: "Seguir verificando",
+      confirm: "Cambiar cuenta"
+    });
+    const confirmed = await this.showProviderExitConfirm();
+
+    if (!confirmed) {
+      this.rearmProviderBackGuard();
+      return false;
+    }
+
+    await this.abortProviderAuthAttempt();
+    return true;
+  }
+
+  async abortProviderAuthAttempt() {
+    try {
+      this.stopLocationTracking();
+      this.stopPresenceHeartbeat();
+    } catch (_) {}
+
+    try {
+      await signOut();
+    } catch (error) {
+      console.warn("[MIMI Provider] No se pudo cerrar Supabase antes de cambiar cuenta:", error?.message ?? error);
+    } finally {
+      try {
+        forceCleanSession("provider");
+        clearAuthRedirectIntent();
+        sessionStorage.setItem("mimi_services_active_mode", "provider");
+        localStorage.setItem("mimi_services_active_mode", "provider");
+      } catch (_) {}
+    }
+
+    this.resolveProviderExitConfirm(false);
+    this.state = null;
+    this.allowProviderBackExit = false;
+    this.backGuardReady = false;
+
+    if (this.elements.providerPhoneOverlay) {
+      this.elements.providerPhoneOverlay.hidden = true;
+    }
+
+    document.body.classList.remove(
+      "provider-phone-open",
+      "provider-auth-loading",
+      "provider-authenticated",
+      "provider-auth-submitting",
+      "provider-exit-open"
+    );
+    document.body.classList.add("provider-auth-required");
+
+    if (this.elements.bottomSheet) this.elements.bottomSheet.style.display = "none";
+    if (this.elements.header) this.elements.header.style.display = "none";
+    if (this.elements.mapContainer) this.elements.mapContainer.style.display = "none";
+
+    this.showProviderLoginGate();
+
+    try {
+      history.replaceState({ mimiProviderLogin: true }, "", "/prestador");
+    } catch (_) {}
+
+    return true;
   }
 
   /**
    * Switch tab
    */
   switchTab(tab) {
+    document.body.dataset.providerTab = tab;
+
     // Update buttons
     this.elements.tabButtons.forEach(btn => {
       btn.classList.toggle('active', btn.dataset.tab === tab);
@@ -3168,6 +4238,46 @@ document.addEventListener("change", (event) => {
     });
     
     actions.setTab(tab);
+    this.syncOnlineButtonVisibility();
+  }
+
+  syncOnlineButtonVisibility() {
+    const container = this.elements.onlineButtonContainer;
+    if (!container || document.body.classList.contains("provider-auth-required")) return;
+
+    const hasContextScreenOpen =
+      this.isBottomSheetExpanded() ||
+      Boolean(this.state?.ui?.drawerOpen) ||
+      Boolean(this.state?.ui?.notificationDrawerOpen) ||
+      Boolean(this.state?.ui?.chatDrawerOpen) ||
+      Boolean(this.state?.ui?.modalOpen) ||
+      (this.elements.providerPinOverlay && !this.elements.providerPinOverlay.hidden) ||
+      (this.elements.providerPhoneOverlay && !this.elements.providerPhoneOverlay.hidden) ||
+      (this.elements.providerExitOverlay && !this.elements.providerExitOverlay.hidden);
+
+    document.body.classList.toggle("provider-drawer-open", Boolean(this.state?.ui?.drawerOpen));
+    document.body.classList.toggle(
+      "provider-overlay-open",
+      Boolean(
+        this.state?.ui?.notificationDrawerOpen ||
+        this.state?.ui?.chatDrawerOpen ||
+        this.state?.ui?.modalOpen ||
+        (this.elements.providerPinOverlay && !this.elements.providerPinOverlay.hidden) ||
+        (this.elements.providerPhoneOverlay && !this.elements.providerPhoneOverlay.hidden) ||
+        (this.elements.providerExitOverlay && !this.elements.providerExitOverlay.hidden)
+      )
+    );
+
+    const isHidden =
+      container.hidden ||
+      container.classList.contains("hidden") ||
+      hasContextScreenOpen ||
+      this.state?.provider?.status !== "OFFLINE" ||
+      Boolean(this.state?.activeService) ||
+      Boolean(this.state?.activeOffer);
+
+    container.classList.toggle("provider-online-context-hidden", Boolean(hasContextScreenOpen));
+    container.setAttribute("aria-hidden", String(Boolean(isHidden)));
   }
 
   /**
@@ -3480,7 +4590,6 @@ for (const category of availableCategories) {
     acceptsImmediate: true,
     acceptsScheduled: true,
     maxHoursPerService: Number(data.get("maxHoursPerService") ?? 8),
-    termsAccepted: data.has("providerTermsAccepted"),
     categories,
     pricing,
     offerings,
@@ -3526,15 +4635,13 @@ async handleProviderBusinessSubmit(event) {
     return;
   }
 
-  if (!payload.termsAccepted) {
-    this.showToast("Acepta los terminos para finalizar tu configuracion", "warning");
-    event.target?.querySelector?.("[name='providerTermsAccepted']")?.focus?.();
+  if (!this.isProviderLegalAccepted()) {
+    this.showToast("Aceptá las condiciones legales antes de publicar servicios", "warning");
     return;
   }
 
   try {
     actions.setLoading(true);
-    await this.acceptProviderTerms();
     const avatarFile = event.target?.querySelector?.("[name='providerAvatarFile']")?.files?.[0] ?? null;
     if (avatarFile) {
       await uploadProviderAvatar({ providerId, file: avatarFile });
@@ -3565,26 +4672,67 @@ async handleProviderBusinessSubmit(event) {
   }
 }
 
+getProviderLegalRequirements() {
+  const requirements = this.state?.provider?.business?.legalRequirements;
+  const source = Array.isArray(requirements) && requirements.length
+    ? requirements
+    : PROVIDER_LEGAL_REQUIREMENT_FALLBACKS;
+
+  return source
+    .map((item) => {
+      const code = item.document_code || item.code;
+      if (!code || !item.version) return null;
+
+      return {
+        document_code: code,
+        actor_type: item.accept_actor_type || (item.actor_type === "all" ? "provider" : item.actor_type || "provider"),
+        version: String(item.version)
+      };
+    })
+    .filter(Boolean);
+}
+
+isProviderLegalRequirementAccepted(requirement = {}) {
+  const acceptances = this.state?.provider?.business?.legalAcceptances ?? [];
+  const expectedActor = requirement.actor_type || "provider";
+
+  return acceptances.some((acceptance) =>
+    acceptance?.document_code === requirement.document_code &&
+    acceptance?.document_version === requirement.version &&
+    (!acceptance?.actor_type || acceptance.actor_type === expectedActor) &&
+    acceptance?.accepted_at
+  );
+}
+
+isProviderLegalAccepted() {
+  const documents = this.getProviderLegalRequirements();
+  return documents.length > 0 && documents.every((documentPayload) =>
+    this.isProviderLegalRequirementAccepted(documentPayload)
+  );
+}
+
 async acceptProviderTerms() {
   const userId = this.state?.session?.userId;
   if (!userId) throw new Error("No se encontro la sesion del prestador");
 
-  const documents = [
-    { actor_type: "provider", document_code: "terms_providers" },
-    { actor_type: "all", document_code: "privacy_policy" }
-  ];
+  const documents = this.getProviderLegalRequirements();
+  const savedAcceptances = [];
 
   for (const documentPayload of documents) {
+    if (this.isProviderLegalRequirementAccepted(documentPayload)) continue;
+
     try {
       const response = await invokeFunction("accept-legal-document", {
         ...documentPayload,
-        version: "2026.1.0",
         acceptance_method: "checkbox_cta",
+        source: "prestador_app",
+        route: window.location.pathname || "/prestador",
         device_id: getDeviceId()
       });
       if (response?.ok !== true) {
         throw new Error(response?.error || "legal_acceptance_not_saved");
       }
+      if (response.acceptance) savedAcceptances.push(response.acceptance);
     } catch (err) {
       console.error("[MIMI] No se pudo registrar aceptacion legal", {
         document: documentPayload.document_code,
@@ -3593,9 +4741,65 @@ async acceptProviderTerms() {
       throw new Error("No pudimos guardar la aceptacion legal. Reintenta en unos segundos.");
     }
   }
+
+  if (savedAcceptances.length) {
+    const current = this.state?.provider?.business?.legalAcceptances ?? [];
+    actions.updateState({
+      provider: {
+        ...this.state.provider,
+        business: {
+          ...this.state.provider.business,
+          legalAcceptances: [...savedAcceptances, ...current]
+        }
+      }
+    });
+  }
+
+  return savedAcceptances;
+}
+
+async handleProviderLegalGateAccept(source = null) {
+  const gate = source?.closest?.("[data-provider-legal-gate]");
+  const checkbox = gate?.querySelector?.("[name='providerLegalGateAccepted']");
+
+  if (!checkbox?.checked) {
+    this.showToast("Marcá la aceptación legal para continuar", "warning");
+    checkbox?.focus?.();
+    return;
+  }
+
+  const originalText = source?.textContent ?? "Aceptar y continuar";
+  if (source) {
+    source.disabled = true;
+    source.textContent = "Registrando...";
+  }
+
+  try {
+    await this.acceptProviderTerms();
+    const providerId = this.state?.session?.providerId;
+    if (providerId) {
+      const workspace = await loadProviderWorkspace(providerId);
+      this.applyWorkspaceToState(workspace);
+    }
+    renderProviderScreen(this.state);
+    this.renderServicesAndPricing();
+    this.renderSheetSummary();
+    this.showToast("Condiciones aceptadas. Ya podés configurar tus servicios.", "success");
+  } catch (err) {
+    this.showToast(err?.message ?? "No pudimos verificar tu aceptación legal. Intentá nuevamente.", "error");
+    if (source) {
+      source.disabled = false;
+      source.textContent = originalText;
+    }
+  }
 }
 
 async handleProviderBusinessAction(action, source = null) {
+  if (action === "accept-provider-legal-gate") {
+    await this.handleProviderLegalGateAccept(source);
+    return;
+  }
+
   if (action === "provider-setup-next" || action === "provider-setup-prev" || action === "provider-setup-go") {
     this.moveProviderSetupStep(action, source);
     return;
@@ -4947,10 +6151,22 @@ startLocationTracking() {
 
   async openProviderSupportChat() {
     this.openProviderSection("support");
+    this.setChatMode("support");
+    updateState({
+      chat: {
+        conversationId: this.supportConversationId ?? null,
+        messages: this.supportConversationId ? (this.state?.chat?.messages ?? []) : [],
+        unreadCount: 0
+      },
+      ui: {
+        chatDrawerOpen: true
+      }
+    });
+    this.renderChat();
+
     const conversationId = await this.ensureProviderSupportConversation();
     if (!conversationId) return;
 
-    this.setChatMode("support");
     await this.loadChatThread(conversationId);
   }
 
@@ -5189,7 +6405,7 @@ startLocationTracking() {
     if (services.length === 0) {
       container.innerHTML = `
         <div class="empty-state">
-          <p>No tens servicios programados</p>
+          <p>No tenes servicios programados</p>
         </div>
       `;
       return;
@@ -5237,10 +6453,10 @@ renderVerificationStatus() {
     statusEl.innerHTML = '<span class="status-icon"></span><span class="status-text">Verificado</span>';
     btn.textContent = "Ver documentos";
   } else if (status === "in_review") {
-    statusEl.innerHTML = '<span class="status-icon"></span><span class="status-text">En revisin</span>';
+    statusEl.innerHTML = '<span class="status-icon"></span><span class="status-text">En revisión</span>';
     btn.textContent = "Ver estado";
   } else if (status === "rejected") {
-    statusEl.innerHTML = '<span class="status-icon"></span><span class="status-text">Requiere correccin</span>';
+    statusEl.innerHTML = '<span class="status-icon"></span><span class="status-text">Requiere corrección</span>';
     btn.textContent = "Ver observaciones";
   } else {
     statusEl.innerHTML = '<span class="status-icon"></span><span class="status-text">Pendiente</span>';
@@ -5465,6 +6681,7 @@ render() {
   this.renderServicesAndPricing();
   this.renderSheetSummary();
   this.renderDrawerProfile();
+  this.renderKycAdminNotice();
 }
   /**
    * Render header
@@ -5512,7 +6729,7 @@ restoreProviderOnlineButton() {
             <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
           </svg>
         </span>
-        <span class="online-button-text">Ponerme en lnea</span>
+        <span class="online-button-text">Ponerme en línea</span>
         <span class="online-button-subtext">Para recibir servicios</span>
       </button>
     `;
@@ -5525,6 +6742,8 @@ restoreProviderOnlineButton() {
   }
 
   container.removeAttribute("style");
+  container.hidden = false;
+  container.classList.remove("hidden", "provider-online-context-hidden");
 
   container.style.position = "";
   container.style.inset = "";
@@ -5542,6 +6761,7 @@ restoreProviderOnlineButton() {
   container.style.opacity = "1";
   container.style.visibility = "visible";
   container.style.pointerEvents = "auto";
+  this.syncOnlineButtonVisibility();
 }
   
   /**
@@ -5582,6 +6802,16 @@ renderOnlineButton() {
 
   container.hidden = false;
   container.classList.toggle("hidden", !shouldShow);
+  container.classList.remove("provider-online-context-hidden");
+  container.setAttribute("aria-hidden", String(!shouldShow));
+
+  if (shouldShow) {
+    container.hidden = false;
+    container.style.display = "";
+    container.style.opacity = "1";
+    container.style.visibility = "visible";
+    container.style.pointerEvents = "auto";
+  }
 }  
   /**
    * Render offer card
@@ -5849,7 +7079,7 @@ if (this.elements.drawerInitials) {
       if (items.length === 0) {
         this.elements.notificationsList.innerHTML = `
           <div class="empty-state">
-            <p>No tens notificaciones</p>
+            <p>No tenes notificaciones</p>
           </div>
         `;
       } else {
@@ -5974,7 +7204,13 @@ if (this.elements.drawerInitials) {
     const normalized = this.normalizeNotifications([notif])[0];
     actions.addNotification(normalized);
 
-    this.showToast(normalized.title || "Nueva notificacin", "info");
+    if (this.isKycReviewNotification(normalized)) {
+      this.showKycRealtimeAlert(normalized);
+    } else {
+      this.showToast(normalized.title || "Nueva notificacion", "info");
+      this.playNotificationSound("info");
+    }
+
     this.showForegroundNotification(normalized.title, normalized.text, notif.data_json);
   }
 
@@ -6114,6 +7350,54 @@ if (this.elements.drawerInitials) {
     }, 3000);
   }
 
+async handleSecurityChallengeAction(sourceUrl = window.location.href) {
+  let url;
+  try {
+    url = new URL(sourceUrl, window.location.origin);
+  } catch (_) {
+    return false;
+  }
+
+  const challengeId = url.searchParams.get("auth_challenge");
+  const action = url.searchParams.get("auth_action") || "open";
+  if (!challengeId) return false;
+
+  if (action !== "approve" && action !== "reject") {
+    this.showToast("Abrimos MIMIGO para confirmar tu acceso.", "info");
+    return true;
+  }
+
+  try {
+    await approveSecurityChallenge({
+      role: "provider",
+      challengeId,
+      action
+    });
+    this.showToast(action === "approve" ? "Acceso aprobado en este dispositivo." : "Acceso rechazado.", action === "approve" ? "success" : "warning");
+  } catch (error) {
+    this.showToast(error?.message || "No pudimos confirmar esta verificacion.", "error");
+  } finally {
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete("auth_challenge");
+    cleanUrl.searchParams.delete("auth_action");
+    window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+  }
+
+  return true;
+}
+
+setupSecurityChallengeListeners() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      if (event.data?.type === "AUTH_CHALLENGE_ACTION" && event.data?.url) {
+        this.handleSecurityChallengeAction(event.data.url);
+      }
+    });
+  }
+
+  this.handleSecurityChallengeAction();
+}
+
 /**
  * Setup install prompt
  */
@@ -6123,6 +7407,17 @@ isRunningAsInstalledPwa() {
     window.matchMedia?.("(display-mode: fullscreen)")?.matches ||
     window.navigator?.standalone === true
   );
+}
+
+isMobileAndroidBrowser() {
+  const ua = navigator.userAgent || "";
+  const isAndroid = /Android/i.test(ua);
+  const isMobile = isAndroid || /Mobi|Mobile|iPhone|iPad|iPod/i.test(ua);
+  return isMobile && !this.isRunningAsInstalledPwa();
+}
+
+isInstallDismissed() {
+  return false;
 }
 
 hideInstallBanner() {
@@ -6135,14 +7430,208 @@ hideInstallBanner() {
   this.elements.installBanner.setAttribute("aria-hidden", "true");
 }
 
-setupInstallPrompt() {
-  if (this.isRunningAsInstalledPwa()) {
-    this.deferredInstallPrompt = null;
-    window.deferredInstallPrompt = null;
-    localStorage.setItem("mimi_services_pwa_installed", "true");
+ensureProviderUpdateBanner() {
+  let banner = document.getElementById("mimiProviderUpdateBanner");
+  if (banner) return banner;
+
+  banner = document.createElement("section");
+  banner.id = "mimiProviderUpdateBanner";
+  banner.className = "provider-update-banner";
+  banner.hidden = true;
+  banner.setAttribute("aria-hidden", "true");
+  banner.setAttribute("role", "status");
+  banner.innerHTML = `
+    <div class="provider-update-copy">
+      <strong>Nueva versión disponible</strong>
+      <span>Actualizá MIMIGO Prestadores para ver las mejoras.</span>
+    </div>
+    <button class="provider-update-cta" id="mimiProviderUpdateButton" type="button">Actualizar</button>
+  `;
+  document.body.appendChild(banner);
+  document.getElementById("mimiProviderUpdateButton")?.addEventListener("click", () => {
+    this.applyProviderUpdate();
+  });
+  return banner;
+}
+
+showProviderUpdateBanner({ critical = false } = {}) {
+  const banner = this.ensureProviderUpdateBanner();
+  banner.hidden = false;
+  banner.dataset.critical = String(Boolean(critical));
+  banner.setAttribute("aria-hidden", "false");
+
+  const title = banner.querySelector("strong");
+  const copy = banner.querySelector("span");
+  if (title) title.textContent = critical ? "Actualización necesaria" : "Nueva versión disponible";
+  if (copy) {
+    copy.textContent = critical
+      ? "Necesitamos actualizar MIMIGO Prestadores para continuar."
+      : "Actualizá MIMIGO Prestadores para ver las mejoras.";
+  }
+}
+
+async cleanupProviderCachesForUpdate() {
+  if (!("caches" in window)) return;
+  const keys = await caches.keys();
+  await Promise.all(
+    keys
+      .filter((key) => key.startsWith("mimi-go-partner-") || key.startsWith("mimi-servicios-provider-"))
+      .map((key) => caches.delete(key))
+  );
+}
+
+async applyProviderUpdate() {
+  const button = document.getElementById("mimiProviderUpdateButton");
+  const banner = document.getElementById("mimiProviderUpdateBanner");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Actualizando...";
+  }
+
+  if (banner) {
+    banner.dataset.updating = "true";
+  }
+
+  try {
+    sessionStorage.setItem("mimi_provider_apply_update", "1");
+    const registration = await navigator.serviceWorker?.getRegistration?.("/prestador");
+    await registration?.update?.();
+    const worker = registration?.waiting || registration?.installing || registration?.active;
+    worker?.postMessage?.({ type: "SKIP_WAITING" });
+    await this.cleanupProviderCachesForUpdate();
+  } catch (error) {
+    console.warn("[MIMI Provider] No se pudo preparar actualización:", error);
+  } finally {
+    const url = new URL(window.location.href);
+    url.searchParams.set("provider_refresh", String(Date.now()));
+    window.location.replace(url.toString());
+  }
+}
+
+compareBuildVersions(a, b) {
+  const left = String(a || "").split(".").map((part) => Number(part) || 0);
+  const right = String(b || "").split(".").map((part) => Number(part) || 0);
+  for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
+    const diff = (left[index] || 0) - (right[index] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+async checkProviderAppVersion() {
+  if (appConfig.securityFlags?.ENABLE_UPDATE_BANNER === false) return;
+  try {
+    const response = await fetch(`/app-version.json?app=provider&t=${Date.now()}`, {
+      cache: "no-store"
+    });
+    if (!response.ok) return;
+    const payload = await response.json();
+    const remote = payload?.provider;
+    const remoteVersion = String(remote?.version || "");
+    if (remoteVersion && remoteVersion !== MIMI_PROVIDER_BUILD) {
+      const minSupported = String(remote?.min_supported_version || "");
+      const forceUpdate = Boolean(
+        appConfig.securityFlags?.ENABLE_FORCE_UPDATE ||
+        (remote?.force_update && minSupported && this.compareBuildVersions(MIMI_PROVIDER_BUILD, minSupported) < 0)
+      );
+      this.showProviderUpdateBanner({ critical: forceUpdate || Boolean(remote?.critical) });
+    } else {
+      const banner = document.getElementById("mimiProviderUpdateBanner");
+      if (banner) {
+        banner.hidden = true;
+        banner.setAttribute("aria-hidden", "true");
+        banner.dataset.updating = "false";
+      }
+    }
+  } catch (error) {
+    console.warn("[MIMI Provider] No se pudo revisar versión:", error);
+  }
+}
+
+setupProviderUpdateManager() {
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("app_update") === "1") {
+      url.searchParams.delete("app_update");
+      window.history.replaceState({}, "", url.toString());
+      setTimeout(() => this.applyProviderUpdate(), 250);
+    }
+  } catch (_) {}
+
+  if ("serviceWorker" in navigator) {
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (sessionStorage.getItem("mimi_provider_apply_update") !== "1") return;
+      if (refreshing) return;
+      refreshing = true;
+      sessionStorage.removeItem("mimi_provider_apply_update");
+      window.location.reload();
+    });
+  }
+
+  window.addEventListener("focus", () => {
+    this.checkProviderAppVersion();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") this.checkProviderAppVersion();
+  });
+
+  window.setInterval(() => this.checkProviderAppVersion(), 10 * 60 * 1000);
+}
+
+showInstallBanner({ sessionEntry = false } = {}) {
+  const banner = this.elements?.installBanner;
+  if (!banner || this.isRunningAsInstalledPwa()) return;
+
+  const hasInstallPrompt = Boolean(this.deferredInstallPrompt || window.deferredInstallPrompt);
+  const shouldShow =
+    this.isMobileAndroidBrowser() &&
+    localStorage.getItem(PARTNER_PWA_INSTALLED_KEY) !== "true" &&
+    !this.isInstallDismissed() &&
+    hasInstallPrompt;
+
+  if (!shouldShow) {
     this.hideInstallBanner();
     return;
   }
+
+  if (sessionEntry) {
+    sessionStorage.setItem(PARTNER_INSTALL_SESSION_KEY, "1");
+  }
+
+  const text = banner.querySelector(".install-text");
+  if (text) {
+    text.textContent = "Instalá la app de prestadores para abrir tu panel más rápido";
+  }
+
+  if (this.elements.installBtn) {
+    this.elements.installBtn.textContent = "Instalar app";
+  }
+
+  banner.hidden = false;
+  banner.style.setProperty("display", "grid", "important");
+  banner.style.opacity = "1";
+  banner.style.pointerEvents = "auto";
+  banner.removeAttribute("aria-hidden");
+  banner.setAttribute("aria-hidden", "false");
+}
+
+setupInstallPrompt() {
+  if (this.installPromptSetupDone) return;
+  this.installPromptSetupDone = true;
+
+  if (this.isRunningAsInstalledPwa()) {
+    this.deferredInstallPrompt = null;
+    window.deferredInstallPrompt = null;
+    localStorage.setItem(PARTNER_PWA_INSTALLED_KEY, "true");
+    this.hideInstallBanner();
+    return;
+  }
+
+  try {
+    localStorage.removeItem(PARTNER_PWA_INSTALLED_KEY);
+  } catch (_) {}
 
   this.hideInstallBanner();
 
@@ -6157,38 +7646,14 @@ setupInstallPrompt() {
 
     this.deferredInstallPrompt = e;
     window.deferredInstallPrompt = e;
-
-    actions.updateState({
-      ui: {
-        installPrompt: e
-      }
-    });
-
-const installDismissed =
-  localStorage.getItem("mimi_services_install_banner_dismissed") === "true";
-
-const isAuthenticated =
-  document.body.classList.contains("provider-authenticated") ||
-  Boolean(this.state?.session?.isAuthenticated);
-
-if (this.elements.installBanner && !installDismissed && isAuthenticated && !this.isRunningAsInstalledPwa()) {
-  this.elements.installBanner.hidden = false;
-  this.elements.installBanner.style.display = "";
-} else if (this.elements.installBanner) {
-  this.hideInstallBanner();
-}
+    this.showInstallBanner({ sessionEntry: true });
     console.log("[MIMI] PWA install prompt listo");
   });
 
   window.addEventListener("appinstalled", () => {
     this.deferredInstallPrompt = null;
     window.deferredInstallPrompt = null;
-
-    actions.updateState({
-      ui: {
-        installPrompt: null
-      }
-    });
+    localStorage.setItem(PARTNER_PWA_INSTALLED_KEY, "true");
 
     if (this.elements.installBanner) {
       this.hideInstallBanner();
@@ -6198,7 +7663,15 @@ if (this.elements.installBanner && !installDismissed && isAuthenticated && !this
   });
 
   window.matchMedia?.("(display-mode: standalone)")?.addEventListener?.("change", () => {
-    this.hideInstallBanner();
+    if (this.isRunningAsInstalledPwa()) {
+      localStorage.setItem(PARTNER_PWA_INSTALLED_KEY, "true");
+      this.hideInstallBanner();
+    } else if (this.deferredInstallPrompt || window.deferredInstallPrompt) {
+      try {
+        localStorage.removeItem(PARTNER_PWA_INSTALLED_KEY);
+      } catch (_) {}
+      this.showInstallBanner({ sessionEntry: false });
+    }
   });
 }
 
@@ -6214,11 +7687,12 @@ async handleInstall() {
   const promptEvent =
     this.deferredInstallPrompt ||
     window.deferredInstallPrompt ||
-    this.state?.ui?.installPrompt;
+    null;
 
-  if (!promptEvent) {
-    this.showToast("La instalacin an no est disponible. Recarg la pgina e intent de nuevo.", "warning");
+  if (!promptEvent || typeof promptEvent.prompt !== "function") {
+    this.showToast("Chrome todavía no habilitó la instalación. Probá de nuevo en unos segundos.", "info");
     console.warn("[MIMI] No hay beforeinstallprompt guardado");
+    this.hideInstallBanner();
     return;
   }
 
@@ -6231,24 +7705,22 @@ async handleInstall() {
     this.deferredInstallPrompt = null;
     window.deferredInstallPrompt = null;
 
-    actions.updateState({
-      ui: {
-        installPrompt: null
-      }
-    });
-
     if (this.elements.installBanner) {
       this.hideInstallBanner();
     }
 
     if (choice?.outcome === "accepted") {
+      localStorage.setItem(PARTNER_PWA_INSTALLED_KEY, "true");
       this.showToast("Instalando app...", "success");
     } else {
-      this.showToast("Instalacin cancelada", "info");
+      this.showToast("Instalación cancelada", "info");
+      try {
+        localStorage.removeItem(PARTNER_INSTALL_DISMISSED_KEY);
+      } catch (_) {}
     }
   } catch (err) {
     console.error("[MIMI] Error instalando PWA:", err);
-    this.showToast("No pudimos abrir la instalacin", "error");
+    this.showToast("No pudimos abrir la instalación", "error");
   }
 }
   
@@ -6339,24 +7811,138 @@ async handleLogout() {
   try {
     this.stopLocationTracking();
     this.stopPresenceHeartbeat();
+    disconnectManagedRealtime("provider-app:");
+    this.notificationRealtimeChannel?.unsubscribe?.();
+    this.offerRealtimeChannel?.unsubscribe?.();
+    this.realtimeChannel?.unsubscribe?.();
     await signOut();
 
     this.state = null;
     this.map = null;
+    this.notificationRealtimeChannel = null;
+    this.offerRealtimeChannel = null;
+    this.realtimeChannel = null;
+
+    try {
+      forceCleanSession("provider");
+      clearAuthRedirectIntent();
+      sessionStorage.setItem("mimi_services_active_mode", "provider");
+      localStorage.setItem("mimi_services_active_mode", "provider");
+      localStorage.removeItem("mimi_provider_session");
+      localStorage.removeItem("mimi_provider_active_service");
+      localStorage.removeItem("mimi_provider_offer");
+    } catch (_) {}
 
     document.body.classList.remove(
+      "provider-phone-open",
+      "provider-auth-loading",
       "provider-authenticated",
-      "provider-auth-submitting"
+      "provider-auth-submitting",
+      "provider-exit-open"
     );
 
     document.body.classList.add("provider-auth-required");
+    if (this.elements.providerPhoneOverlay) this.elements.providerPhoneOverlay.hidden = true;
+    if (this.elements.bottomSheet) this.elements.bottomSheet.style.display = "none";
+    if (this.elements.header) this.elements.header.style.display = "none";
+    if (this.elements.mapContainer) this.elements.mapContainer.style.display = "none";
 
     this.showProviderLoginGate();
+    history.replaceState({ mimiProviderLogin: true }, "", "/prestador");
   } catch (err) {
     console.error("[MIMI] logout error:", err);
-    this.showToast("No pudimos cerrar sesin", "error");
+    this.showToast("No pudimos cerrar sesion", "error");
   }
 }
+setCameraStatus(message, state = "info") {
+  if (!this.elements.cameraStatus) return;
+  this.elements.cameraStatus.textContent = message;
+  this.elements.cameraStatus.dataset.state = state;
+}
+
+showCameraSupportAction(show = true) {
+  if (this.elements.cameraSupportBtn) {
+    this.elements.cameraSupportBtn.hidden = !show;
+  }
+}
+
+providerCameraConstraints(isSelfie) {
+  return {
+    audio: false,
+    video: {
+      facingMode: isSelfie ? { ideal: "user" } : { ideal: "environment" },
+      width: { ideal: 1920, min: 1280 },
+      height: { ideal: 1080, min: 720 },
+      aspectRatio: { ideal: isSelfie ? 3 / 4 : 16 / 9 },
+      frameRate: { ideal: 30, max: 30 }
+    }
+  };
+}
+
+providerCameraFallbackConstraints(isSelfie) {
+  return {
+    audio: false,
+    video: {
+      facingMode: isSelfie ? "user" : { ideal: "environment" },
+      width: { ideal: 1280 },
+      height: { ideal: 720 }
+    }
+  };
+}
+
+getObjectFitCoverCrop(video, targetWidth, targetHeight) {
+  const sourceWidth = video.videoWidth || 0;
+  const sourceHeight = video.videoHeight || 0;
+  const sourceRatio = sourceWidth / sourceHeight;
+  const targetRatio = targetWidth / targetHeight;
+
+  if (!sourceWidth || !sourceHeight || !targetWidth || !targetHeight) return null;
+
+  if (sourceRatio > targetRatio) {
+    const width = Math.round(sourceHeight * targetRatio);
+    return { sx: Math.round((sourceWidth - width) / 2), sy: 0, sw: width, sh: sourceHeight };
+  }
+
+  const height = Math.round(sourceWidth / targetRatio);
+  return { sx: 0, sy: Math.round((sourceHeight - height) / 2), sw: sourceWidth, sh: height };
+}
+
+analyzeCapturedCanvas(canvas) {
+  const width = canvas.width || 0;
+  const height = canvas.height || 0;
+
+  if (width < 720 || height < 720) {
+    return { ok: false, message: "La camara entrego una imagen muy chica. Proba con mejor luz o desde Chrome." };
+  }
+
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  const sampleWidth = Math.min(96, width);
+  const sampleHeight = Math.min(96, height);
+  const image = ctx.getImageData(
+    Math.floor((width - sampleWidth) / 2),
+    Math.floor((height - sampleHeight) / 2),
+    sampleWidth,
+    sampleHeight
+  );
+  let brightness = 0;
+
+  for (let i = 0; i < image.data.length; i += 4) {
+    brightness += (image.data[i] + image.data[i + 1] + image.data[i + 2]) / 3;
+  }
+
+  brightness = brightness / (image.data.length / 4);
+
+  if (brightness < 38) {
+    return { ok: false, message: "La foto esta muy oscura. Busca mas luz de frente y repetila." };
+  }
+
+  if (brightness > 238) {
+    return { ok: false, message: "Hay demasiada luz directa. Evita reflejos fuertes y repetila." };
+  }
+
+  return { ok: true, message: "Listo para capturar" };
+}
+
   async openCameraCapture(documentType) {
   const providerId = this.state?.session?.providerId;
 
@@ -6373,7 +7959,7 @@ async handleLogout() {
   const isSelfie = documentType === "selfie";
   const isDniBack = documentType === "dni_back";
 
-  this.cameraCapture = { documentType, blob: null, file: null };
+  this.cameraCapture = { documentType, blob: null, file: null, previewUrl: null, uploading: false };
 
   if (this.elements.cameraTitle) {
     this.elements.cameraTitle.textContent = isSelfie
@@ -6401,14 +7987,12 @@ async handleLogout() {
     this.elements.cameraCaptureModal.style.display = "block";
     this.elements.cameraCaptureModal.style.zIndex = "999999";
 
-    this.cameraStream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        facingMode: isSelfie ? "user" : { ideal: "environment" },
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      }
-    });
+    try {
+      this.cameraStream = await navigator.mediaDevices.getUserMedia(this.providerCameraConstraints(isSelfie));
+    } catch (highResError) {
+      console.warn("[MIMI][KYC] Camara alta resolucion no disponible, usando fallback:", highResError?.name || highResError?.message);
+      this.cameraStream = await navigator.mediaDevices.getUserMedia(this.providerCameraFallbackConstraints(isSelfie));
+    }
 
 const video = this.elements.cameraVideo;
 
@@ -6418,18 +8002,21 @@ video.muted = true;
 video.autoplay = true;
 video.srcObject = this.cameraStream;
 
-await new Promise((resolve) => {
-  video.onloadedmetadata = resolve;
+await new Promise((resolve, reject) => {
+  const timeout = setTimeout(() => reject(new Error("camera_metadata_timeout")), 7000);
+  video.onloadedmetadata = () => {
+    clearTimeout(timeout);
+    resolve();
+  };
 });
 
 await video.play();
-    if (this.elements.cameraStatus) {
-      this.elements.cameraStatus.textContent = "Cmara lista";
-    }
+    this.setCameraStatus(isSelfie ? "Centrate dentro de la silueta. Buena luz." : "Ubica el documento completo dentro de la guia.", "success");
   } catch (err) {
     console.error("[MIMI] Error abriendo cmara:", err);
     this.closeCameraCapture();
     this.showToast("No pudimos abrir la cmara. Revis permisos del navegador.", "error");
+    this.openProviderSection("support");
   }
 }
 captureCameraFrame() {
@@ -6446,25 +8033,61 @@ captureCameraFrame() {
   if (this.elements.cameraBusyOverlay) this.elements.cameraBusyOverlay.hidden = false;
   if (this.elements.cameraStatus) this.elements.cameraStatus.textContent = "Capturando imagen...";
 
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
+  const wrapRect = video.getBoundingClientRect();
+  const targetWidth = Math.min(1600, Math.max(720, Math.round(wrapRect.width * window.devicePixelRatio)));
+  const targetHeight = Math.min(2000, Math.max(720, Math.round(wrapRect.height * window.devicePixelRatio)));
+  const crop = this.getObjectFitCoverCrop(video, targetWidth, targetHeight);
 
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  if (!crop) {
+    this.setButtonBusy(captureButton, false);
+    if (this.elements.cameraBusyOverlay) this.elements.cameraBusyOverlay.hidden = true;
+    this.showToast("No pudimos leer el encuadre de la camara", "error");
+    return;
+  }
+
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+
+  const ctx = canvas.getContext("2d", { alpha: false });
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, targetWidth, targetHeight);
+
+  const analysis = this.analyzeCapturedCanvas(canvas);
+  if (!analysis.ok) {
+    this.setButtonBusy(captureButton, false);
+    if (this.elements.cameraBusyOverlay) this.elements.cameraBusyOverlay.hidden = true;
+    this.setCameraStatus(analysis.message, "warning");
+    this.showToast(analysis.message, "warning");
+    return;
+  }
 
   canvas.toBlob((blob) => {
-    if (!blob) {
+    if (!blob || blob.size < 10 * 1024) {
       this.setButtonBusy(captureButton, false);
       if (this.elements.cameraBusyOverlay) this.elements.cameraBusyOverlay.hidden = true;
-      this.showToast("No pudimos capturar la imagen", "error");
+      this.showToast("No pudimos capturar una imagen valida", "error");
       return;
     }
 
     const documentType = this.cameraCapture.documentType;
     const fileName = `${documentType}-${Date.now()}.jpg`;
 
+    const previewUrl = URL.createObjectURL(blob);
+    if (this.cameraCapture.previewUrl) {
+      URL.revokeObjectURL(this.cameraCapture.previewUrl);
+    }
+
     this.cameraCapture.blob = blob;
+    this.cameraCapture.previewUrl = previewUrl;
     this.cameraCapture.file = new File([blob], fileName, { type: "image/jpeg" });
+    this.cameraCapture.width = canvas.width;
+    this.cameraCapture.height = canvas.height;
+
+    if (this.elements.cameraStillPreview) {
+      this.elements.cameraStillPreview.src = previewUrl;
+      this.elements.cameraStillPreview.hidden = false;
+    }
 
     video.pause();
 
@@ -6473,14 +8096,26 @@ captureCameraFrame() {
     if (this.elements.cameraCaptureBtn) this.elements.cameraCaptureBtn.hidden = true;
     if (this.elements.cameraRetakeBtn) this.elements.cameraRetakeBtn.hidden = false;
     if (this.elements.cameraUseBtn) this.elements.cameraUseBtn.hidden = false;
-    if (this.elements.cameraStatus) this.elements.cameraStatus.textContent = "Foto capturada. Confirm o repet.";
-  }, "image/jpeg", 0.92);
+    this.setCameraStatus("Foto capturada. Confirmala o repetila.", "success");
+  }, "image/jpeg", 0.95);
 }
 
 resetCameraPreview() {
+  if (this.cameraCapture.previewUrl) {
+    URL.revokeObjectURL(this.cameraCapture.previewUrl);
+  }
+
   this.cameraCapture.blob = null;
   this.cameraCapture.file = null;
+  this.cameraCapture.previewUrl = null;
+  this.cameraCapture.uploading = false;
+  this.showCameraSupportAction(false);
   if (this.elements.cameraBusyOverlay) this.elements.cameraBusyOverlay.hidden = true;
+
+  if (this.elements.cameraStillPreview) {
+    this.elements.cameraStillPreview.hidden = true;
+    this.elements.cameraStillPreview.removeAttribute("src");
+  }
 
   if (this.elements.cameraVideo?.srcObject) {
     this.elements.cameraVideo.play().catch(() => {});
@@ -6489,7 +8124,7 @@ resetCameraPreview() {
   if (this.elements.cameraCaptureBtn) this.elements.cameraCaptureBtn.hidden = false;
   if (this.elements.cameraRetakeBtn) this.elements.cameraRetakeBtn.hidden = true;
   if (this.elements.cameraUseBtn) this.elements.cameraUseBtn.hidden = true;
-  if (this.elements.cameraStatus) this.elements.cameraStatus.textContent = "Cmara lista";
+  this.setCameraStatus("Camara lista", "info");
 }
 
 async confirmCameraCapture() {
@@ -6497,14 +8132,18 @@ async confirmCameraCapture() {
   const documentType = this.cameraCapture.documentType;
   const file = this.cameraCapture.file;
 
+  if (this.cameraCapture.uploading) return;
+
   if (!providerId || !documentType || !file) {
     this.showToast("Falta capturar la foto", "warning");
     return;
   }
 
   try {
+    this.cameraCapture.uploading = true;
     actions.setLoading(true);
-    this.setButtonBusy(this.elements.cameraUseBtn, true, "Subiendo...");
+    this.setButtonBusy(this.elements.cameraUseBtn, true, "Subiendo imagen segura...");
+    if (this.elements.cameraRetakeBtn) this.elements.cameraRetakeBtn.disabled = true;
     if (this.elements.cameraBusyOverlay) this.elements.cameraBusyOverlay.hidden = false;
 
     if (this.elements.cameraStatus) {
@@ -6517,7 +8156,10 @@ const uploadedDocument = await uploadProviderDocument({
   file
 });
 
-console.log("[MIMI][KYC] Documento subido:", uploadedDocument);
+console.info("[MIMI][KYC] Documento recibido", {
+  document_type: uploadedDocument?.document_type,
+  review_status: uploadedDocument?.review_status
+});
     
     if (documentType === "dni_front" && this.elements.dniFrontStatus) {
       this.elements.dniFrontStatus.textContent = "Frente recibido";
@@ -6545,7 +8187,8 @@ console.log("[MIMI][KYC] Documento subido:", uploadedDocument);
       return;
     }
 
-    this.showToast("Verificando identidad...", "info");
+    this.showToast("Analizando identidad...", "info");
+    this.setCameraStatus("Analizando identidad...", "info");
     await invokeFunction("svc-verify-provider-identity", {
   provider_id: providerId
 });
@@ -6566,16 +8209,22 @@ const status = String(
       this.showToast("Necesitamos que repitas una foto con mejor calidad.", "warning");
     } else if (status === "REJECTED") {
       this.showToast("No pudimos validar la identidad. Contact soporte.", "error");
+      this.showCameraSupportAction(true);
     } else {
       this.showToast("Verificacin enviada correctamente.", "success");
     }
 
     this.showWizardStep(5);
   } catch (err) {
-    console.error("[MIMI] Error en verificacin por cmara:", err);
-    this.showToast(err?.message ?? "No pudimos completar la verificacin", "error");
+    console.error("[MIMI] Error en verificacion por camara:", err?.code || err?.message || err);
+    const message = err?.details?.message || err?.message || "No pudimos completar la verificacion. Podes repetir la foto e intentar de nuevo.";
+    this.showToast(message, "error");
+    this.setCameraStatus(message, "error");
+    this.showCameraSupportAction(true);
   } finally {
+    this.cameraCapture.uploading = false;
     this.setButtonBusy(this.elements.cameraUseBtn, false);
+    if (this.elements.cameraRetakeBtn) this.elements.cameraRetakeBtn.disabled = false;
     if (this.elements.cameraBusyOverlay) this.elements.cameraBusyOverlay.hidden = true;
     actions.setLoading(false);
   }
@@ -6601,6 +8250,13 @@ async uploadVerificationFile(documentType, file, input = null) {
 
     await uploadProviderDocument({ providerId, documentType, file });
 
+    if (documentType === "selfie") {
+      this.showToast("Analizando identidad...", "info");
+      await invokeFunction("svc-verify-provider-identity", {
+        provider_id: providerId
+      });
+    }
+
     const workspace = await loadProviderWorkspace(providerId);
     this.applyWorkspaceToState(workspace);
     renderProviderScreen(this.state);
@@ -6616,6 +8272,9 @@ async uploadVerificationFile(documentType, file, input = null) {
   } catch (err) {
     console.error("[MIMI] Error subiendo documento:", err);
     this.showToast(err?.message ?? "No pudimos subir el documento", "error");
+    if (documentType === "selfie" || documentType === "dni_front" || documentType === "dni_back") {
+      this.openProviderSection("support");
+    }
   } finally {
     this.setButtonBusy(trigger, false);
     actions.setLoading(false);
@@ -6624,6 +8283,10 @@ async uploadVerificationFile(documentType, file, input = null) {
 }
 
 closeCameraCapture() {
+  if (this.cameraCapture.previewUrl) {
+    URL.revokeObjectURL(this.cameraCapture.previewUrl);
+  }
+
   if (this.cameraStream) {
     this.cameraStream.getTracks().forEach((track) => track.stop());
     this.cameraStream = null;
@@ -6638,10 +8301,17 @@ closeCameraCapture() {
     this.elements.cameraCaptureModal.hidden = true;
   }
 
+  if (this.elements.cameraStillPreview) {
+    this.elements.cameraStillPreview.hidden = true;
+    this.elements.cameraStillPreview.removeAttribute("src");
+  }
+
   this.cameraCapture = {
     documentType: null,
     blob: null,
-    file: null
+    file: null,
+    previewUrl: null,
+    uploading: false
   };
 }
 
@@ -6677,6 +8347,29 @@ showVerificationEntry(forceStatus = false) {
   }
 
   this.showWizardStep(1);
+}
+
+openVerificationDocumentStep(documentType) {
+  const step = {
+    dni_front: 1,
+    dni_back: 2,
+    selfie: 3,
+    criminal_record_certificate: 4
+  }[documentType];
+
+  if (!step) return;
+
+  this.verificationReturnStep = 5;
+  this.showWizardStep(step);
+
+  const statusCopy = {
+    dni_front: "Cargá o corregí el frente de tu DNI.",
+    dni_back: "Cargá o corregí el dorso de tu DNI.",
+    selfie: "Sacate una selfie clara para completar la verificación.",
+    criminal_record_certificate: "Subí el certificado si ya lo tenés disponible."
+  }[documentType];
+
+  if (statusCopy) this.showToast(statusCopy, "info");
 }
 
 handleWizardNext() {
@@ -6756,21 +8449,18 @@ if (window.__MIMI_PROVIDER_APP_BUILD && window.__MIMI_PROVIDER_APP_BUILD !== MIM
 // ============================================
 
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw-2026.js')
+  window.addEventListener('load', async () => {
+    await removeConflictingServiceWorkers("/prestador");
+    navigator.serviceWorker.register('/sw-partner.js', { scope: '/prestador' })
       .then(registration => {
         console.log('[MIMI] SW registered:', registration);
         registration.update?.();
-
-        if (registration.waiting) {
-          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-        }
 
         registration.addEventListener?.('updatefound', () => {
           const worker = registration.installing;
           worker?.addEventListener?.('statechange', () => {
             if (worker.state === 'installed' && navigator.serviceWorker.controller) {
-              worker.postMessage({ type: 'SKIP_WAITING' });
+              window.app?.checkProviderAppVersion?.();
             }
           });
         });

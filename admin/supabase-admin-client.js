@@ -49,10 +49,19 @@ class SupabaseAdminService {
   }
 
   getBaseUrl() {
+    if (window.location.pathname === "/admin" || window.location.pathname === "/admin/") {
+      return `${window.location.origin}/admin/`;
+    }
+    if (window.location.pathname === "/admin/panel" || window.location.pathname === "/admin/panel/") {
+      return `${window.location.origin}/admin/`;
+    }
     return window.location.origin + window.location.pathname.replace(/[^/]*$/, "");
   }
 
   getRedirectUrl(path = "./admin-panel.html") {
+    if (path === "./admin-panel.html" && window.location.origin) {
+      return `${window.location.origin}/admin/panel`;
+    }
     return new URL(path, this.getBaseUrl()).toString();
   }
 
@@ -91,11 +100,6 @@ class SupabaseAdminService {
         if (!this.authListenerRegistered) {
           this.client.auth.onAuthStateChange((event, session) => {
             this.lastSession = session || null;
-
-            console.log("[MIMI Admin Auth]", event, {
-              userId: session?.user?.id || null,
-              email: session?.user?.email || null
-            });
 
             if (event === "SIGNED_OUT") {
               this.lastSession = null;

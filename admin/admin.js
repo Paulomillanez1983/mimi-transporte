@@ -1,4 +1,4 @@
-import supabaseAdminService from "./supabase-admin-client.js";
+import supabaseAdminService from "./supabase-admin-client.js?v=2026.05.14.2";
 
 const emailEl = document.getElementById("email");
 const avatarEl = document.getElementById("avatar");
@@ -9,7 +9,7 @@ const moduleSections = Array.from(document.querySelectorAll("[data-admin-section
 const mobileDockButtons = Array.from(document.querySelectorAll("[data-admin-mobile-view-target]"));
 
 const MOBILE_BREAKPOINT = 980;
-const ADMIN_BUILD_VERSION = "2026.05.14.1";
+const ADMIN_BUILD_VERSION = "2026.05.14.2";
 
 function isAdminMobile() {
   return window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches;

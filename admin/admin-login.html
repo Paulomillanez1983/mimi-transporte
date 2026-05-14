@@ -1,21 +1,21 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>MIMI Admin Login</title>
+  <title>MIMI Servicios Admin Login</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0a0a0a" />
   <meta name="color-scheme" content="dark" />
   <meta
     name="description"
-    content="Acceso administrativo a MIMI para operaciones, revisión de choferes, KYC y monitoreo de choferes."
+    content="Acceso administrativo a MIMI Servicios para soporte, KYC y revision de prestadores."
   />
 
   <link rel="icon" href="../assets/icons/logo-mimi.png" type="image/png" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="preconnect" href="https://xrphpqmutvadjrucqicn.supabase.co" crossorigin />
-  <link rel="stylesheet" href="./admin.css" />
+  <link rel="stylesheet" href="./admin.css?v=2026.05.13.33" />
 
   <style>
     .login-page {
@@ -186,10 +186,10 @@
         </div>
 
         <div class="admin-login-copy">
-          <span class="eyebrow">MIMI ADMIN</span>
-          <h1 id="loginTitle">Panel de administración</h1>
+          <span class="eyebrow">MIMI SERVICIOS ADMIN</span>
+          <h1 id="loginTitle">Panel de administracion</h1>
           <p id="loginSubtitle" class="login-subtitle">
-            Acceso seguro para operaciones, revisión de choferes, KYC y monitoreo en vivo.
+            Acceso seguro para soporte, revision KYC y validacion de prestadores.
           </p>
         </div>
       </div>
@@ -218,7 +218,7 @@
       </p>
 
       <div class="login-footer">
-        <span>Producción · 2026 · Flujo seguro con Google OAuth + Supabase</span>
+        <span>Produccion 2026 - Flujo seguro con Google OAuth + Supabase</span>
         <span id="envHint">Verificando entorno...</span>
       </div>
     </section>
@@ -227,7 +227,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script type="module">
-    import supabaseAdminService from "./supabase-admin-client.js";
+    import supabaseAdminService from "./supabase-admin-client.js?v=2026.05.14.2";
 
     const googleLoginBtn = document.getElementById("googleLoginBtn");
     const loginLoading = document.getElementById("loginLoading");
@@ -266,11 +266,11 @@
     }
 
     function goToPanel() {
-      window.location.replace("./admin-panel.html");
+      window.location.replace("/admin/panel");
     }
 
     async function verifyExistingAccess() {
-      setLoading(true, "Verificando sesión...");
+      setLoading(true, "Verificando sesion...");
       setError("");
 
       try {
@@ -292,13 +292,13 @@
 
         if (result?.reason === "no_session") {
           setLoading(false);
-          setEnvHint("Listo para iniciar sesión.");
+          setEnvHint("Listo para iniciar sesion.");
           return;
         }
 
         if (result?.reason === "not_admin") {
           setLoading(false);
-          setError("Tu cuenta inició sesión, pero no tiene permisos de administrador activos.");
+          setError("Tu cuenta inicio sesion, pero no tiene permisos de administrador activos.");
           setEnvHint("Acceso restringido.");
 
           try {
@@ -311,7 +311,7 @@
 
         if (result?.reason === "admin_lookup_error") {
           setLoading(false);
-          setError("No pudimos validar permisos de administrador. Probá nuevamente.");
+          setError("No pudimos validar permisos de administrador. Proba nuevamente.");
           setEnvHint("Error al consultar permisos.");
           return;
         }
@@ -319,17 +319,17 @@
         if (result?.reason === "init_failed") {
           setLoading(false);
           setError("No pudimos inicializar Supabase.");
-          setEnvHint("Falló la inicialización.");
+          setEnvHint("Fallo la inicializacion.");
           return;
         }
 
         setLoading(false);
-        setEnvHint("Listo para iniciar sesión.");
+        setEnvHint("Listo para iniciar sesion.");
       } catch (err) {
         console.error("[admin-login.verifyExistingAccess]", err);
         setLoading(false);
-        setError(err instanceof Error ? err.message : "Ocurrió un error al verificar la sesión.");
-        setEnvHint("Error de verificación.");
+        setError(err instanceof Error ? err.message : "Ocurrio un error al verificar la sesion.");
+        setEnvHint("Error de verificacion.");
       }
     }
 
@@ -351,7 +351,7 @@
       } catch (err) {
         console.error("[admin-login.handleGoogleLogin]", err);
         setLoading(false);
-        setError(err instanceof Error ? err.message : "No pudimos iniciar sesión con Google.");
+        setError(err instanceof Error ? err.message : "No pudimos iniciar sesion con Google.");
         setEnvHint("Login cancelado o con error.");
       }
     }
@@ -384,4 +384,3 @@
   </script>
 </body>
 </html>
-
