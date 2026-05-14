@@ -7,11 +7,11 @@
     "message": "Mejoramos estabilidad, velocidad y seguridad."
   },
   "provider": {
-    "version": "2026.05.14.4",
-    "min_supported_version": "2026.05.14.4",
+    "version": "2026.05.14.8",
+    "min_supported_version": "2026.05.14.8",
     "critical": false,
     "force_update": false,
-    "message": "Corregimos recuperacion de sesion vencida y limpieza de cache del prestador."
+    "message": "Restauramos el acceso visual premium de MIMIGO Prestadores y corregimos cache."
   },
   "admin": {
     "version": "2026.05.14.2",

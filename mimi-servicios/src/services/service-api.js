@@ -6,7 +6,7 @@ import {
   getSupabaseClient,
   recoverSessionSafely,
   signOut as signOutFromSupabase
-} from "./supabase.js?v=2026.05.14.4";
+} from "./supabase.js?v=2026.05.14.8";
 import { buildMockProviders } from "./mock-data.js";
 import { MIMI_NEARBY_REFRESH_INTERVAL_MS } from "./runtime-config.js";
 
