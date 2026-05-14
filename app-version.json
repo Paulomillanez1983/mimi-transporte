@@ -14,11 +14,11 @@
     "message": "Mejoramos avisos en tiempo real para correcciones de verificacion."
   },
   "admin": {
-    "version": "2026.05.13.34",
-    "min_supported_version": "2026.05.13.34",
+    "version": "2026.05.14.1",
+    "min_supported_version": "2026.05.14.1",
     "critical": false,
     "force_update": false,
-    "message": "Agregamos Finanzas enterprise, ledger y vista contable del administrador."
+    "message": "Agregamos motores reales de liquidacion, conciliacion, payouts y cierre contable."
   }
 }
 

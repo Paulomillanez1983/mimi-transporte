@@ -66,7 +66,7 @@ serve(async (req) => {
   const includeTests = url.searchParams.get("include_tests") === "1";
   const fiscalVisibility = includeTests ? undefined : "fiscal_reportable";
 
-  const [revenueRes, earningsRes, payoutsRes, refundsRes, reportsRes, closesRes, exportsRes] = await Promise.all([
+  const [revenueRes, earningsRes, payoutsRes, refundsRes, reportsRes, itemsRes, closesRes, exportsRes, batchesRes, payoutBatchesRes] = await Promise.all([
     supabase
       .from("platform_revenue")
       .select("gross_amount,revenue_amount,currency,created_at,fiscal_visibility,is_test")
@@ -75,13 +75,13 @@ serve(async (req) => {
       .limit(5000),
     supabase
       .from("provider_earnings")
-      .select("gross_amount,commission_amount,net_amount,status,currency,created_at,fiscal_visibility,is_test")
+      .select("gross_amount,commission_amount,psp_fee_amount,net_amount,status,currency,created_at,fiscal_visibility,is_test")
       .eq("is_test", includeTests ? true : false)
       .match(fiscalVisibility ? { fiscal_visibility: fiscalVisibility } : {})
       .limit(5000),
     supabase
       .from("payouts")
-      .select("gross_amount,net_amount,status,currency,created_at,fiscal_visibility,is_test")
+      .select("amount,status,currency,created_at,fiscal_visibility,is_test")
       .eq("is_test", includeTests ? true : false)
       .match(fiscalVisibility ? { fiscal_visibility: fiscalVisibility } : {})
       .limit(5000),
@@ -97,6 +97,11 @@ serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(8),
     supabase
+      .from("reconciliation_items")
+      .select("discrepancy_status,severity,difference_amount,created_at")
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
       .from("monthly_closures")
       .select("closure_key,status,gross_amount,revenue_amount,provider_liability_amount,discrepancy_amount,created_at")
       .order("created_at", { ascending: false })
@@ -105,6 +110,16 @@ serve(async (req) => {
       .from("financial_exports")
       .select("export_key,export_type,format,status,period_start,period_end,created_at")
       .order("created_at", { ascending: false })
+      .limit(8),
+    supabase
+      .from("settlement_batches")
+      .select("id,batch_key,settlement_type,status,period_start,period_end,provider_count,gross_amount,commission_amount,net_amount,created_at")
+      .order("created_at", { ascending: false })
+      .limit(8),
+    supabase
+      .from("payout_batches")
+      .select("id,batch_key,status,provider_count,payout_count,net_amount,created_at")
+      .order("created_at", { ascending: false })
       .limit(8)
   ]);
 
@@ -112,12 +127,15 @@ serve(async (req) => {
   const earningRows = earningsRes.data ?? [];
   const payoutRows = payoutsRes.data ?? [];
   const refundRows = refundsRes.data ?? [];
-  const pendingPayouts = payoutRows.filter((row) => ["queued", "processing", "failed"].includes(String(row.status ?? "")));
+  const pendingPayouts = payoutRows.filter((row) => ["pending", "processing", "failed", "on_hold"].includes(String(row.status ?? "")));
   const reconciliationRows = reportsRes.data ?? [];
+  const reconciliationItems = itemsRes.data ?? [];
   const openDifferences = reconciliationRows.reduce(
     (sum, row) => sum + Number(row.differences_count ?? 0),
     0
   );
+  const p0Alerts = reconciliationItems.filter((row) => row.severity === "critical").length;
+  const p1Alerts = reconciliationItems.filter((row) => row.severity === "high").length;
 
   return json({
     ok: true,
@@ -130,16 +148,24 @@ serve(async (req) => {
       gmv: money(revenueRows, "gross_amount"),
       net_revenue: money(revenueRows, "revenue_amount"),
       commissions: money(earningRows, "commission_amount"),
-      provider_liabilities: money(earningRows, "net_amount") - money(payoutRows, "net_amount"),
-      pending_payouts: money(pendingPayouts, "net_amount"),
+      provider_liabilities: money(earningRows, "net_amount") - money(payoutRows.filter((row) => row.status === "paid"), "amount"),
+      pending_payouts: money(pendingPayouts, "amount"),
       refunds: money(refundRows, "amount"),
+      psp_fees: money(earningRows, "psp_fee_amount"),
+      chargebacks: 0,
+      disputes: reconciliationItems.filter((row) => row.discrepancy_status !== "matched").length,
+      p0_alerts: p0Alerts,
+      p1_alerts: p1Alerts,
       reconciliation_open_differences: openDifferences,
       payout_count: payoutRows.length,
       provider_earning_count: earningRows.length
     },
     reconciliation: reconciliationRows,
+    reconciliation_items: reconciliationItems,
     monthly_closures: closesRes.data ?? [],
     exports: exportsRes.data ?? [],
+    settlement_batches: batchesRes.data ?? [],
+    payout_batches: payoutBatchesRes.data ?? [],
     generated_at: new Date().toISOString()
   });
 });

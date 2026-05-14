@@ -16,7 +16,13 @@ serve(async (req) => {
   const userId = userData?.user?.id;
   if (!userId) return fail("Invalid JWT", 401);
 
-  const isAdmin = Boolean((await supabase.from("admin_users").select("user_id").eq("user_id", userId).eq("active", true).maybeSingle()).data);
+  const isAdmin = Boolean((await supabase
+    .from("admin_users")
+    .select("user_id,role")
+    .eq("user_id", userId)
+    .eq("active", true)
+    .in("role", ["ADMIN", "SUPERADMIN", "FINANCE", "FINANCE_ADMIN"])
+    .maybeSingle()).data);
   if (!isAdmin) return fail("Forbidden", 403);
 
   const body = await readJson(req);
@@ -27,26 +33,69 @@ serve(async (req) => {
   const { data: payment, error } = await supabase.from("payments").select("*").eq("id", paymentId).maybeSingle();
   if (error) return fail("Payment lookup failed", 500, error);
   if (!payment) return fail("Payment not found", 404);
-  if (!["APPROVED", "CAPTURED", "SETTLED"].includes(payment.status)) return fail("Payment cannot be refunded", 409);
+  if (!["APPROVED", "CAPTURED", "SETTLED", "PARTIALLY_REFUNDED"].includes(payment.status)) return fail("Payment cannot be refunded", 409);
 
-  const amount = Math.min(Number(body.amount ?? payment.total_amount), Number(payment.total_amount));
+  const { data: existingRefunds } = await supabase
+    .from("refunds")
+    .select("amount,status")
+    .eq("payment_id", payment.id)
+    .in("status", ["REFUNDED", "REFUND_PENDING", "PARTIALLY_REFUNDED"]);
+
+  const alreadyRefunded = (existingRefunds || []).reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  const remaining = Math.max(Number(payment.total_amount) - alreadyRefunded, 0);
+  const amount = Math.min(Number(body.amount ?? remaining), remaining);
   if (amount <= 0) return fail("Invalid refund amount", 400);
+
+  const { data: settlementItem } = await supabase
+    .from("settlement_items")
+    .select("settlement_id, provider_settlements!inner(id,status)")
+    .eq("payment_id", payment.id)
+    .maybeSingle();
+
+  const settlementStatus = String(settlementItem?.provider_settlements?.status ?? "");
+  const allowCompensatingAdjustment = Boolean(body.allow_compensating_adjustment);
+  if (["paid", "locked"].includes(settlementStatus) && !allowCompensatingAdjustment) {
+    return fail("SETTLEMENT_LOCKED_REQUIRES_COMPENSATING_ADJUSTMENT", 409);
+  }
 
   const provider = getPaymentProvider(payment.provider_name);
   const providerResult = await provider.refundPayment(payment.provider_payment_id ?? payment.id, amount, reason);
   const traceId = crypto.randomUUID();
-  const correlationId = `refund:${payment.id}:${Date.now()}`;
+  const idempotencyKey = String(body.idempotency_key ?? `refund:${payment.id}:${amount}:${reason}`).slice(0, 220);
+  const correlationId = idempotencyKey;
+
+  const { data: ledger } = await supabase
+    .from("financial_ledgers")
+    .select("id")
+    .eq("code", "operational_financial_ledger")
+    .maybeSingle();
+
+  const refundKey = `refund:${payment.id}:${providerResult.providerPaymentId ?? idempotencyKey}`;
+  const { data: existingRefund } = await supabase
+    .from("refunds")
+    .select("*")
+    .eq("refund_key", refundKey)
+    .maybeSingle();
+
+  if (existingRefund) {
+    return json({ ok: true, duplicated: true, refund: existingRefund });
+  }
 
   const { data: refund, error: refundError } = await supabase
     .from("refunds")
     .insert({
+      ledger_id: ledger?.id ?? null,
       payment_id: payment.id,
       amount,
       reason,
       status: providerResult.status,
       provider_refund_id: providerResult.providerPaymentId,
       raw_response: providerResult.rawResponse,
-      refund_key: `refund:${payment.id}:${providerResult.providerPaymentId ?? correlationId}`,
+      refund_key: refundKey,
+      idempotency_key: idempotencyKey,
+      actor_user_id: userId,
+      provider_settlement_id: settlementItem?.settlement_id ?? null,
+      evidence_url: typeof body.evidence_url === "string" ? body.evidence_url.slice(0, 500) : null,
       environment: "production",
       is_test: false,
       fiscal_visibility: "fiscal_reportable",
@@ -90,6 +139,17 @@ serve(async (req) => {
     .single();
 
   if (updateError) return fail("Payment refund update failed", 500, updateError);
+
+  if (settlementItem?.settlement_id && !["paid", "locked"].includes(settlementStatus)) {
+    await supabase
+      .from("provider_settlements")
+      .update({
+        refund_amount: amount,
+        status: "pending_review",
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", settlementItem.settlement_id);
+  }
 
   await supabase.from("payment_events").insert({
     payment_id: payment.id,

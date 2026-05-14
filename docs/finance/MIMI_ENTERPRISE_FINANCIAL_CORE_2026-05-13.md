@@ -144,6 +144,138 @@ Se reforzo:
 
 Nota de deploy: `payment-webhook` debe desplegarse con `--no-verify-jwt` porque el PSP externo no envia JWT Supabase. La autenticacion del webhook queda en la firma del proveedor validada por el adapter.
 
+## Segunda pasada enterprise
+
+Fecha: 2026-05-14
+
+Se agrego la migracion `20260514000624_enterprise_financial_engines_second_pass.sql` y el hotfix `20260514002045_financial_export_enum_cast_hotfix.sql`.
+
+### Settlement engine
+
+Nuevas piezas:
+
+- `settlement_items`
+- `financial_calculate_settlement_batch`
+- `financial_approve_settlement_batch`
+
+El motor agrupa `provider_earnings` por prestador y periodo, calcula bruto, comision, fees PSP, refunds, ajustes y neto. Recalcula solo batches no aprobados/bloqueados/pagados.
+
+### Payout engine
+
+Nuevas piezas:
+
+- `payout_batches`
+- `payout_batch_items`
+- `financial_create_payout_batch`
+- `financial_mark_payout_paid`
+
+El payout se genera desde liquidaciones aprobadas. Los prestadores no aprobados, bloqueados o con disputa quedan en `on_hold` o `disputed`. El pago efectivo postea doble partida:
+
+- Debe `provider_payable_ars`
+- Haber `cash_psp_ars`
+
+### Reconciliation engine
+
+Nueva tabla:
+
+- `reconciliation_items`
+
+Nueva funcion:
+
+- `financial_run_reconciliation`
+
+Detecta pagos huérfanos, faltantes internos/externos, mismatches y payouts sin confirmacion externa.
+
+### Wallet engine
+
+Nueva funcion:
+
+- `financial_rebuild_provider_wallet`
+
+El balance del prestador se deriva del ledger, principalmente desde `provider_payable_ars`, y separa disponible, disputado, pagado y reversado.
+
+### Month-end closing
+
+Nueva funcion:
+
+- `financial_close_accounting_period`
+
+Genera snapshot hash del trial balance, crea `monthly_closures` y activa un trigger que impide postear movimientos `fiscal_reportable` en periodos cerrados o bloqueados. Ajustes posteriores deben ser compensatorios y en periodo abierto.
+
+### Exports
+
+Nueva funcion:
+
+- `financial_create_export_record`
+
+Genera registro de export contable/fiscal con filtros por `fiscal_visibility`. Por defecto no incluye test data.
+
+### Admin operations
+
+Nueva Edge Function:
+
+- `admin-financial-operations`
+
+Acciones soportadas:
+
+- `calculate_settlements`
+- `approve_settlement_batch`
+- `create_payout_batch`
+- `mark_payout_paid`
+- `run_reconciliation`
+- `close_period`
+- `create_export`
+
+Requiere admin financiero: `SUPERADMIN`, `ADMIN`, `FINANCE` o `FINANCE_ADMIN`.
+
+### Webhook enterprise
+
+`payment-webhook` ahora:
+
+- almacena raw payload normalizado
+- calcula hash del evento
+- marca dead-letter para firma invalida, eventos sin payment id o pagos inexistentes
+- protege eventos fuera de orden
+- registra PSP fee si viene en payload
+- no postea al ledger si el evento no es confiable
+- mantiene idempotencia por `provider_name + provider_event_id`
+
+### Refunds enterprise
+
+`refund-payment` ahora:
+
+- requiere rol financiero/admin
+- soporta refund parcial y total
+- calcula saldo remanente para evitar sobrerrefund
+- bloquea refund contra settlement pagado/bloqueado salvo ajuste compensatorio explicito
+- registra actor, evidencia, idempotency key y settlement asociado
+- postea compensating entry en ledger
+
+### Vistas por rol
+
+Nuevas vistas:
+
+- `provider_financial_history`
+- `client_financial_history`
+
+El frontend debe consumir estas vistas o funciones seguras, no recalcular montos financieros localmente.
+
+### QA ejecutado
+
+Smoke test remoto no fiscal:
+
+- `financial_calculate_settlement_batch(... include_tests=true ...)`
+- `financial_run_reconciliation(... include_tests=true ...)`
+- `financial_create_export_record(... include_tests=true ...)`
+
+Resultado:
+
+- `settlement_batches = 1`
+- `reconciliation_reports = 1`
+- `qa_exports = 1`
+
+Los registros quedan marcados como test/QA y no contaminan contabilidad real.
+
 ## Panel admin
 
 Se agrego modulo `Finanzas` en `admin/admin-panel.html` con:

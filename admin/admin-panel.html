@@ -28,7 +28,7 @@
     }
   })();
 </script>
-  <link rel="stylesheet" href="./admin.css?v=2026.05.13.34" />
+  <link rel="stylesheet" href="./admin.css?v=2026.05.14.1" />
 </head>
 <body>
   <a href="#mainContent" class="sr-only sr-only-focusable">Saltar al contenido principal</a>
@@ -601,6 +601,27 @@
     </article>
   </section>
 
+  <section class="financial-actions" aria-label="Acciones financieras">
+    <button id="financeRunReconciliationBtn" type="button" class="financial-action-btn">
+      Conciliar
+    </button>
+    <button id="financeCalculateSettlementsBtn" type="button" class="financial-action-btn">
+      Generar liquidaciones
+    </button>
+    <button id="financeApproveLatestSettlementBtn" type="button" class="financial-action-btn">
+      Aprobar liquidacion
+    </button>
+    <button id="financeCreatePayoutBatchBtn" type="button" class="financial-action-btn">
+      Crear payouts
+    </button>
+    <button id="financeCreateExportBtn" type="button" class="financial-action-btn">
+      Export contable
+    </button>
+    <button id="financeClosePeriodBtn" type="button" class="financial-action-btn financial-action-danger">
+      Cerrar periodo
+    </button>
+  </section>
+
   <section class="financial-workbench" aria-label="Mesa financiera">
     <article class="financial-panel">
       <div class="financial-panel-head">
@@ -624,6 +645,22 @@
         <span>CSV/XLSX/JSON/PDF</span>
       </div>
       <div id="financeExportsList" class="financial-list financial-list-compact"></div>
+    </article>
+
+    <article class="financial-panel">
+      <div class="financial-panel-head">
+        <h3>Liquidaciones</h3>
+        <span>Settlement engine</span>
+      </div>
+      <div id="financeSettlementBatchesList" class="financial-list"></div>
+    </article>
+
+    <article class="financial-panel">
+      <div class="financial-panel-head">
+        <h3>Payouts</h3>
+        <span>Payout engine</span>
+      </div>
+      <div id="financePayoutBatchesList" class="financial-list"></div>
     </article>
   </section>
 </section>
@@ -770,10 +807,10 @@ window.getAdminAccessToken = async function getAdminAccessToken() {
     return true;
 };
 </script>
-  <script type="module" src="./admin.js?v=2026.05.13.34"></script>
-<script type="module" src="./admin-support.js?v=2026.05.13.34"></script>
-<script type="module" src="./admin-services-providers.js?v=2026.05.13.34"></script>
-<script type="module" src="./admin-finance.js?v=2026.05.13.34"></script>
+  <script type="module" src="./admin.js?v=2026.05.14.1"></script>
+<script type="module" src="./admin-support.js?v=2026.05.14.1"></script>
+<script type="module" src="./admin-services-providers.js?v=2026.05.14.1"></script>
+<script type="module" src="./admin-finance.js?v=2026.05.14.1"></script>
 </body>
 </html>
 

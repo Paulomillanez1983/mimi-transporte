@@ -5141,6 +5141,32 @@ body:not(.login-page) .admin-main {
   overflow: hidden;
 }
 
+.financial-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.financial-action-btn {
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow-xs);
+  font-weight: 950;
+}
+
+.financial-action-btn:hover {
+  border-color: rgba(37, 99, 235, 0.32);
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.financial-action-danger {
+  border-color: rgba(220, 38, 38, 0.22);
+  color: var(--danger);
+}
+
 .financial-panel {
   min-height: 0;
   display: grid;
@@ -6025,6 +6051,10 @@ body:not(.login-page) .admin-main {
     overflow-y: auto;
     padding-bottom: 4px;
   }
+
+  .financial-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 560px) {
@@ -6094,5 +6124,9 @@ body:not(.login-page) .admin-main {
 
   .financial-kpi {
     min-height: 82px;
+  }
+
+  .financial-actions {
+    grid-template-columns: 1fr;
   }
 }

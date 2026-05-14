@@ -13,6 +13,26 @@ function normalizeStatus(status = "PENDING") {
   return "PENDING";
 }
 
+function statusRank(status = "PENDING") {
+  const value = normalizeStatus(status);
+  if (value === "PENDING") return 1;
+  if (value === "REJECTED" || value === "CANCELLED") return 3;
+  if (value === "APPROVED") return 4;
+  if (value === "REFUNDED") return 5;
+  return 0;
+}
+
+async function sha256Hex(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function numeric(value: unknown) {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return fail("Method not allowed", 405);
@@ -20,11 +40,59 @@ serve(async (req) => {
   const rawBody = await req.text();
   const providerName = new URL(req.url).searchParams.get("provider") ?? Deno.env.get("PAYMENT_PROVIDER") ?? "mock";
   const provider = getPaymentProvider(providerName);
+  const traceId = crypto.randomUUID();
+  const eventHash = await sha256Hex(`${providerName}:${rawBody}`);
   const event = await provider.parseWebhook(req, rawBody);
-  if (!event.valid) return fail("Invalid webhook signature", 401);
-  if (!event.providerPaymentId) return fail("provider payment id required", 400);
+  const eventId = String(
+    event.payload?.id ??
+      event.payload?.event_id ??
+      `${event.eventType}:${event.providerPaymentId}:${event.status}:${eventHash}`
+  );
+  const correlationId = eventId;
+  const nextStatus = normalizeStatus(event.status);
 
-  const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  );
+
+  if (!event.valid) {
+    await supabase.from("payment_processor_events").upsert({
+      provider_name: providerName,
+      provider_event_id: eventId,
+      provider_payment_id: event.providerPaymentId ?? null,
+      normalized_event_type: event.eventType ?? "payment.webhook.invalid",
+      normalized_status: "INVALID_SIGNATURE",
+      amount: numeric(event.payload?.amount),
+      payload: event.payload,
+      signature_valid: false,
+      processed: false,
+      dead_letter: true,
+      dead_letter_reason: "invalid_signature",
+      event_hash: eventHash,
+      trace_id: traceId,
+      correlation_id: correlationId,
+      environment: "production",
+      is_test: false,
+      fiscal_visibility: "excluded_from_accounting"
+    }, { onConflict: "provider_name,provider_event_id" });
+
+    return fail("Invalid webhook signature", 401);
+  }
+
+  if (!event.providerPaymentId) {
+    await supabase.from("financial_dead_letters").upsert({
+      source: "payment_webhook",
+      event_key: `${providerName}:${eventId}`,
+      reason: "provider_payment_id_required",
+      payload: event.payload,
+      trace_id: traceId,
+      correlation_id: correlationId
+    }, { onConflict: "source,event_key" });
+
+    return fail("provider payment id required", 400);
+  }
+
   const { data: payment, error } = await supabase
     .from("payments")
     .select("*")
@@ -32,9 +100,31 @@ serve(async (req) => {
     .maybeSingle();
 
   if (error) return fail("Payment lookup failed", 500, error);
-  if (!payment) return fail("Payment not found", 404);
 
-  const eventId = String(event.payload?.id ?? event.payload?.event_id ?? `${event.eventType}:${event.providerPaymentId}:${event.status}`);
+  if (!payment) {
+    await supabase.from("payment_processor_events").upsert({
+      provider_name: providerName,
+      provider_event_id: eventId,
+      provider_payment_id: event.providerPaymentId,
+      normalized_event_type: event.eventType ?? "payment.webhook.orphan",
+      normalized_status: nextStatus,
+      amount: numeric(event.payload?.amount),
+      payload: event.payload,
+      signature_valid: true,
+      processed: false,
+      dead_letter: true,
+      dead_letter_reason: "payment_not_found",
+      event_hash: eventHash,
+      trace_id: traceId,
+      correlation_id: correlationId,
+      environment: "production",
+      is_test: false,
+      fiscal_visibility: "fiscal_reportable"
+    }, { onConflict: "provider_name,provider_event_id" });
+
+    return fail("Payment not found", 404);
+  }
+
   const { data: existingEvent } = await supabase
     .from("payment_events")
     .select("id")
@@ -43,17 +133,15 @@ serve(async (req) => {
 
   if (existingEvent) return json({ ok: true, duplicated: true });
 
-  const nextStatus = normalizeStatus(event.status);
-  const traceId = crypto.randomUUID();
-  const correlationId = eventId;
+  const outOfOrder = statusRank(nextStatus) < statusRank(payment.status);
   const patch: Record<string, unknown> = {
-    status: nextStatus,
+    status: outOfOrder ? payment.status : nextStatus,
     raw_response: event.payload
   };
 
-  if (nextStatus === "APPROVED") patch.approved_at = new Date().toISOString();
-  if (nextStatus === "CANCELLED") patch.cancelled_at = new Date().toISOString();
-  if (nextStatus === "REFUNDED") patch.refunded_at = new Date().toISOString();
+  if (!outOfOrder && nextStatus === "APPROVED") patch.approved_at = new Date().toISOString();
+  if (!outOfOrder && nextStatus === "CANCELLED") patch.cancelled_at = new Date().toISOString();
+  if (!outOfOrder && nextStatus === "REFUNDED") patch.refunded_at = new Date().toISOString();
 
   const { data: updated, error: updateError } = await supabase
     .from("payments")
@@ -71,11 +159,15 @@ serve(async (req) => {
     normalized_event_type: event.eventType ?? "payment.webhook",
     normalized_status: nextStatus,
     payment_id: payment.id,
-    amount: Number(payment.total_amount ?? 0),
+    amount: numeric(payment.total_amount),
     currency: payment.currency ?? "ARS",
     payload: event.payload,
     signature_valid: true,
     processed: false,
+    dead_letter: false,
+    out_of_order: outOfOrder,
+    provider_fee_amount: numeric(event.payload?.fee_amount ?? event.payload?.fee),
+    event_hash: eventHash,
     trace_id: traceId,
     correlation_id: correlationId,
     environment: "production",
@@ -83,7 +175,7 @@ serve(async (req) => {
     fiscal_visibility: "fiscal_reportable"
   }, { onConflict: "provider_name,provider_event_id" });
 
-  if (nextStatus === "APPROVED") {
+  if (!outOfOrder && nextStatus === "APPROVED") {
     try {
       await postPaymentCaptureLedger(supabase, updated, eventId, {
         source: "payment_webhook",
@@ -97,7 +189,10 @@ serve(async (req) => {
         environment: "production",
         is_test: false,
         fiscal_visibility: "fiscal_reportable",
-        metadata: { webhook_type: event.eventType ?? "payment.webhook" }
+        metadata: {
+          webhook_type: event.eventType ?? "payment.webhook",
+          provider_fee_amount: numeric(event.payload?.fee_amount ?? event.payload?.fee)
+        }
       });
     } catch (ledgerError) {
       console.error("[payment-webhook] financial ledger post failed", {
@@ -117,7 +212,7 @@ serve(async (req) => {
     payload: event.payload
   });
 
-  if (nextStatus === "APPROVED") {
+  if (!outOfOrder && nextStatus === "APPROVED") {
     await supabase.from("settlements").upsert({
       payment_id: payment.id,
       provider_id: payment.provider_id,
@@ -128,36 +223,52 @@ serve(async (req) => {
       status: "PENDING"
     }, { onConflict: "payment_id" });
 
-    if (payment.provider_id) {
+    const { data: ledger } = await supabase
+      .from("financial_ledgers")
+      .select("id")
+      .eq("code", "operational_financial_ledger")
+      .maybeSingle();
+
+    if (payment.provider_id && ledger?.id) {
       await supabase.from("provider_earnings").upsert({
+        ledger_id: ledger.id,
         provider_id: payment.provider_id,
         payment_id: payment.id,
         service_request_id: payment.service_request_id ?? null,
         earning_key: `provider.earning:${payment.id}`,
-        gross_amount: Number(payment.total_amount ?? 0),
-        commission_amount: Number(payment.platform_fee ?? 0),
-        net_amount: Number(payment.provider_amount ?? 0),
+        gross_amount: numeric(payment.total_amount),
+        commission_amount: numeric(payment.platform_fee),
+        psp_fee_amount: numeric(event.payload?.fee_amount ?? event.payload?.fee),
+        net_amount: numeric(payment.provider_amount),
         currency: payment.currency ?? "ARS",
-        status: "earned",
+        status: "available",
         environment: "production",
         is_test: false,
-        fiscal_visibility: "fiscal_reportable"
-      }, { onConflict: "earning_key" });
+        fiscal_visibility: "fiscal_reportable",
+        trace_id: traceId,
+        correlation_id: correlationId
+      }, { onConflict: "earning_key", ignoreDuplicates: true });
     }
 
-    await supabase.from("platform_revenue").upsert({
-      payment_id: payment.id,
-      service_request_id: payment.service_request_id ?? null,
-      revenue_key: `platform.revenue:${payment.id}`,
-      revenue_type: "commission",
-      gross_amount: Number(payment.total_amount ?? 0),
-      revenue_amount: Number(payment.platform_fee ?? 0),
-      currency: payment.currency ?? "ARS",
-      recognized_at: new Date().toISOString(),
-      environment: "production",
-      is_test: false,
-      fiscal_visibility: "fiscal_reportable"
-    }, { onConflict: "revenue_key" });
+    if (ledger?.id) {
+      await supabase.from("platform_revenue").upsert({
+        ledger_id: ledger.id,
+        payment_id: payment.id,
+        service_request_id: payment.service_request_id ?? null,
+        revenue_key: `platform.revenue:${payment.id}`,
+        revenue_type: "commission",
+        gross_amount: numeric(payment.total_amount),
+        revenue_amount: numeric(payment.platform_fee),
+        net_amount: numeric(payment.platform_fee),
+        currency: payment.currency ?? "ARS",
+        recognized_at: new Date().toISOString(),
+        environment: "production",
+        is_test: false,
+        fiscal_visibility: "fiscal_reportable",
+        trace_id: traceId,
+        correlation_id: correlationId
+      }, { onConflict: "revenue_key", ignoreDuplicates: true });
+    }
 
     await supabase
       .from("payment_processor_events")
@@ -166,5 +277,5 @@ serve(async (req) => {
       .eq("provider_event_id", eventId);
   }
 
-  return json({ ok: true, payment: updated });
+  return json({ ok: true, payment: updated, out_of_order: outOfOrder });
 });
