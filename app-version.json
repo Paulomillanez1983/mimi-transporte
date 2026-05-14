@@ -7,11 +7,11 @@
     "message": "Mejoramos estabilidad, velocidad y seguridad."
   },
   "provider": {
-    "version": "2026.05.14.2",
-    "min_supported_version": "2026.05.14.2",
+    "version": "2026.05.14.3",
+    "min_supported_version": "2026.05.14.3",
     "critical": false,
     "force_update": false,
-    "message": "Actualizamos la app de prestadores y limpiamos cache anterior para evitar pantallas antiguas."
+    "message": "Actualizamos el modulo de servicios del prestador y corregimos carga de version."
   },
   "admin": {
     "version": "2026.05.14.2",

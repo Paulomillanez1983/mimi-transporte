@@ -1,5 +1,11 @@
 import { appConfig } from "../config.js";
-import { getSupabaseClient, callRpc } from "./supabase.js";
+import {
+  callRpc,
+  clearAuthRedirectIntent,
+  forceCleanSession,
+  getSupabaseClient,
+  signOut as signOutFromSupabase
+} from "./supabase.js";
 import { buildMockProviders } from "./mock-data.js";
 import { MIMI_NEARBY_REFRESH_INTERVAL_MS } from "./runtime-config.js";
 
@@ -37,6 +43,32 @@ const SERVICE_REQUEST_SAFE_SELECT = `
   svc_categories(id,name,code,description)
 `;
 const providerSnapshotCache = new Map();
+const PROVIDER_LEGAL_REQUIREMENT_FALLBACKS = [
+  {
+    code: "terms_providers",
+    document_code: "terms_providers",
+    actor_type: "provider",
+    accept_actor_type: "provider",
+    title: "Términos y Condiciones para Prestadores Independientes",
+    version: "2026.1.0",
+    version_label: "Versión 2026.1.0",
+    is_mandatory: true,
+    accepted: false,
+    accepted_at: null
+  },
+  {
+    code: "privacy_policy",
+    document_code: "privacy_policy",
+    actor_type: "all",
+    accept_actor_type: "provider",
+    title: "Política de Privacidad y Protección de Datos Personales",
+    version: "2026.1.0",
+    version_label: "Versión 2026.1.0",
+    is_mandatory: true,
+    accepted: false,
+    accepted_at: null
+  }
+];
 
 function hasBackend() {
   return Boolean(getSupabaseClient());
@@ -97,6 +129,54 @@ function getAuthDeviceContext(actorRole = "client") {
   };
 }
 
+function isOtpQaEnabled() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const flag = params.get("otp_qa");
+
+    if (flag === "1") {
+      localStorage.setItem("mimi_otp_qa", "1");
+      return true;
+    }
+
+    if (flag === "0") {
+      localStorage.removeItem("mimi_otp_qa");
+      return false;
+    }
+
+    return localStorage.getItem("mimi_otp_qa") === "1";
+  } catch (_) {
+    return false;
+  }
+}
+
+function buildSafeOtpQaPayload(payload = {}) {
+  const details = payload?.details || {};
+  const status =
+    payload?.status ||
+    details.status ||
+    (payload?.ok === true ? "ok" : payload?.code || payload?.error || details.code || details.error || "unknown");
+
+  return {
+    debug_id:
+      payload?.debug_id ||
+      payload?.attempt_id ||
+      payload?.attemptId ||
+      details.debug_id ||
+      details.attempt_id ||
+      null,
+    channel: payload?.channel || details.channel || null,
+    fallback: payload?.fallback === true || details.fallback === true,
+    maskedPhone: payload?.masked_phone || payload?.maskedPhone || details.masked_phone || null,
+    status
+  };
+}
+
+function logOtpQaEvent(eventName, payload = {}) {
+  if (!isOtpQaEnabled()) return;
+  console.info(`[MIMI OTP QA] ${eventName}`, buildSafeOtpQaPayload(payload));
+}
+
 function normalizePricingMode(value) {
   const mode = String(value ?? "").trim().toUpperCase();
 
@@ -131,8 +211,7 @@ export async function invokeFunction(functionName, body = {}) {
   const { data, error } = await supabase.functions.invoke(functionName, {
     body,
     headers: {
-      "Content-Type": "application/json",
-      "x-correlation-id": correlationId
+      "Content-Type": "application/json"
     }
   });
 
@@ -147,9 +226,10 @@ export async function invokeFunction(functionName, body = {}) {
       payload = null;
     }
 
-    if (payload?.error) {
-      const normalized = new Error(String(payload.error));
-      normalized.code = payload.error;
+    if (payload?.error || payload?.code) {
+      const code = String(payload.code || payload.error);
+      const normalized = new Error(code);
+      normalized.code = code;
       normalized.details = payload;
       normalized.correlationId = payload.correlation_id || correlationId;
       normalized.originalError = error;
@@ -231,14 +311,25 @@ export async function requestOtp(input = {}) {
   }
 
   const actorRole = input.actorRole || input.actor_role || "client";
-  return invokeFunction(appConfig.functions.otpRequest, {
-    ...getAuthDeviceContext(actorRole),
-    purpose: input.purpose || "phone_verification",
-    phone_number: input.phoneNumber || input.phone_number,
-    country_code: input.countryCode || input.country_code,
-    country_iso: input.countryIso || input.country_iso,
-    channel: input.channel || "sms"
-  });
+  try {
+    const result = await invokeFunction(appConfig.functions.otpRequest, {
+      ...getAuthDeviceContext(actorRole),
+      purpose: input.purpose || "phone_verification",
+      phone_number: input.phoneNumber || input.phone_number,
+      country_code: input.countryCode || input.country_code,
+      country_iso: input.countryIso || input.country_iso,
+      channel: input.channel || "whatsapp"
+    });
+    logOtpQaEvent("request", result);
+    return result;
+  } catch (error) {
+    logOtpQaEvent("request_error", {
+      code: error?.code,
+      error: error?.message,
+      details: error?.details
+    });
+    throw error;
+  }
 }
 
 export async function verifyOtp(input = {}) {
@@ -247,12 +338,25 @@ export async function verifyOtp(input = {}) {
   }
 
   const actorRole = input.actorRole || input.actor_role || "client";
-  return invokeFunction(appConfig.functions.otpVerify, {
-    ...getAuthDeviceContext(actorRole),
-    attempt_id: input.attemptId || input.attempt_id,
-    phone_number: input.phoneNumber || input.phone_number,
-    code: input.code || input.otp
-  });
+  const attemptId = input.attemptId || input.attempt_id;
+  try {
+    const result = await invokeFunction(appConfig.functions.otpVerify, {
+      ...getAuthDeviceContext(actorRole),
+      attempt_id: attemptId,
+      phone_number: input.phoneNumber || input.phone_number,
+      code: input.code || input.otp
+    });
+    logOtpQaEvent("verify", result);
+    return result;
+  } catch (error) {
+    logOtpQaEvent("verify_error", {
+      debug_id: attemptId,
+      code: error?.code,
+      error: error?.message,
+      details: error?.details
+    });
+    throw error;
+  }
 }
 
 export async function startClientPhoneVerification(input = {}) {
@@ -265,7 +369,8 @@ export async function startClientPhoneVerification(input = {}) {
     purpose: input.purpose || "phone_verification",
     phone_number: input.phoneNumber || input.phone_number,
     country_code: input.countryCode || input.country_code,
-    country_iso: input.countryIso || input.country_iso
+    country_iso: input.countryIso || input.country_iso,
+    channel: input.channel || input.preferredChannel || input.preferred_channel || "whatsapp"
   });
 }
 
@@ -296,6 +401,64 @@ async function fetchTable(tableName, buildQuery) {
   return data ?? [];
 }
 
+function normalizeProviderLegalRequirement(doc = {}) {
+  const code = doc.code || doc.document_code;
+
+  if (!code || !doc.version) {
+    return null;
+  }
+
+  return {
+    code,
+    document_code: code,
+    actor_type: doc.actor_type || "provider",
+    accept_actor_type: doc.actor_type === "all" ? "provider" : (doc.actor_type || "provider"),
+    title: doc.title || code,
+    version: doc.version,
+    version_label: doc.version_label || doc.version,
+    effective_at: doc.effective_at || null,
+    hash_sha256: doc.hash_sha256 || null,
+    is_mandatory: doc.is_mandatory !== false,
+    accepted: Boolean(doc.accepted),
+    accepted_at: doc.accepted_at || null
+  };
+}
+
+function mergeProviderLegalFallbacks(documents = []) {
+  const byCode = new Map(
+    (documents ?? [])
+      .map(normalizeProviderLegalRequirement)
+      .filter(Boolean)
+      .map((doc) => [doc.document_code, doc])
+  );
+
+  return PROVIDER_LEGAL_REQUIREMENT_FALLBACKS.map((fallback) => {
+    const current = byCode.get(fallback.document_code);
+    return current ? { ...fallback, ...current } : { ...fallback };
+  });
+}
+
+async function loadProviderLegalRequirements() {
+  try {
+    const result = await invokeFunction("get-legal-center", {
+      actor_type: "provider"
+    });
+
+    if (!result?.ok || !Array.isArray(result.documents)) {
+      return mergeProviderLegalFallbacks();
+    }
+
+    return mergeProviderLegalFallbacks(
+      result.documents.filter((doc) =>
+        ["terms_providers", "privacy_policy"].includes(doc?.code)
+      )
+    );
+  } catch (error) {
+    console.warn("[MIMI] no se pudo cargar centro legal de prestador:", error?.message || error);
+    return mergeProviderLegalFallbacks();
+  }
+}
+
 function normalizeProviderDocuments(rows = []) {
   const supabase = getSupabaseClient();
 
@@ -323,16 +486,23 @@ function inferFileExtension(file) {
   const name = String(file?.name ?? "");
   const parts = name.split(".");
   const fromName = parts.length > 1 ? parts.pop().toLowerCase().replace(/[^a-z0-9]/g, "") : "";
+  const mime = String(file?.type ?? "").toLowerCase();
+  const expectedByMime = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "application/pdf": "pdf"
+  };
 
-  if (fromName && fromName.length <= 8) {
+  if (fromName && fromName.length <= 8 && ["jpg", "jpeg", "png", "webp", "pdf"].includes(fromName)) {
     return fromName;
   }
 
-  const mime = String(file?.type ?? "").toLowerCase();
-  if (mime.includes("jpeg") || mime.includes("jpg")) return "jpg";
-  if (mime.includes("png")) return "png";
-  if (mime.includes("webp")) return "webp";
-  if (mime.includes("pdf")) return "pdf";
+  if (expectedByMime[mime]) return expectedByMime[mime];
+  if (mime.includes("jpeg") || mime.includes("jpg")) return expectedByMime["image/jpeg"];
+  if (mime.includes("png")) return expectedByMime["image/png"];
+  if (mime.includes("webp")) return expectedByMime["image/webp"];
+  if (mime.includes("pdf")) return expectedByMime["application/pdf"];
 
   return "bin";
 }
@@ -522,12 +692,48 @@ export async function registerDevice(input = null) {
   const notificationsEnabled =
     options.notificationsEnabled ?? options.notifications_enabled ?? Boolean(pushToken);
 
-  return invokeFunction("svc-register-device", {
+  const payload = {
+    role: options.role || options.actorRole || options.actor_role || "client",
     device_id: deviceId,
+    device_label: options.deviceLabel || options.device_label || navigator.userAgentData?.platform || navigator.platform || "Web",
     push_token: pushToken,
     platform,
     notifications_enabled: notificationsEnabled,
+    notification_permission: typeof Notification !== "undefined" ? Notification.permission : "unsupported",
     marketing_opt_in: Boolean(options.marketingOptIn ?? options.marketing_opt_in ?? false),
+    app_version: window.MIMI_PROVIDER_BUILD || window.MIMI_CLIENT_BUILD || "web"
+  };
+
+  try {
+    return await invokeFunction(appConfig.functions.authRegisterDevice || "auth-register-device", payload);
+  } catch (error) {
+    console.warn("[service-api] auth-register-device fallback", error);
+    return invokeFunction(appConfig.functions.registerDevice || "svc-register-device", payload);
+  }
+}
+
+export async function startSecurityVerification(input = {}) {
+  return invokeFunction(appConfig.functions.authStartVerification || "auth-start-verification", {
+    ...getAuthDeviceContext(input.actorRole || input.actor_role || input.role || "client"),
+    role: input.role || input.actorRole || input.actor_role || "client",
+    purpose: input.purpose || "login_new_device",
+    preferred_channel: input.preferredChannel || input.preferred_channel || null
+  });
+}
+
+export async function approveSecurityChallenge(input = {}) {
+  const role = input.role || input.actorRole || input.actor_role || "client";
+  return invokeFunction(appConfig.functions.authApproveChallenge || "auth-approve-challenge", {
+    ...getAuthDeviceContext(role),
+    challenge_id: input.challengeId || input.challenge_id,
+    action: input.action,
+    role
+  });
+}
+
+export async function checkSecurityChallenge(input = {}) {
+  return invokeFunction(appConfig.functions.authCheckChallenge || "auth-check-challenge", {
+    challenge_id: input.challengeId || input.challenge_id
   });
 }
 function isUuidLike(value) {
@@ -1329,6 +1535,8 @@ export async function loadProviderWorkspace(providerId) {
 
   await requireSession();
 
+  const legalRequirementsPromise = loadProviderLegalRequirements();
+
   const [
     profileRows,
     profileDetailRows,
@@ -1423,12 +1631,13 @@ export async function loadProviderWorkspace(providerId) {
 
   // ¿Ya aceptó los términos de la versión actual? (para no pedirlos cada vez)
   // El cliente `supabase` ya está declarado al inicio de la función.
+  const legalRequirements = await legalRequirementsPromise;
   let legalAcceptances = [];
   if (supabase && profileRows?.[0]?.user_id) {
     try {
       const { data } = await supabase
         .from("legal_acceptances")
-        .select("document_code, document_version, accepted_at")
+        .select("actor_type, document_code, document_version, accepted_at")
         .eq("user_id", profileRows[0].user_id)
         .eq("accepted", true)
         .in("document_code", ["terms_providers", "privacy_policy"])
@@ -1450,6 +1659,7 @@ export async function loadProviderWorkspace(providerId) {
     reviews: reviewRows ?? [],
     categories: categoryRows ?? [],
     completedCount: completedRows?.length ?? 0,
+    legalRequirements,
     legalAcceptances
   };
 }
@@ -1682,6 +1892,16 @@ const safeDocumentType = normalizeDocumentType(documentType);
     throw new Error("Formato no permitido. Usá JPG, PNG, WEBP o PDF.");
   }
 
+  const inferredExtension = inferFileExtension(file);
+  const allowedExtensions = new Set(["jpg", "jpeg", "png", "webp", "pdf"]);
+  if (!allowedExtensions.has(inferredExtension)) {
+    throw new Error("La extension del archivo no es valida. Usa JPG, PNG, WEBP o PDF.");
+  }
+
+  if (["dni_front", "dni_back", "selfie"].includes(safeDocumentType) && file.type === "application/pdf") {
+    throw new Error("Para identidad necesitamos una foto clara, no PDF.");
+  }
+
   const storagePath = buildProviderDocumentPath(userId, safeDocumentType, file);
 
   const { error: uploadError } = await supabase.storage
@@ -1725,6 +1945,7 @@ if (error) throw error;
 
 const normalized = normalizeProviderDocuments([data])[0] ?? data;
 
+/*
 if (safeDocumentType === "selfie") {
   try {
     const verifyResult = await invokeFunction("svc-verify-provider-identity", {
@@ -1750,6 +1971,7 @@ if (safeDocumentType === "selfie") {
   }
 }
 
+*/
 return normalized;
 }
 
@@ -1914,14 +2136,12 @@ export async function loadClientRequestInsights(requestId, providerId = null) {
   };
 }
 export async function signOut() {
-  const supabase = getSupabaseClient();
-
-  if (!supabase) return;
-
-  const { error } = await supabase.auth.signOut();
-
-  if (error) throw error;
-
+  try {
+    await signOutFromSupabase();
+  } finally {
+    forceCleanSession();
+    clearAuthRedirectIntent();
+  }
   return true;
 }
 export async function getProviderDashboard(providerId) {

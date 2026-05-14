@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.14.2";
+const MIMI_PROVIDER_BUILD = "2026.05.14.3";
 const PARTNER_PWA_INSTALLED_KEY = "mimi_go_partner_pwa_installed";
 const PARTNER_INSTALL_DISMISSED_KEY = "mimi_go_partner_install_dismissed_until";
 const PARTNER_INSTALL_SESSION_KEY = "mimi_go_partner_install_shown_session";
@@ -82,7 +82,7 @@ import {
   signOut,
   updateProviderStatus,
   verifyOtp
-  } from "./services/service-api.js";
+  } from "./services/service-api.js?v=2026.05.14.3";
 import {
   detectDefaultCountry,
   loadPhoneCountries,
