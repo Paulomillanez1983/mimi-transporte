@@ -5,6 +5,47 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>Conectando con MIMI Servicios...</title>
+  <script>
+    (() => {
+      const params = new URLSearchParams(window.location.search);
+      const requestedRole = params.get("appRole") || params.get("mode");
+      let providerIntent = requestedRole === "provider";
+
+      try {
+        providerIntent = providerIntent ||
+          sessionStorage.getItem("mimi_services_auth_redirect_in_progress") === "prestador.html" ||
+          sessionStorage.getItem("mimi_services_auth_redirect_in_progress") === "./prestador.html" ||
+          sessionStorage.getItem("mimi_services_auth_intent") === "provider" ||
+          localStorage.getItem("mimi_services_auth_intent") === "provider" ||
+          Boolean(sessionStorage.getItem("mimi_services_provider_auth_lock")) ||
+          Boolean(localStorage.getItem("mimi_services_provider_auth_lock"));
+      } catch (_) {}
+
+      if (!providerIntent) return;
+
+      try {
+        sessionStorage.setItem("mimi_services_active_mode", "provider");
+        localStorage.setItem("mimi_services_active_mode", "provider");
+        sessionStorage.setItem("mimi_services_auth_redirect_in_progress", "prestador.html");
+        sessionStorage.setItem("mimi_services_auth_intent", "provider");
+        localStorage.setItem("mimi_services_auth_intent", "provider");
+        const lock = JSON.stringify({ mode: "provider", target: "prestador.html", recoveredFrom: "auth-callback-head", startedAt: Date.now() });
+        sessionStorage.setItem("mimi_services_provider_auth_lock", lock);
+        localStorage.setItem("mimi_services_provider_auth_lock", lock);
+        sessionStorage.removeItem("mimi_services_client_auth_lock");
+        localStorage.removeItem("mimi_services_client_auth_lock");
+      } catch (_) {}
+
+      const providerCallback = new URL("./auth-provider-callback.html", window.location.href);
+      for (const [key, value] of params.entries()) {
+        providerCallback.searchParams.set(key, value);
+      }
+      providerCallback.searchParams.set("appRole", "provider");
+      providerCallback.searchParams.set("returnTo", "/prestador");
+      providerCallback.searchParams.set("target", "prestador.html");
+      window.location.replace(`${providerCallback.pathname}${providerCallback.search}${window.location.hash || ""}`);
+    })();
+  </script>
   <style>
     :root {
       color-scheme: light;
@@ -63,48 +104,80 @@
   <script src="./env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script type="module">
-    import { getCurrentSession } from "./src/services/supabase.js";
+    import { getCurrentSession } from "./src/services/supabase.js?v=2026.05.14.9";
 
     const params = new URLSearchParams(window.location.search);
-    const requestedTarget = String(params.get("target") || "").replace(/^\.\//, "");
-    const storedMode =
-      sessionStorage.getItem("mimi_services_auth_intent") ||
-      localStorage.getItem("mimi_services_auth_intent") ||
-      sessionStorage.getItem("mimi_services_active_mode") ||
-      localStorage.getItem("mimi_services_active_mode");
-    const mode =
-      params.get("mode") === "provider" ||
-      requestedTarget === "prestador.html" ||
-      storedMode === "provider"
-        ? "provider"
-        : "client";
-    const target =
-      mode === "provider" || requestedTarget === "prestador.html"
-        ? "./prestador.html"
+    const requestedRole = params.get("appRole") || params.get("mode");
+    const providerIntent = (() => {
+      try {
+        return (
+          requestedRole === "provider" ||
+          sessionStorage.getItem("mimi_services_auth_redirect_in_progress") === "prestador.html" ||
+          sessionStorage.getItem("mimi_services_auth_redirect_in_progress") === "./prestador.html" ||
+          sessionStorage.getItem("mimi_services_auth_intent") === "provider" ||
+          localStorage.getItem("mimi_services_auth_intent") === "provider" ||
+          Boolean(sessionStorage.getItem("mimi_services_provider_auth_lock")) ||
+          Boolean(localStorage.getItem("mimi_services_provider_auth_lock"))
+        );
+      } catch (_) {
+        return requestedRole === "provider";
+      }
+    })();
+
+    if (providerIntent) {
+      try {
+        sessionStorage.setItem("mimi_services_active_mode", "provider");
+        localStorage.setItem("mimi_services_active_mode", "provider");
+        sessionStorage.setItem("mimi_services_auth_redirect_in_progress", "prestador.html");
+        sessionStorage.setItem("mimi_services_auth_intent", "provider");
+        localStorage.setItem("mimi_services_auth_intent", "provider");
+        const lock = JSON.stringify({ mode: "provider", target: "prestador.html", recoveredFrom: "client-callback", startedAt: Date.now() });
+        sessionStorage.setItem("mimi_services_provider_auth_lock", lock);
+        localStorage.setItem("mimi_services_provider_auth_lock", lock);
+        sessionStorage.removeItem("mimi_services_client_auth_lock");
+        localStorage.removeItem("mimi_services_client_auth_lock");
+      } catch (_) {}
+
+      const providerCallback = new URL("./auth-provider-callback.html", window.location.href);
+      for (const [key, value] of params.entries()) {
+        providerCallback.searchParams.set(key, value);
+      }
+      providerCallback.searchParams.set("appRole", "provider");
+      providerCallback.searchParams.set("returnTo", "/prestador");
+      providerCallback.searchParams.set("target", "prestador.html");
+      window.location.replace(`${providerCallback.pathname}${providerCallback.search}${window.location.hash || ""}`);
+    } else {
+      const allowedClientReturnTo = new Set([
+        "/cliente",
+        "/servicios",
+        "/mimi-servicios/cliente.html"
+      ]);
+      const requestedReturnTo = String(params.get("returnTo") || "");
+      const mode = "client";
+      const target = allowedClientReturnTo.has(requestedReturnTo)
+        ? requestedReturnTo
         : "./cliente.html";
 
-    try {
-      sessionStorage.setItem("mimi_services_active_mode", mode);
-      localStorage.setItem("mimi_services_active_mode", mode);
-      sessionStorage.setItem(
-        "mimi_services_auth_redirect_in_progress",
-        mode === "provider" ? "prestador.html" : "cliente.html"
-      );
-      sessionStorage.setItem("mimi_services_auth_intent", mode);
-      localStorage.setItem("mimi_services_auth_intent", mode);
-    } catch (_) {}
-
-    async function finishAuth() {
       try {
-        await getCurrentSession();
-      } catch (error) {
-        console.warn("[MIMI servicios auth callback] session recovery warning:", error);
+        sessionStorage.setItem("mimi_services_active_mode", mode);
+        localStorage.setItem("mimi_services_active_mode", mode);
+        sessionStorage.setItem("mimi_services_auth_redirect_in_progress", "cliente.html");
+        sessionStorage.setItem("mimi_services_auth_intent", mode);
+        localStorage.setItem("mimi_services_auth_intent", mode);
+      } catch (_) {}
+
+      async function finishAuth() {
+        try {
+          await getCurrentSession();
+        } catch (error) {
+          console.warn("[MIMI servicios auth callback] session recovery warning:", error);
+        }
+
+        window.location.replace(target);
       }
 
-      window.location.replace(target);
+      finishAuth();
     }
-
-    finishAuth();
   </script>
 </body>
 </html>

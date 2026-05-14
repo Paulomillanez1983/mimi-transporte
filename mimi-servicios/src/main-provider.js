@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.14.8";
+const MIMI_PROVIDER_BUILD = "2026.05.14.9";
 const PARTNER_PWA_INSTALLED_KEY = "mimi_go_partner_pwa_installed";
 const PARTNER_INSTALL_DISMISSED_KEY = "mimi_go_partner_install_dismissed_until";
 const PARTNER_INSTALL_SESSION_KEY = "mimi_go_partner_install_shown_session";
@@ -82,7 +82,7 @@ import {
   signOut,
   updateProviderStatus,
   verifyOtp
-  } from "./services/service-api.js?v=2026.05.14.8";
+  } from "./services/service-api.js?v=2026.05.14.9";
 import {
   detectDefaultCountry,
   loadPhoneCountries,
@@ -96,7 +96,7 @@ import {
   forceCleanSession,
   getSupabaseClient,
   signInWithGoogle
-} from "./services/supabase.js?v=2026.05.14.8";
+} from "./services/supabase.js?v=2026.05.14.9";
 import { getMimiPushToken } from "./services/push.js";
 import {
   MIMI_ACTIVE_JOB_LOCATION_INTERVAL_MS,
@@ -1978,7 +1978,7 @@ renderPartnerLoadingMarketing(index = 0) {
     window.clearTimeout(this.partnerLoadingRenderTimeout);
   }
 
-  this.partnerLoadingRenderTimeout = window.setTimeout(() => {
+  const applySlide = () => {
     this.partnerLoadingRenderTimeout = null;
     if (!document.body.classList.contains("provider-auth-loading") || this.elements.providerBootLoader?.hidden) return;
     if (this.elements.providerBootMarketingEyebrow) this.elements.providerBootMarketingEyebrow.textContent = slide.eyebrow;
@@ -1993,7 +1993,9 @@ renderPartnerLoadingMarketing(index = 0) {
     }
 
     marketing.classList.add("is-visible");
-  }, 120);
+  };
+
+  applySlide();
 }
 
 startPartnerLoadingCarousel() {

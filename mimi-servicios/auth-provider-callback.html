@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>Conectando con MIMI Partners...</title>
+  <title>MIMIGO | Preparando tu panel</title>
   <style>
     :root {
-      color-scheme: light;
+      color-scheme: dark;
       font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
@@ -16,36 +16,147 @@
       margin: 0;
       display: grid;
       place-items: center;
-      background: #f8fafc;
-      color: #102033;
+      padding: calc(env(safe-area-inset-top, 0px) + 20px) 18px calc(env(safe-area-inset-bottom, 0px) + 20px);
+      background:
+        radial-gradient(circle at 50% 43%, rgba(79, 195, 255, 0.18), transparent 34%),
+        radial-gradient(circle at 50% 66%, rgba(34, 197, 94, 0.08), transparent 28%),
+        linear-gradient(180deg, #02070e 0%, #07111f 100%);
+      color: #f8fafc;
+      box-sizing: border-box;
     }
 
     main {
-      width: min(360px, calc(100vw - 32px));
-      text-align: center;
+      width: min(390px, 100%);
+      overflow: hidden;
+      border: 1px solid rgba(79, 195, 255, 0.18);
+      border-radius: 28px;
+      padding: 24px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(2, 6, 23, 0.92));
+      box-shadow: 0 26px 78px rgba(0, 0, 0, 0.42), 0 0 58px rgba(79, 195, 255, 0.12);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-sizing: border-box;
+    }
+
+    .brand {
+      margin-bottom: 14px;
+      font-size: 26px;
+      font-weight: 950;
+      letter-spacing: 0;
+      color: transparent;
+      background: linear-gradient(90deg, #4fc3ff 0 48%, #ffffff 49% 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
     }
 
     .spinner {
-      width: 44px;
-      height: 44px;
-      margin: 0 auto 18px;
-      border: 4px solid #d7e2ef;
-      border-top-color: #16784d;
-      border-radius: 50%;
-      animation: spin 0.9s linear infinite;
+      position: relative;
+      width: 116px;
+      height: 116px;
+      margin: 8px auto 20px;
+      border-radius: 999px;
+      background:
+        radial-gradient(circle, rgba(255, 255, 255, 0.9) 0 10%, rgba(79, 195, 255, 0.94) 11% 26%, rgba(79, 195, 255, 0.2) 27% 48%, transparent 49%),
+        conic-gradient(from 90deg, transparent 0 16%, rgba(79, 195, 255, 0.82) 17% 24%, transparent 25% 50%, rgba(79, 195, 255, 0.6) 51% 58%, transparent 59% 100%);
+      box-shadow: 0 0 38px rgba(79, 195, 255, 0.42), inset 0 0 24px rgba(2, 6, 23, 0.45);
+      animation: pulse 2.2s ease-in-out infinite;
+    }
+
+    .spinner::before,
+    .spinner::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      pointer-events: none;
+    }
+
+    .spinner::before {
+      inset: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.46);
+      opacity: 0.78;
+    }
+
+    .spinner::after {
+      inset: -18px;
+      border: 1px solid rgba(79, 195, 255, 0.22);
+      border-top-color: rgba(79, 195, 255, 0.74);
+      animation: spin 4.8s linear infinite;
     }
 
     h1 {
       margin: 0 0 8px;
-      font-size: 20px;
-      line-height: 1.25;
+      font-size: 28px;
+      line-height: 1.08;
+      letter-spacing: 0;
+      text-align: center;
     }
 
     p {
       margin: 0;
-      color: #607084;
-      font-size: 14px;
-      line-height: 1.5;
+      color: #cbd5e1;
+      font-size: 15px;
+      line-height: 1.45;
+      text-align: center;
+    }
+
+    .loader-marketing {
+      display: grid;
+      grid-template-columns: 30px minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+      margin-top: 18px;
+      padding: 13px 13px 14px;
+      border: 1px solid rgba(79, 195, 255, 0.16);
+      border-radius: 18px;
+      background:
+        radial-gradient(circle at 14% 14%, rgba(79, 195, 255, 0.18), transparent 34%),
+        linear-gradient(135deg, rgba(79, 195, 255, 0.12), rgba(15, 23, 42, 0.22)),
+        rgba(2, 6, 23, 0.35);
+      text-align: left;
+    }
+
+    .loader-marketing-icon {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 11px;
+      color: #7dd3fc;
+      background: rgba(79, 195, 255, 0.11);
+      border: 1px solid rgba(125, 211, 252, 0.22);
+      font-weight: 900;
+    }
+
+    .loader-marketing small {
+      display: block;
+      margin: 1px 0 5px;
+      color: #67e8f9;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .loader-marketing strong {
+      display: block;
+      color: #f8fafc;
+      font-size: 15px;
+      line-height: 1.18;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .loader-marketing p {
+      margin-top: 5px;
+      color: #aebdce;
+      font-size: 12px;
+      line-height: 1.35;
+      text-align: left;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(0.98); opacity: 0.86; }
+      50% { transform: scale(1.02); opacity: 1; }
     }
 
     @keyframes spin {
@@ -55,18 +166,35 @@
 </head>
 <body>
   <main>
+    <div class="brand">MIMIGO</div>
     <div class="spinner" aria-hidden="true"></div>
-    <h1>Conectando con MIMI Partners</h1>
-    <p>Estamos terminando el ingreso de prestador con Google.</p>
+    <h1>Preparando tu panel</h1>
+    <p>Sincronizando tu cuenta...</p>
+    <article class="loader-marketing" aria-live="polite">
+      <span class="loader-marketing-icon" aria-hidden="true">OK</span>
+      <div>
+        <small>Más libertad</small>
+        <strong>Trabajá cuando querés, donde querés.</strong>
+        <p>Organizá tus servicios desde un solo lugar.</p>
+      </div>
+    </article>
   </main>
 
   <script src="./env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script type="module">
-    import { getCurrentSession } from "./src/services/supabase.js";
+    import { getCurrentSession } from "./src/services/supabase.js?v=2026.05.14.9";
 
+    const allowedProviderReturnTo = new Set([
+      "/prestador",
+      "/mimi-servicios/prestador.html"
+    ]);
+    const params = new URLSearchParams(window.location.search);
     const mode = "provider";
-    const target = "./prestador.html";
+    const requestedReturnTo = String(params.get("returnTo") || "");
+    const target = allowedProviderReturnTo.has(requestedReturnTo)
+      ? requestedReturnTo
+      : "/prestador";
 
     try {
       sessionStorage.setItem("mimi_services_active_mode", mode);
@@ -74,6 +202,11 @@
       sessionStorage.setItem("mimi_services_auth_redirect_in_progress", "prestador.html");
       sessionStorage.setItem("mimi_services_auth_intent", mode);
       localStorage.setItem("mimi_services_auth_intent", mode);
+      const lock = JSON.stringify({ mode, target: "prestador.html", source: "provider-callback", startedAt: Date.now() });
+      sessionStorage.setItem("mimi_services_provider_auth_lock", lock);
+      localStorage.setItem("mimi_services_provider_auth_lock", lock);
+      sessionStorage.removeItem("mimi_services_client_auth_lock");
+      localStorage.removeItem("mimi_services_client_auth_lock");
     } catch (_) {}
 
     async function finishAuth() {
