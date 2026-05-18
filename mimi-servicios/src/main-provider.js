@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.18.2";
+const MIMI_PROVIDER_BUILD = "2026.05.18.3";
 const PARTNER_PWA_INSTALLED_KEY = "mimi_go_partner_pwa_installed";
 const PARTNER_INSTALL_DISMISSED_KEY = "mimi_go_partner_install_dismissed_until";
 const PARTNER_INSTALL_SESSION_KEY = "mimi_go_partner_install_shown_session";
@@ -92,7 +92,7 @@ import {
 } from "./utils/phone-countries.js";
 
 
-import { renderProviderScreen } from "./ui/render-provider.js?v=2026.05.18.2";
+import { renderProviderScreen } from "./ui/render-provider.js?v=2026.05.18.3";
 import {
   clearAuthRedirectIntent,
   forceCleanSession,
@@ -241,7 +241,7 @@ const partnerLoadingMessages = [
     body: "MIMIGO reduce pasos para que puedas enfocarte en trabajar."
   },
   {
-    eyebrow: "MIMIGO Partner",
+    eyebrow: "MIMI GO Pro",
     title: "La herramienta que menos trabajo te da para conseguir trabajo.",
     body: "Publicá, recibí solicitudes y administrá tu disponibilidad."
   },
@@ -1927,7 +1927,7 @@ dismissInstallBanner(event = null) {
   }
 
   try {
-    localStorage.removeItem(PARTNER_INSTALL_DISMISSED_KEY);
+    localStorage.setItem(PARTNER_INSTALL_DISMISSED_KEY, String(Date.now() + 30 * 24 * 60 * 60 * 1000));
   } catch (_) {}
 }
 
@@ -7711,7 +7711,8 @@ isMobileAndroidBrowser() {
 }
 
 isInstallDismissed() {
-  return false;
+  const dismissedUntil = Number(localStorage.getItem(PARTNER_INSTALL_DISMISSED_KEY) || 0);
+  return Number.isFinite(dismissedUntil) && dismissedUntil > Date.now();
 }
 
 hideInstallBanner() {
@@ -7896,11 +7897,11 @@ showInstallBanner({ sessionEntry = false } = {}) {
 
   const text = banner.querySelector(".install-text");
   if (text) {
-    text.textContent = "Instalá la app de prestadores para abrir tu panel más rápido";
+    text.textContent = "Instalá MIMI GO Pro para abrir tu panel más rápido";
   }
 
   if (this.elements.installBtn) {
-    this.elements.installBtn.textContent = "Instalar app";
+    this.elements.installBtn.textContent = "Instalar MIMI GO Pro";
   }
 
   banner.hidden = false;
@@ -7922,10 +7923,6 @@ setupInstallPrompt() {
     this.hideInstallBanner();
     return;
   }
-
-  try {
-    localStorage.removeItem(PARTNER_PWA_INSTALLED_KEY);
-  } catch (_) {}
 
   this.hideInstallBanner();
 
@@ -7961,9 +7958,6 @@ setupInstallPrompt() {
       localStorage.setItem(PARTNER_PWA_INSTALLED_KEY, "true");
       this.hideInstallBanner();
     } else if (this.deferredInstallPrompt || window.deferredInstallPrompt) {
-      try {
-        localStorage.removeItem(PARTNER_PWA_INSTALLED_KEY);
-      } catch (_) {}
       this.showInstallBanner({ sessionEntry: false });
     }
   });
@@ -8009,7 +8003,7 @@ async handleInstall() {
     } else {
       this.showToast("Instalación cancelada", "info");
       try {
-        localStorage.removeItem(PARTNER_INSTALL_DISMISSED_KEY);
+        localStorage.setItem(PARTNER_INSTALL_DISMISSED_KEY, String(Date.now() + 30 * 24 * 60 * 60 * 1000));
       } catch (_) {}
     }
   } catch (err) {

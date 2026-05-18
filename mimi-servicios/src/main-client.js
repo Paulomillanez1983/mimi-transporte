@@ -54,7 +54,7 @@ import {
   state,
   subscribe
 } from "./state/app-state.js";
-import { renderClientScreen } from "./ui/render-client.js";
+import { renderClientScreen } from "./ui/render-client.js?v=2026.05.18.3";
 import { cancelPayment, createPaymentIntent, getPaymentStatus } from "./payments/payment-api.js";
 import {
   detectDefaultCountry,
@@ -113,6 +113,63 @@ function sanitizeServiceRequestPayload(request = {}) {
   delete clean.service_pin_attempts;
   delete clean.service_pin_locked_until;
   return clean;
+}
+
+const SERVICE_PIN_FETCH_STATUSES = new Set([
+  "ACCEPTED",
+  "SCHEDULED",
+  "PROVIDER_EN_ROUTE",
+  "PROVIDER_ARRIVED"
+]);
+
+function activeRequestStatus(request = {}) {
+  return String(request?.status || "").toUpperCase();
+}
+
+function shouldFetchServicePin(request = {}) {
+  return Boolean(request?.id) && SERVICE_PIN_FETCH_STATUSES.has(activeRequestStatus(request));
+}
+
+async function fetchServicePinForRequest(request, source = "hydrate") {
+  if (!shouldFetchServicePin(request)) return null;
+
+  try {
+    return await getServicePin(request.id);
+  } catch (error) {
+    console.warn(`[MIMI] No se pudo obtener PIN de servicio (${source}):`, error);
+    return null;
+  }
+}
+
+async function refreshServicePinForRequest(request, source = "realtime") {
+  const requestId = request?.id;
+
+  if (!requestId) return;
+
+  if (!shouldFetchServicePin(request)) {
+    if (state.client.activeRequest?.id === requestId) {
+      patchState("client.insights.servicePin", null);
+    }
+    return;
+  }
+
+  const servicePin = await fetchServicePinForRequest(request, source);
+
+  if (state.client.activeRequest?.id === requestId) {
+    patchState("client.insights.servicePin", servicePin);
+  }
+}
+
+function openMercadoPagoCheckout(payment, source = "manual") {
+  if (!payment?.checkout_url) return false;
+
+  try {
+    sessionStorage.setItem("mimigo_last_checkout_payment_id", String(payment.id || ""));
+    sessionStorage.setItem("mimigo_last_checkout_source", source);
+  } catch (_) {}
+
+  window.location.assign(payment.checkout_url);
+  return true;
 }
 
 const INTENT_CATEGORY_RULES = [
@@ -1805,13 +1862,7 @@ async function hydrateLiveContext(activeRequestOverride) {
         providerCategories: []
       };
 
-  const pinVisibleStatuses = ["ACCEPTED", "SCHEDULED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED"];
-  const servicePin = activeRequest?.id && pinVisibleStatuses.includes(String(activeRequest.status || "").toUpperCase())
-    ? await getServicePin(activeRequest.id).catch((error) => {
-        console.warn("[MIMI] No se pudo obtener PIN de servicio:", error);
-        return null;
-      })
-    : null;
+  const servicePin = await fetchServicePinForRequest(activeRequest, "hydrate");
 
   setState((draft) => {
     draft.client.activeRequest = activeRequest
@@ -2466,6 +2517,10 @@ async function handleProviderSelection(providerId) {
   setClientView("services", { behavior: "auto" });
   await delay(Math.max(360, 820 - (Date.now() - progressStartedAt)));
   hideRequestProgress();
+  if (paymentIntent?.checkout_url) {
+    setInfo("Pago requerido para confirmar. Te llevamos a Mercado Pago y despues volves a MIMIGO para verificarlo.");
+    openMercadoPagoCheckout(paymentIntent, "request_created");
+  }
   pushRegistration.catch(() => {});
   return true;
 }
@@ -2563,7 +2618,7 @@ async function handlePaymentAction(action) {
 
   if (action === "checkout") {
     if (payment.checkout_url) {
-      window.open(payment.checkout_url, "_blank", "noopener,noreferrer");
+      openMercadoPagoCheckout(payment, "payment_button");
       return;
     }
 
@@ -3399,6 +3454,8 @@ function setupRealtime(
           };
         }
       });
+
+      refreshServicePinForRequest(safePayload, "realtime_request_update");
     }
   });
 }

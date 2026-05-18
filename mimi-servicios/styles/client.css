@@ -1442,6 +1442,24 @@ button {
   background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
 }
 
+.payment-required-card {
+  border-color: rgba(37, 99, 235, 0.25);
+  background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+}
+
+.summary-actions-inline {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.summary-actions-inline .btn-primary,
+.summary-actions-inline .btn-secondary {
+  width: 100%;
+  min-height: 44px;
+}
+
 .service-pin-code {
   display: block;
   margin: 4px 0 6px;

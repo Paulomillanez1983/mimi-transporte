@@ -1,17 +1,17 @@
 {
   "client": {
-    "version": "2026.05.13.13",
+    "version": "2026.05.18.3",
     "min_supported_version": "2026.05.13.8",
     "critical": false,
     "force_update": false,
     "message": "Mejoramos estabilidad, velocidad y seguridad."
   },
   "provider": {
-    "version": "2026.05.18.2",
-    "min_supported_version": "2026.05.18.2",
+    "version": "2026.05.18.3",
+    "min_supported_version": "2026.05.18.3",
     "critical": false,
     "force_update": false,
-    "message": "Restauramos Wallet de prestadores con backend sincronizado."
+    "message": "Ajustamos pagos, PIN de inicio y panel del prestador."
   },
   "admin": {
     "version": "2026.05.14.2",

@@ -15,7 +15,8 @@
     "qa:provider-payout-account-foundation": "node qa/provider-payout-account-foundation-static.js",
     "qa:provider-payout-account-ownership": "node qa/provider-payout-account-ownership-verification-static.js",
     "qa:services-payment-lifecycle": "node qa/services-payment-lifecycle-static.js",
-    "qa:provider-wallet-payout-contract": "node qa/provider-wallet-payout-contract-static.js"
+    "qa:provider-wallet-payout-contract": "node qa/provider-wallet-payout-contract-static.js",
+    "qa:service-flow-regression": "node qa/service-flow-regression-static.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",

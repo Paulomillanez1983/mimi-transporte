@@ -1145,12 +1145,29 @@ export function renderRequestSummary(state) {
   const flowSteps = requestFlowSteps(currentStatus);
   const rawAddress = request.address_text ?? state.requestDraft.address ?? "Pendiente";
   const compactAddress = compactServiceAddress(rawAddress);
+  const payment = state.client.insights?.paymentIntent ?? null;
+  const paymentStatus = String(payment?.status || "").toUpperCase();
+  const paymentApproved = ["APPROVED", "CAPTURED", "SETTLED"].includes(paymentStatus);
+  const paymentNeedsAction = Boolean(payment?.checkout_url) && !paymentApproved;
+  const servicePin = state.client.insights?.servicePin?.pin ?? null;
+  const showServicePin = currentStatus === "PROVIDER_ARRIVED" && servicePin;
 
   summary.innerHTML = `
-    ${state.client.insights?.servicePin?.pin ? `
+    ${paymentNeedsAction ? `
+      <div class="summary-card payment-required-card">
+        <span class="eyebrow">Pago requerido para confirmar</span>
+        <strong>Completá el pago en Mercado Pago</strong>
+        <span class="muted">El prestador puede tomar la solicitud, pero el servicio avanza cuando Mercado Pago confirma el pago.</span>
+        <div class="summary-actions-inline">
+          <button class="btn-primary" type="button" data-payment-action="checkout">Ir a Mercado Pago</button>
+          ${payment?.id ? `<button class="btn-secondary" type="button" data-payment-action="refresh">Actualizar pago</button>` : ""}
+        </div>
+      </div>
+    ` : ""}
+    ${showServicePin ? `
       <div class="summary-card service-pin-card">
         <span class="eyebrow">Código de inicio</span>
-        <strong class="service-pin-code">${escapeHtml(state.client.insights.servicePin.pin)}</strong>
+        <strong class="service-pin-code">${escapeHtml(servicePin)}</strong>
         <span class="muted">Compartilo únicamente cuando el prestador llegue a tu domicilio. El servicio empieza cuando el código se valida.</span>
       </div>
     ` : ""}

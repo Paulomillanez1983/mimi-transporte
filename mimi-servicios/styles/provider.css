@@ -17200,6 +17200,167 @@ body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel 
   }
 }
 
+/* Service-flow stabilization 2026-05-18.
+   Final overrides only for live service cards and the collapsed provider sheet. */
+@media (max-width: 480px) {
+  :root {
+    --provider-bottom-nav-visible: calc(154px + max(env(safe-area-inset-bottom, 0px), 14px));
+  }
+
+  body.provider-authenticated .bottom-sheet {
+    min-height: var(--provider-bottom-nav-visible) !important;
+    padding: 12px 14px max(env(safe-area-inset-bottom, 0px), 14px) !important;
+    border-radius: 20px 20px 0 0 !important;
+  }
+
+  body.provider-authenticated .sheet-tabs {
+    gap: 5px !important;
+    margin-bottom: 8px !important;
+    padding: 5px !important;
+  }
+
+  body.provider-authenticated .tab-btn {
+    min-height: 42px !important;
+    padding: 8px 5px !important;
+    font-size: 13px !important;
+  }
+
+  .offer-card-float:not([hidden]) {
+    top: calc(env(safe-area-inset-top, 0px) + 88px) !important;
+    left: 18px !important;
+    right: auto !important;
+    width: min(84vw, 318px) !important;
+    max-width: calc(100vw - 36px) !important;
+  }
+
+  .offer-card-float .offer-glass {
+    max-height: min(32dvh, 268px) !important;
+    padding: 10px !important;
+    gap: 6px !important;
+    overflow-y: auto !important;
+    scrollbar-width: none !important;
+  }
+
+  .offer-card-float .offer-glass::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .offer-card-float .offer-header {
+    margin-bottom: 2px !important;
+  }
+
+  .offer-card-float .offer-timer {
+    font-size: 15px !important;
+  }
+
+  .offer-card-float .offer-body {
+    gap: 5px !important;
+  }
+
+  .offer-card-float .offer-service {
+    font-size: 18px !important;
+    line-height: 1.05 !important;
+  }
+
+  .offer-card-float .offer-location,
+  .offer-card-float .offer-client {
+    font-size: 12px !important;
+    line-height: 1.14 !important;
+  }
+
+  .offer-card-float .offer-price {
+    font-size: 20px !important;
+    line-height: 1.06 !important;
+  }
+
+  .offer-card-float .offer-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+    margin-top: 2px !important;
+  }
+
+  .offer-card-float .offer-detail-pill {
+    min-height: 40px !important;
+    padding: 6px 7px !important;
+    border-radius: 10px !important;
+  }
+
+  .offer-card-float .offer-detail-pill span {
+    font-size: 9px !important;
+  }
+
+  .offer-card-float .offer-detail-pill strong {
+    font-size: 12px !important;
+  }
+
+  .offer-card-float .offer-detail-pill:nth-child(n+5) {
+    display: none !important;
+  }
+
+  .offer-card-float .offer-actions {
+    gap: 7px !important;
+    margin-top: 3px !important;
+  }
+
+  .offer-card-float .offer-btn {
+    min-height: 42px !important;
+    border-radius: 13px !important;
+    font-size: 15px !important;
+  }
+
+  .active-service-float:not([hidden]) {
+    top: calc(env(safe-area-inset-top, 0px) + 92px) !important;
+    bottom: calc(var(--provider-bottom-nav-visible) + 16px) !important;
+    left: 18px !important;
+    right: 18px !important;
+    max-height: min(42dvh, 340px) !important;
+    overflow-y: auto !important;
+    scrollbar-width: none !important;
+  }
+
+  .active-service-float:not([hidden])::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .active-service-float .service-glass {
+    padding: 12px !important;
+    gap: 7px !important;
+    border-radius: 17px !important;
+  }
+
+  .active-service-float .service-title {
+    font-size: 20px !important;
+    line-height: 1.05 !important;
+  }
+
+  .active-service-float .service-location,
+  .active-service-float .service-client {
+    font-size: 13px !important;
+    line-height: 1.15 !important;
+  }
+
+  .active-service-float .service-route-metrics {
+    gap: 7px !important;
+    margin: 6px 0 !important;
+  }
+
+  .active-service-float .service-route-metrics div {
+    min-height: 54px !important;
+    padding: 8px 10px !important;
+    border-radius: 13px !important;
+  }
+
+  .active-service-float .service-route-metrics strong {
+    font-size: 17px !important;
+  }
+
+  .active-service-float .service-action-btn {
+    min-height: 48px !important;
+    border-radius: 14px !important;
+    font-size: 15px !important;
+  }
+}
+
 /* Provider installed login balance 2026-05-13.17.
    Keep GoPro only as Android launcher label; the in-app login remains MIMIGO. */
 @media (display-mode: standalone) and (max-width: 480px),
