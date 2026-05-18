@@ -443,7 +443,7 @@ export class MercadoPagoPaymentProvider extends PreparedProvider {
       statement_descriptor: "MIMIGO"
     };
 
-    if (input.customerEmail) {
+    if (!sandbox && input.customerEmail) {
       preferencePayload.payer = { email: input.customerEmail };
     }
 
