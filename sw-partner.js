@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-18-mimigo-pro-provider-47";
+const APP_VERSION = "2026-05-18-mimigo-pro-provider-wallet-48";
 const CACHE_PREFIX = "mimi-go-partner-";
 const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 const LEGACY_CACHE_PREFIXES = ["mimi-servicios-provider-"];

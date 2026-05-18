@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <base href="/mimi-servicios/">
-  <title>MIMIGO Prestadores | Prestadores independientes</title>
+  <title>MIMI GO Pro</title>
   <meta name="description" content="Recibi solicitudes de clientes y administra tus servicios desde tu panel MIMIGO.">
   <meta name="theme-color" content="#f8fafc">
   <link rel="canonical" href="https://mimigo.com.ar/prestador">
 
   <!-- Social Preview / Open Graph -->
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="MIMIGO Prestadores">
+  <meta property="og:site_name" content="MIMI GO Pro">
   <meta property="og:locale" content="es_AR">
-  <meta property="og:title" content="MIMIGO Prestadores | Prestadores independientes">
+  <meta property="og:title" content="MIMI GO Pro | Prestadores independientes">
   <meta property="og:description" content="Recibi solicitudes de clientes y administra tus servicios desde tu panel MIMIGO.">
   <meta property="og:url" content="https://mimigo.com.ar/prestador">
   <meta property="og:image" content="https://mimigo.com.ar/assets/og/og-mimigo-partners-whatsapp-v5.jpg">
@@ -23,7 +23,7 @@
 
   <!-- X / Twitter Cards -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="MIMIGO Prestadores | Prestadores independientes">
+  <meta name="twitter:title" content="MIMI GO Pro | Prestadores independientes">
   <meta name="twitter:description" content="Recibi solicitudes de clientes y administra tus servicios desde tu panel MIMIGO.">
   <meta name="twitter:image" content="https://mimigo.com.ar/assets/og/og-mimigo-partners-whatsapp-v5.jpg">
 
@@ -49,7 +49,7 @@
   <!-- Styles -->
   <link rel="stylesheet" href="./styles/app.css?v=2026.05.14.2">
   <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.14.2">
-  <link rel="stylesheet" href="./styles/provider.css?v=2026.05.14.9">
+  <link rel="stylesheet" href="./styles/provider.css?v=2026.05.18.2">
 
   <!-- Provider map theme: light, clean, professional -->
   <script>
@@ -354,6 +354,7 @@
         <div class="sheet-tabs">
           <button class="tab-btn active" type="button" data-tab="now">Ahora</button>
           <button class="tab-btn" type="button" data-tab="scheduled">Agenda</button>
+          <button class="tab-btn" type="button" data-tab="wallet">Wallet</button>
           <button class="tab-btn" type="button" data-tab="pricing">Servicios</button>
           <button class="tab-btn" type="button" data-tab="account">Cuenta</button>
         </div>
@@ -361,9 +362,6 @@
         <div class="tab-panel active" id="tabNow">
           <div class="panel-section">
             <h3 class="section-title">Estado actual</h3>
-
-            <!-- Dashboard real -->
-            <div id="providerDashboardPanel"></div>
 
             <div class="status-toggle-modern" id="statusToggleModern">
               <button class="toggle-option active" type="button" data-status="OFFLINE">
@@ -405,6 +403,13 @@
                 <span>Soporte</span>
               </button>
             </div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="tabWallet">
+          <div class="panel-section provider-wallet-section">
+            <h3 class="section-title">Wallet</h3>
+            <div id="providerDashboardPanel"></div>
           </div>
         </div>
 
@@ -465,9 +470,10 @@
             <h3 class="section-title">Ayuda y soporte</h3>
             <div class="provider-support-live-card">
               <div>
-                <span class="support-kicker">Chat privado con MIMI</span>
-                <strong>Habla con soporte/admin desde la app</strong>
-                <p>Usalo para cuenta, verificacion, servicios, pagos o problemas con una solicitud.</p>
+                <span class="support-kicker">MIMIGO soporte</span>
+                <strong>Contactarnos</strong>
+                <p class="provider-support-copy">Tu chat con MIMIGO para cuenta, servicios y pagos.</p>
+                <p>Usalo para cuenta, verificaciÃ³n, servicios, pagos o problemas con una solicitud.</p>
               </div>
               <button class="provider-support-chat-btn" id="providerSupportChatBtn" type="button">Abrir chat</button>
             </div>
@@ -507,7 +513,7 @@
         </div>
         <div class="drawer-stat">
           <span class="drawer-stat-value" id="drawerEarnings">$0</span>
-          <span class="drawer-stat-label">Ganancias</span>
+          <span class="drawer-stat-label">Wallet</span>
         </div>
       </div>
 
@@ -539,7 +545,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
-          <span>Ganancias</span>
+          <span>Wallet</span>
         </a>
 
         <a href="#" class="drawer-link" id="linkSettings">
@@ -766,6 +772,6 @@
   <script src="./env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Push notifications are initialized from src/services/push.js. -->
-  <script type="module" src="./src/main-provider.js?v=2026.05.14.9"></script>
+  <script type="module" src="./src/main-provider.js?v=2026.05.18.2"></script>
 </body>
 </html>

@@ -11,7 +11,9 @@
     "qa:mercadopago-sandbox": "node qa/mercadopago-sandbox-static.js",
     "qa:payment-provider-admin-config": "node qa/payment-provider-admin-config-static.js",
     "qa:financial-hardening": "node qa/financial-core-hardening-static.js",
-    "qa:mercadopago-phase1": "node qa/mercadopago-phase1-static.js"
+    "qa:mercadopago-phase1": "node qa/mercadopago-phase1-static.js",
+    "qa:provider-payout-account-foundation": "node qa/provider-payout-account-foundation-static.js",
+    "qa:provider-payout-account-ownership": "node qa/provider-payout-account-ownership-verification-static.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",

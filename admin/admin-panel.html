@@ -28,7 +28,7 @@
     }
   })();
 </script>
-  <link rel="stylesheet" href="./admin.css?v=2026.05.14.2" />
+  <link rel="stylesheet" href="./admin.css?v=2026.05.15.enterprise.3" />
 </head>
 <body>
   <a href="#mainContent" class="sr-only sr-only-focusable">Saltar al contenido principal</a>
@@ -46,15 +46,18 @@
       />
 
       <div class="header-copy">
-        <h1>MIMI Servicios Admin</h1>
-        <p class="header-subtitle">KYC - Prestadores - Soporte</p>
+        <h1>MIMIGO Command</h1>
+        <p class="header-subtitle">Operaciones, KYC, soporte y finanzas</p>
       </div>
     </div>
 
     <div class="right">
       <nav class="admin-desktop-tabs" aria-label="Secciones principales">
         <button class="admin-desktop-tab is-active" type="button" data-admin-mobile-view-target="providers" aria-pressed="true">
-          Prestadores
+          KYC
+        </button>
+        <button class="admin-desktop-tab" type="button" data-admin-mobile-view-target="clients" aria-pressed="false">
+          Clientes
         </button>
         <button class="admin-desktop-tab" type="button" data-admin-mobile-view-target="finance" aria-pressed="false">
           Finanzas
@@ -80,6 +83,10 @@
         </div>
       </div>
 
+      <button id="adminThemeToggle" class="admin-theme-toggle" type="button" aria-label="Cambiar tema del panel">
+        Tema
+      </button>
+
       <button id="logout" type="button" aria-label="Cerrar sesion">
         Salir
       </button>
@@ -87,6 +94,25 @@
   </header>
 
   <main id="mainContent" class="admin-main" role="main">
+    <section class="admin-command-strip" aria-label="Estado operativo">
+      <div class="admin-command-title">
+        <span class="eyebrow">Enterprise console</span>
+        <strong>Control operativo MIMIGO</strong>
+      </div>
+
+      <div class="admin-command-signals" aria-label="Senales del sistema">
+        <span class="admin-signal admin-signal-live">
+          <i aria-hidden="true"></i>
+          Produccion
+        </span>
+        <span class="admin-signal">
+          Realtime
+          <b id="adminRealtimeShellBadge">Preparado</b>
+        </span>
+        <span id="adminClock" class="admin-signal">--:--</span>
+      </div>
+    </section>
+
     <section class="hero-grid" aria-label="Resumen general del panel" hidden>
       <article class="hero-card hero-card-primary admin-mobile-panel admin-mobile-choferes admin-mobile-ai" aria-labelledby="opsCenterTitle">
         <div class="hero-card-head">
@@ -307,6 +333,15 @@
     </div>
 
     <div class="support-head-actions">
+      <span
+        id="supportRealtimeStatus"
+        class="support-realtime-status"
+        data-state="idle"
+        aria-live="polite"
+      >
+        Realtime
+      </span>
+
       <button id="supportRefreshBtn" type="button" class="support-head-btn">
         Recargar
       </button>
@@ -457,30 +492,30 @@
 
   <section class="hero-card services-providers-metrics" aria-label="Metricas de prestadores">
     <div class="hero-stats">
-      <div class="hero-stat">
+      <button class="hero-stat provider-metric-filter" type="button" data-provider-filter="all" aria-pressed="false">
         <span>Total</span>
         <strong id="svcMetricTotal">0</strong>
-      </div>
+      </button>
 
-      <div class="hero-stat">
+      <button class="hero-stat provider-metric-filter" type="button" data-provider-filter="queue" aria-pressed="true">
         <span>Pendientes</span>
         <strong id="svcMetricPending">0</strong>
-      </div>
+      </button>
 
-      <div class="hero-stat">
+      <button class="hero-stat provider-metric-filter" type="button" data-provider-filter="approved" aria-pressed="false">
         <span>Aprobados</span>
         <strong id="svcMetricApproved">0</strong>
-      </div>
+      </button>
 
-      <div class="hero-stat">
+      <button class="hero-stat provider-metric-filter" type="button" data-provider-filter="rejected" aria-pressed="false">
         <span>Rechazados</span>
         <strong id="svcMetricRejected">0</strong>
-      </div>
+      </button>
 
-      <div class="hero-stat">
+      <button class="hero-stat provider-metric-filter" type="button" data-provider-filter="blocked" aria-pressed="false">
         <span>Bloqueados</span>
         <strong id="svcMetricBlocked">0</strong>
-      </div>
+      </button>
     </div>
   </section>
 <section class="toolbar toolbar-pro providers-toolbar" aria-label="Filtros de prestadores">
@@ -529,7 +564,6 @@
       <option value="20">20</option>
       <option value="30" selected>30</option>
       <option value="50">50</option>
-      <option value="80">80</option>
     </select>
   </div>
 </section>
@@ -555,6 +589,73 @@
       aria-live="polite"
       aria-label="Detalle de revision del prestador"
     ></aside>
+  </section>
+</section>
+<section
+  id="adminClientsModule"
+  class="admin-clients-section admin-mobile-panel admin-mobile-clients"
+  aria-label="Clientes, trust y riesgo"
+>
+  <div class="section-head">
+    <div>
+      <h2>Clientes</h2>
+      <p>Trust, riesgo, reputacion, verificaciones y acciones auditadas</p>
+    </div>
+    <button id="clientRefreshBtn" type="button" class="support-head-btn">
+      Recargar clientes
+    </button>
+  </div>
+
+  <section class="hero-card admin-clients-metrics" aria-label="Metricas de clientes">
+    <div class="hero-stats">
+      <div class="hero-stat"><span>Total</span><strong id="clientMetricTotal">0</strong></div>
+      <div class="hero-stat"><span>Activos</span><strong id="clientMetricActive">0</strong></div>
+      <div class="hero-stat"><span>Limitados</span><strong id="clientMetricLimited">0</strong></div>
+      <div class="hero-stat"><span>Alto riesgo</span><strong id="clientMetricHighRisk">0</strong></div>
+      <div class="hero-stat"><span>Verificacion</span><strong id="clientMetricVerification">0</strong></div>
+    </div>
+  </section>
+
+  <section class="toolbar toolbar-pro clients-toolbar" aria-label="Filtros de clientes">
+    <div class="toolbar-search">
+      <label for="clientSearchInput" class="sr-only">Buscar cliente</label>
+      <input
+        id="clientSearchInput"
+        type="text"
+        placeholder="Buscar por nombre o email"
+        autocomplete="off"
+        inputmode="search"
+        enterkeyhint="search"
+        spellcheck="false"
+      />
+    </div>
+    <div class="toolbar-filters" role="tablist" aria-label="Filtros de clientes">
+      <button class="filter-btn is-active" type="button" data-client-filter="all" aria-pressed="true">Todos</button>
+      <button class="filter-btn" type="button" data-client-filter="high_risk" aria-pressed="false">Riesgo alto</button>
+      <button class="filter-btn" type="button" data-client-filter="verification" aria-pressed="false">Verificacion</button>
+      <button class="filter-btn" type="button" data-client-filter="limited" aria-pressed="false">Limitados</button>
+      <button class="filter-btn" type="button" data-client-filter="blocked" aria-pressed="false">Bloqueados</button>
+    </div>
+    <div class="provider-page-size">
+      <label for="clientPageSize">Por pagina</label>
+      <select id="clientPageSize" aria-label="Clientes por pagina">
+        <option value="20">20</option>
+        <option value="30" selected>30</option>
+        <option value="50">50</option>
+      </select>
+    </div>
+  </section>
+
+  <section class="client-trust-workbench" aria-label="Mesa de trust de clientes">
+    <div>
+      <section id="clientsReviewList" class="clients-review-list" aria-live="polite" aria-label="Listado de clientes"></section>
+      <nav class="provider-pagination" aria-label="Paginacion de clientes">
+        <button id="clientPrevPage" type="button" class="btn small">Anterior</button>
+        <span id="clientPageLabel">Pagina 1</span>
+        <button id="clientNextPage" type="button" class="btn small">Siguiente</button>
+      </nav>
+    </div>
+    <aside id="clientReviewDetail" class="client-review-detail" aria-live="polite" aria-label="Detalle de cliente"></aside>
   </section>
 </section>
 <section
@@ -622,6 +723,117 @@
     </button>
   </section>
 
+  <section class="financial-provider-panel" aria-label="Pasarela de pago">
+    <div class="financial-panel-head">
+      <div>
+        <h3>Pasarela de pago</h3>
+        <span id="paymentProviderStatusBadge">Dinero real desactivado</span>
+      </div>
+      <button id="paymentProviderRefreshBtn" type="button" class="support-head-btn">
+        Actualizar
+      </button>
+    </div>
+
+    <div class="payment-provider-grid">
+      <article class="payment-provider-summary">
+        <div class="payment-provider-kpis">
+          <div>
+            <span>Proveedor activo</span>
+            <strong id="paymentProviderActive">mock</strong>
+          </div>
+          <div>
+            <span>Modo</span>
+            <strong id="paymentProviderEnvironment">test</strong>
+          </div>
+          <div>
+            <span>Estado</span>
+            <strong id="paymentProviderConnection">Sin validar</strong>
+          </div>
+          <div>
+            <span>Proveedor efectivo</span>
+            <strong id="paymentProviderEffectiveProvider">mock</strong>
+          </div>
+        </div>
+        <p id="paymentProviderRealMoneyNotice" class="payment-provider-warning">
+          PAYMENTS_REAL_ENABLED=false. Dinero real desactivado; aunque se configure un PSP real, no se habilitan pagos reales.
+        </p>
+        <div class="payment-provider-webhook">
+          <span>Webhook URL</span>
+          <code id="paymentProviderWebhookUrl">Sin proveedor seleccionado</code>
+        </div>
+      </article>
+
+      <article class="payment-provider-controls">
+        <label>
+          <span>Proveedor</span>
+          <select id="paymentProviderSelect">
+            <option value="mock">Mock / test</option>
+            <option value="mercadopago">Mercado Pago</option>
+            <option value="mobbex">Mobbex</option>
+            <option value="stripe">Stripe</option>
+            <option value="manual">Manual / cash futuro</option>
+          </select>
+        </label>
+        <label>
+          <span>Entorno</span>
+          <select id="paymentProviderEnvironmentSelect">
+            <option value="test">Test</option>
+            <option value="production">Produccion</option>
+          </select>
+        </label>
+        <label class="payment-provider-reason">
+          <span>Motivo del cambio</span>
+          <input id="paymentProviderReason" type="text" maxlength="220" placeholder="Ej: preparar pruebas QA con Mobbex test" />
+        </label>
+        <div class="payment-provider-actions">
+          <button id="paymentProviderValidateBtn" type="button" class="financial-action-btn">
+            Validar
+          </button>
+          <button id="paymentProviderTestBtn" type="button" class="financial-action-btn">
+            Probar conexion
+          </button>
+          <button id="paymentProviderActivateBtn" type="button" class="financial-action-btn financial-action-danger">
+            Cambiar proveedor
+          </button>
+        </div>
+      </article>
+    </div>
+
+    <div class="payment-provider-lists">
+      <div class="payment-provider-matrix-wrap">
+        <h4>Estado por proveedor</h4>
+        <div id="paymentProviderMatrix" class="payment-provider-matrix" aria-live="polite"></div>
+      </div>
+      <div>
+        <h4>Secrets requeridos</h4>
+        <div id="paymentProviderSecretsList" class="financial-list financial-list-compact"></div>
+      </div>
+      <div>
+        <h4>Eventos recientes</h4>
+        <div id="paymentProviderLogList" class="financial-list financial-list-compact"></div>
+      </div>
+      <div>
+        <h4>Salud operativa pagos</h4>
+        <div id="paymentProviderHealthList" class="financial-list financial-list-compact"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="financial-panel financial-payout-review-panel" aria-label="Revision de datos de cobro de prestadores">
+    <div class="financial-panel-head">
+      <div>
+        <h3>Datos de cobro prestadores</h3>
+        <span>Payout real desactivado</span>
+      </div>
+      <button id="providerPayoutAccountsRefreshBtn" type="button" class="support-head-btn">
+        Ver pendientes
+      </button>
+    </div>
+    <div id="providerPayoutAccountReviewList" class="financial-list financial-list-compact">
+      <div class="financial-empty">Todavia no hay CBU/CVU en revision.</div>
+    </div>
+  </section>
+
   <section class="financial-workbench" aria-label="Mesa financiera">
     <article class="financial-panel">
       <div class="financial-panel-head">
@@ -662,14 +874,6 @@
       </div>
       <div id="financePayoutBatchesList" class="financial-list"></div>
     </article>
-
-    <article class="financial-panel">
-      <div class="financial-panel-head">
-        <h3>Salud pagos sandbox</h3>
-        <span>Mercado Pago</span>
-      </div>
-      <div id="paymentProviderHealthList" class="financial-list"></div>
-    </article>
   </section>
 </section>
     <section class="section-head admin-mobile-panel admin-mobile-choferes" aria-label="Listado principal" hidden>
@@ -696,6 +900,10 @@
     <button class="admin-mobile-dock-btn is-active" type="button" data-admin-mobile-view-target="providers" aria-pressed="true">
       <span class="admin-mobile-dock-icon">Pro</span>
       <span class="admin-mobile-dock-label">Prestadores</span>
+    </button>
+    <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="clients" aria-pressed="false">
+      <span class="admin-mobile-dock-icon">Cli</span>
+      <span class="admin-mobile-dock-label">Clientes</span>
     </button>
     <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="finance" aria-pressed="false">
       <span class="admin-mobile-dock-icon">Fin</span>
@@ -789,7 +997,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script type="module">
-  import "./supabase-admin-client.js?v=2026.05.14.2";
+  import "./supabase-admin-client.js?v=2026.05.15.4";
 
 window.getAdminAccessToken = async function getAdminAccessToken() {
   const client =
@@ -815,10 +1023,11 @@ window.getAdminAccessToken = async function getAdminAccessToken() {
     return true;
 };
 </script>
-  <script type="module" src="./admin.js?v=2026.05.14.2"></script>
-<script type="module" src="./admin-support.js?v=2026.05.14.2"></script>
-<script type="module" src="./admin-services-providers.js?v=2026.05.14.2"></script>
-<script type="module" src="./admin-finance.js?v=2026.05.14.2"></script>
+  <script type="module" src="./admin.js?v=2026.05.15.enterprise.3"></script>
+<script type="module" src="./admin-support.js?v=2026.05.15.enterprise.4"></script>
+<script type="module" src="./admin-services-providers.js?v=2026.05.15.6"></script>
+<script type="module" src="./admin-clients.js?v=2026.05.15.1"></script>
+<script type="module" src="./admin-finance.js?v=2026.05.16.1"></script>
 </body>
 </html>
 

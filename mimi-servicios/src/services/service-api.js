@@ -12,6 +12,7 @@ import { MIMI_NEARBY_REFRESH_INTERVAL_MS } from "./runtime-config.js";
 
 const SERVICE_PROVIDER_DOCUMENTS_BUCKET = "service-provider-documents";
 const PROVIDER_DOCUMENT_SELECT = "id,provider_id,document_type,storage_bucket,storage_path,mime_type,file_size_bytes,review_status,review_notes,reviewed_at,metadata_json,created_at,updated_at";
+const PROVIDER_WALLET_SAFE_SELECT = "id,provider_id,currency,available_balance,pending_balance,negative_balance,cash_debt_balance,risk_hold_balance,payout_hold_balance,lifetime_earnings,wallet_status,risk_level,cash_enabled,recovery_enabled,last_activity_at,last_recomputed_at,metadata,updated_at";
 const SERVICE_REQUEST_SAFE_SELECT = `
   id,
   client_user_id,
@@ -2193,6 +2194,10 @@ export async function getProviderDashboard(providerId) {
   if (!providerId || !supabase) {
     return {
       earnings: 0,
+      available_balance: 0,
+      pending_balance: 0,
+      negative_balance: 0,
+      cash_debt_balance: 0,
       completed: 0,
       active: null,
       history: []
@@ -2201,12 +2206,30 @@ export async function getProviderDashboard(providerId) {
 
   await requireSession();
 
+  let wallet = null;
+  try {
+    const { data: walletRows, error: walletError } = await supabase
+      .from("provider_wallets")
+      .select(PROVIDER_WALLET_SAFE_SELECT)
+      .eq("provider_id", providerId)
+      .order("updated_at", { ascending: false })
+      .limit(1);
+
+    if (!walletError) {
+      wallet = walletRows?.[0] ?? null;
+    }
+  } catch (walletError) {
+    console.warn("[service-api] provider wallet snapshot unavailable", walletError?.message || walletError);
+  }
+
   // 🔥 servicios completados
   const { data: completedRows, error: completedError } = await supabase
     .from("svc_requests")
     .select("id,total_price_snapshot,created_at,address_text,status")
-    .eq("selected_provider_id", providerId)
-    .eq("status", "COMPLETED");
+    .or(`selected_provider_id.eq.${providerId},accepted_provider_id.eq.${providerId}`)
+    .eq("status", "COMPLETED")
+    .order("created_at", { ascending: false })
+    .limit(50);
 
   if (completedError) throw completedError;
 
@@ -2214,8 +2237,9 @@ export async function getProviderDashboard(providerId) {
   const { data: activeRows } = await supabase
     .from("svc_requests")
     .select("*")
-    .eq("selected_provider_id", providerId)
+    .or(`selected_provider_id.eq.${providerId},accepted_provider_id.eq.${providerId}`)
     .not("status", "in", '("COMPLETED","CANCELLED")')
+    .order("updated_at", { ascending: false })
     .limit(1);
   const activeWithPayment = await attachPaymentStatusToOffers(activeRows ?? []);
 
@@ -2224,9 +2248,44 @@ const earnings = (completedRows ?? []).reduce(
   0
 );
   return {
-    earnings,
+    earnings: Number(wallet?.lifetime_earnings ?? earnings),
+    available_balance: Number(wallet?.available_balance ?? wallet?.lifetime_earnings ?? earnings),
+    pending_balance: Number(wallet?.pending_balance ?? 0),
+    negative_balance: Number(wallet?.negative_balance ?? wallet?.cash_debt_balance ?? 0),
+    cash_debt_balance: Number(wallet?.cash_debt_balance ?? 0),
+    risk_hold_balance: Number(wallet?.risk_hold_balance ?? 0),
+    payout_hold_balance: Number(wallet?.payout_hold_balance ?? 0),
+    wallet_status: wallet?.wallet_status ?? null,
+    risk_level: wallet?.risk_level ?? null,
     completed: completedRows?.length ?? 0,
     active: activeWithPayment?.[0] ?? null,
-    history: completedRows ?? []
+    history: completedRows ?? [],
+    wallet_snapshot_at: wallet?.updated_at ?? null
   };
+}
+
+export async function getProviderPayoutAccount() {
+  if (!hasBackend()) {
+    return { ok: false, account: null };
+  }
+
+  try {
+    return await invokeFunction(appConfig.functions.providerPayoutAccount || "provider-payout-account", {
+      action: "get_current"
+    });
+  } catch (error) {
+    console.warn("[service-api] provider payout account fallback", error);
+    return { ok: false, account: null, error: error?.code || error?.message || "payout_account_unavailable" };
+  }
+}
+
+export async function submitProviderPayoutAccount(payload = {}) {
+  if (!hasBackend()) {
+    throw new Error("AUTH_REQUIRED");
+  }
+
+  return invokeFunction(appConfig.functions.providerPayoutAccount || "provider-payout-account", {
+    action: "submit_for_review",
+    ...payload
+  });
 }

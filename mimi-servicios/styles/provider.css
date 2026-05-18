@@ -11123,6 +11123,284 @@ body.provider-auth-required .notification-container {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Provider Wallet foundation: no real payouts enabled. */
+#providerDashboardPanel .provider-wallet-overview,
+#providerDashboardPanel .provider-payout-account-form {
+  display: grid;
+  gap: 12px;
+}
+
+#providerDashboardPanel .provider-wallet-overview {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 14px;
+}
+
+#providerDashboardPanel .provider-wallet-card,
+#providerDashboardPanel .provider-payout-account-panel,
+#providerDashboardPanel .provider-kpi-card,
+#providerDashboardPanel .provider-history {
+  min-width: 0;
+  border: 1px solid rgba(16, 21, 19, 0.1);
+  background: rgba(255, 255, 255, 0.94);
+  color: #101513;
+  border-radius: 18px;
+  box-shadow: 0 14px 34px rgba(16, 21, 19, 0.08);
+}
+
+#providerDashboardPanel .provider-wallet-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+
+#providerDashboardPanel .provider-wallet-card-soft {
+  background: #f7faf8;
+}
+
+#providerDashboardPanel .provider-wallet-card span,
+#providerDashboardPanel .provider-payout-account-form span,
+#providerDashboardPanel .provider-payout-account-copy p {
+  color: #5d6863;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+#providerDashboardPanel .provider-wallet-card > span,
+#providerDashboardPanel .provider-payout-account-form span {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.72rem;
+}
+
+#providerDashboardPanel .provider-wallet-card strong {
+  font-size: clamp(1.35rem, 7vw, 2.15rem);
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+#providerDashboardPanel .provider-wallet-card small,
+#providerDashboardPanel .provider-wallet-warning {
+  color: #5d6863;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+#providerDashboardPanel .provider-wallet-warning {
+  margin: 0;
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: #fff7e6;
+  color: #8a5a00;
+}
+
+#providerDashboardPanel .provider-wallet-loading,
+#providerDashboardPanel .provider-wallet-error,
+#providerDashboardPanel .provider-wallet-current {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+#providerDashboardPanel .provider-wallet-loading {
+  background: #edf7f1;
+  color: #176438;
+}
+
+#providerDashboardPanel .provider-wallet-error {
+  background: #fff0f0;
+  color: #9a1b1b;
+}
+
+#providerDashboardPanel .provider-wallet-current {
+  margin-top: 10px;
+  background: #f7faf8;
+  color: #28332f;
+}
+
+#providerDashboardPanel .provider-wallet-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  vertical-align: middle;
+}
+
+#providerDashboardPanel .provider-wallet-status.is-incomplete {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+#providerDashboardPanel .provider-wallet-status.is-pending {
+  background: #fff7e6;
+  color: #8a5a00;
+}
+
+#providerDashboardPanel .provider-wallet-status.is-verified {
+  background: #e9f9ef;
+  color: #176438;
+}
+
+#providerDashboardPanel .provider-wallet-status.is-rejected {
+  background: #fff0f0;
+  color: #9a1b1b;
+}
+
+#providerDashboardPanel .provider-wallet-note {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #eef6ff;
+  color: #24435f;
+  font-size: 0.82rem;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+#providerDashboardPanel .provider-wallet-card button,
+#providerDashboardPanel .provider-payout-account-form button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 14px;
+  background: #101513;
+  color: #fff;
+  font-weight: 900;
+}
+
+#providerDashboardPanel .provider-payout-account-panel {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding: 16px;
+}
+
+#providerDashboardPanel .provider-payout-account-copy h3 {
+  margin: 0 0 6px;
+  color: #101513;
+  font-size: 1.08rem;
+}
+
+#providerDashboardPanel .provider-payout-account-copy p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+#providerDashboardPanel .provider-wallet-methods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+#providerDashboardPanel .provider-wallet-method {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(16, 21, 19, 0.12);
+  border-radius: 999px;
+  background: #fff;
+  color: #53605b;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+#providerDashboardPanel .provider-wallet-method.is-active {
+  border-color: rgba(23, 100, 56, 0.35);
+  background: #e9f9ef;
+  color: #176438;
+}
+
+#providerDashboardPanel .provider-payout-account-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#providerDashboardPanel .provider-payout-account-form label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+#providerDashboardPanel .provider-payout-account-form input,
+#providerDashboardPanel .provider-payout-account-form select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgba(16, 21, 19, 0.12);
+  border-radius: 12px;
+  background: #fff;
+  color: #101513;
+  padding: 0 12px;
+  font: inherit;
+  font-weight: 800;
+}
+
+#providerDashboardPanel .provider-payout-account-form[aria-busy="true"] {
+  opacity: 0.72;
+}
+
+#providerDashboardPanel .provider-payout-account-form input:disabled,
+#providerDashboardPanel .provider-payout-account-form select:disabled,
+#providerDashboardPanel .provider-payout-account-form button:disabled,
+#providerDashboardPanel .provider-wallet-card button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+#providerDashboardPanel .provider-payout-account-reason,
+#providerDashboardPanel .provider-payout-account-form button {
+  grid-column: 1 / -1;
+}
+
+#providerDashboardPanel .provider-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+#providerDashboardPanel .provider-kpi-card {
+  display: grid;
+  gap: 7px;
+  padding: 14px;
+}
+
+#providerDashboardPanel .provider-kpi-card span {
+  color: #5d6863;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+#providerDashboardPanel .provider-kpi-card strong {
+  font-size: 1.15rem;
+  line-height: 1.1;
+}
+
+#providerDashboardPanel .provider-kpi-card small {
+  color: #5d6863;
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+#providerDashboardPanel .provider-history {
+  padding: 16px;
+}
+
+@media (max-width: 640px) {
+  #providerDashboardPanel .provider-wallet-overview,
+  #providerDashboardPanel .provider-payout-account-form,
+  #providerDashboardPanel .provider-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Provider marketplace setup: compact, predictable, mobile-first. */
 #providerBusinessPanel .provider-stack,
 #providerBusinessPanel .provider-settings-form,

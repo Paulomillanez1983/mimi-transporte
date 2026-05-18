@@ -58,7 +58,9 @@ export const appConfig = {
     createPaymentIntent: "create-payment-intent",
     getPaymentStatus: "get-payment-status",
     cancelPayment: "cancel-payment",
-    refundPayment: "refund-payment"
+    refundPayment: "refund-payment",
+    providerPayoutAccount: "provider-payout-account",
+    securityRiskEvent: "security-risk-event"
   },
 
   serviceStates: [

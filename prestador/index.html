@@ -1,20 +1,791 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es-AR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <base href="/mimi-servicios/">
+  <title>MIMI GO Pro</title>
+  <meta name="description" content="Recibi solicitudes de clientes y administra tus servicios desde tu panel MIMIGO.">
   <meta name="theme-color" content="#f8fafc">
   <link rel="canonical" href="https://mimigo.com.ar/prestador">
+
+  <!-- Social Preview / Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="MIMI GO Pro">
+  <meta property="og:locale" content="es_AR">
+  <meta property="og:title" content="MIMI GO Pro | Prestadores independientes">
+  <meta property="og:description" content="Recibi solicitudes de clientes y administra tus servicios desde tu panel MIMIGO.">
+  <meta property="og:url" content="https://mimigo.com.ar/prestador">
+  <meta property="og:image" content="https://mimigo.com.ar/assets/og/og-mimigo-partners-whatsapp-v5.jpg">
+  <meta property="og:image:secure_url" content="https://mimigo.com.ar/assets/og/og-mimigo-partners-whatsapp-v5.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <!-- X / Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="MIMI GO Pro | Prestadores independientes">
+  <meta name="twitter:description" content="Recibi solicitudes de clientes y administra tus servicios desde tu panel MIMIGO.">
+  <meta name="twitter:image" content="https://mimigo.com.ar/assets/og/og-mimigo-partners-whatsapp-v5.jpg">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="MIMI GO Pro">
   <meta name="application-name" content="MIMI GO Pro">
-  <link rel="manifest" href="/manifest-partners.json?v=2026.05.18.1">
-  <meta http-equiv="refresh" content="0; url=/mimi-servicios/prestador.html?provider_refresh=20260514">
-  <title>MIMI GO Pro</title>
+
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/icons/mimigo-pro-icon-v10-32.png?v=mimigo-visual-v10">
+  <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/mimigo-pro-icon-v10-16.png?v=mimigo-visual-v10">
+  <link rel="apple-touch-icon" href="./assets/icons/mimigo-pro-apple-touch-icon-v10.png?v=mimigo-visual-v10">
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest-partners.json?v=2026.05.18.2">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="./styles/app.css?v=2026.05.14.2">
+  <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.14.2">
+  <link rel="stylesheet" href="./styles/provider.css?v=2026.05.18.2">
+
+  <!-- Provider map theme: light, clean, professional -->
   <script>
-    window.location.replace("/mimi-servicios/prestador.html?provider_refresh=20260514");
+    window.MIMI_PROVIDER_MAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
+    window.MIMI_PROVIDER_MAP_DEFAULT = {
+      center: [-64.1888, -31.4201],
+      zoom: 12.2,
+      pitch: 0,
+      bearing: 0
+    };
   </script>
 </head>
-<body>
-  <a href="/mimi-servicios/prestador.html?provider_refresh=20260514">Entrar a MIMI GO Pro</a>
+
+<body class="provider-auth-loading">
+  <!-- App Shell -->
+  <div id="app" class="app-container">
+    <section class="provider-boot-loader" id="providerBootLoader" role="status" aria-live="polite">
+      <div class="provider-boot-card">
+        <div class="provider-boot-brand">MIMIGO</div>
+        <div class="provider-boot-shimmer" aria-hidden="true"></div>
+        <h1 id="providerBootTitle">Preparando tu panel</h1>
+        <p id="providerBootSubtitle">Sincronizando tu cuenta...</p>
+        <article class="provider-boot-marketing is-visible" id="providerBootMarketing" aria-live="polite">
+          <span class="provider-boot-marketing-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M13.5 4.8c2.4-.9 4.3-.7 5.1-.5.2.8.4 2.7-.5 5.1-.7 1.9-2.1 3.8-4.2 5.8l-3.1-3.1c2-2.1 3.9-3.5 5.8-4.2Z"/>
+              <path d="M10.8 12.1 7 11.5 5.3 13.2l3.2 1.2"/>
+              <path d="m11.9 13.2.6 3.8-1.7 1.7-1.2-3.2"/>
+              <path d="M8.6 15.4 6.2 17.8"/>
+              <path d="M15.2 8.8h.01"/>
+            </svg>
+          </span>
+          <div class="provider-boot-marketing-copy">
+            <small id="providerBootMarketingEyebrow">Más libertad</small>
+            <strong id="providerBootMarketingTitle">Trabajá cuando querés, donde querés.</strong>
+            <p id="providerBootMarketingBody">Organizá tus servicios desde un solo lugar.</p>
+          </div>
+          <div class="provider-boot-dots" id="providerBootMarketingDots" aria-hidden="true">
+            <span class="is-active"></span><span></span><span></span><span></span>
+          </div>
+        </article>
+        <button class="provider-boot-retry" id="providerBootRetry" type="button" hidden>Reintentar</button>
+      </div>
+    </section>
+
+    <!-- Map Background -->
+    <div id="mapContainer" class="map-background">
+      <div id="map" class="map-surface" data-map-style="light"></div>
+
+      <div class="map-fallback" id="mapFallback" hidden>
+        <div class="fallback-content">
+          <svg class="fallback-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 7m0 13V7m0 0L9.553 4.553A1 1 0 009 4.118v.006"/>
+          </svg>
+          <h3 class="fallback-title">Mapa no disponible</h3>
+          <p class="fallback-text">Seguimos mostrando tu operación</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating Header -->
+    <header class="floating-header" id="header">
+      <div class="header-glass">
+        <div class="header-content">
+          <div class="header-brand" aria-label="MIMI GO">
+            <span class="brand-text brand-text--mimigo">
+              <span class="brand-text-blue">MIMI</span><span class="brand-text-white">GO</span>
+            </span>
+            <span class="brand-badge" id="statusBadge">OFFLINE</span>
+          </div>
+
+          <div class="header-status" id="headerStatus">
+            <span class="status-dot" id="statusDot"></span>
+            <span class="status-text" id="statusText">Desconectado</span>
+          </div>
+
+          <button class="menu-button" id="menuButton" type="button" aria-label="Menú">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Provider Login Gate -->
+    <div class="online-button-container hidden" id="onlineButtonContainer" hidden></div>
+
+    <section class="provider-login-hero-art" aria-hidden="true">
+      <div class="provider-art-glow"></div>
+
+      <div class="provider-art-stack">
+        <div class="provider-art-card card-clean">
+          <span>CLN</span>
+          <small>Limpieza</small>
+        </div>
+        <div class="provider-art-card card-care">
+          <span>CARE</span>
+          <small>Cuidado</small>
+        </div>
+        <div class="provider-art-card card-home">
+          <span>HOME</span>
+          <small>Hogar</small>
+        </div>
+        <div class="provider-art-card card-wellness">
+          <span>WELL</span>
+          <small>Bienestar</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="provider-login-panel" aria-label="Ingreso de prestadores">
+      <div class="provider-login-logo">
+        <span class="provider-login-wordmark provider-login-wordmark--mimigo" aria-label="MIMIGO">MIMIGO</span>
+      </div>
+
+      <button class="provider-login-google" id="providerGoogleLoginButtonStatic" type="button">
+        <span class="provider-google-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48">
+            <path fill="#EA4335" d="M24 9.5c3.4 0 6.4 1.2 8.8 3.2l6.5-6.5C35.3 2.6 30 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.8 6.1C12.3 13.4 17.7 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-2.8-.4-4.1H24v7.8h12.7c-.3 2-1.6 5-4.4 7l6.9 5.3c4-3.7 6.3-9.2 6.3-16z"/>
+            <path fill="#FBBC05" d="M10.4 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.2.8-4.6l-7.8-6.1C.9 16.6 0 20.2 0 24s.9 7.4 2.6 10.7l7.8-6.1z"/>
+            <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-6.9-5.3c-1.9 1.3-4.5 2.2-9 2.2-6.3 0-11.7-3.9-13.6-9.4l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/>
+          </svg>
+        </span>
+
+        <span class="provider-google-text">
+          <strong>Continuar con Google</strong>
+        </span>
+
+        <span class="provider-google-arrow">→</span>
+      </button>
+
+      <div class="provider-login-trust">
+        <span>OK<small>Sesión segura</small></span>
+        <span>ID<small>Verificación profesional</small></span>
+        <span>+<small>Servicios reales</small></span>
+      </div>
+    </section>
+
+    <!-- Floating Offer Card -->
+    <div class="offer-card-float" id="offerCard" hidden>
+      <div class="offer-glass">
+        <div class="offer-header">
+          <span class="offer-label">Nueva solicitud</span>
+          <span class="offer-timer" id="offerTimer">15s</span>
+        </div>
+        <div class="offer-body">
+          <div class="offer-service" id="offerService">Plomería</div>
+          <div class="offer-location" id="offerLocation">Nueva Córdoba</div>
+          <div class="offer-client" id="offerClient">Cliente: Mariana</div>
+          <div class="offer-price" id="offerPrice">$18.000 estimado</div>
+          <div class="offer-detail-grid" id="offerDetails" aria-live="polite"></div>
+        </div>
+        <div class="offer-actions">
+          <button class="offer-btn reject" id="rejectOffer" type="button">Rechazar</button>
+          <button class="offer-btn accept" id="acceptOffer" type="button">Aceptar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Service Card -->
+    <div class="active-service-float" id="activeServiceCard" hidden>
+      <div class="service-glass">
+        <div class="service-header">
+          <span class="service-label">Servicio activo</span>
+          <span class="service-status" id="serviceStatusBadge">En camino</span>
+        </div>
+        <div class="service-body">
+          <div class="service-type" id="activeServiceType">Electricista</div>
+          <div class="service-location" id="activeServiceLocation">Nueva Córdoba</div>
+          <div class="service-client" id="activeServiceClient">Mariana</div>
+        </div>
+        <div class="service-navigation-panel" id="activeServiceNavigation" hidden>
+          <div class="service-route-metrics">
+            <div>
+              <span>ETA</span>
+              <strong id="serviceEta">--</strong>
+            </div>
+            <div>
+              <span>Distancia</span>
+              <strong id="serviceDistance">--</strong>
+            </div>
+          </div>
+          <div class="service-next-step" id="serviceNextStep">Calculando la mejor ruta al cliente...</div>
+          <div class="service-step-list" id="serviceStepList"></div>
+          <div class="service-nav-actions">
+            <button class="service-nav-btn" id="openExternalNavigation" type="button">Abrir mapa</button>
+          </div>
+          <div class="service-nav-actions service-nav-actions--secondary">
+            <button class="service-nav-btn nav-follow" id="toggleInAppNavigation" type="button">Seguir en app</button>
+            <button class="service-nav-btn secondary" id="recenterNavigation" type="button">Recentrar</button>
+          </div>
+          <div class="service-nav-mode" id="serviceNavModeLabel">Guia in-app lista</div>
+        </div>
+        <button class="service-action-btn" id="serviceActionBtn" type="button">
+          Llegué al domicilio
+        </button>
+      </div>
+    </div>
+
+    <div class="provider-pin-overlay" id="providerPinOverlay" hidden>
+      <section class="provider-pin-sheet" role="dialog" aria-modal="true" aria-labelledby="providerPinTitle">
+        <button class="provider-pin-close" id="providerPinClose" type="button" aria-label="Cerrar">&times;</button>
+        <span class="provider-pin-eyebrow">Validar servicio</span>
+        <h2 id="providerPinTitle">Ingresá el código del cliente</h2>
+        <p>Pedile al cliente el PIN de 4 dígitos para iniciar el servicio.</p>
+        <div class="provider-pin-inputs" id="providerPinInputs">
+          <input inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code" aria-label="Digito 1">
+          <input inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digito 2">
+          <input inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digito 3">
+          <input inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digito 4">
+        </div>
+        <div class="provider-pin-status" id="providerPinStatus" role="status" aria-live="polite"></div>
+        <button class="provider-pin-submit" id="providerPinSubmit" type="button">Validar e iniciar</button>
+      </section>
+    </div>
+
+    <div class="provider-phone-overlay" id="providerPhoneOverlay" hidden>
+      <section class="provider-phone-sheet" role="dialog" aria-modal="true" aria-labelledby="providerPhoneTitle">
+        <button class="provider-phone-close" id="providerPhoneClose" type="button" aria-label="Cerrar">&times;</button>
+        <span class="provider-phone-eyebrow">Seguridad de cuenta</span>
+        <h2 id="providerPhoneTitle">Verificá tu teléfono</h2>
+        <p id="providerPhoneCopy">Usamos este número para proteger tu panel y validar dispositivos nuevos.</p>
+        <form id="providerPhoneForm" novalidate>
+          <div class="provider-phone-entry" id="providerPhoneEntryStep">
+            <button class="provider-phone-country" id="providerPhoneCountryButton" type="button" aria-haspopup="listbox" aria-expanded="false">
+              <span id="providerPhoneCountryFlag" aria-hidden="true">AR</span>
+              <strong id="providerPhoneCountryName">Argentina</strong>
+              <b id="providerPhoneCountryDial">+54</b>
+            </button>
+            <div class="provider-phone-country-panel" id="providerPhoneCountryPanel" hidden>
+              <input id="providerPhoneCountrySearch" type="search" placeholder="Buscar país o código" autocomplete="off">
+              <div class="provider-phone-country-list" id="providerPhoneCountryList" role="listbox"></div>
+            </div>
+            <label class="provider-phone-field">
+              <span>Número con WhatsApp o SMS</span>
+              <input id="providerPhoneInput" type="tel" inputmode="tel" autocomplete="tel" placeholder="351 555 0000">
+            </label>
+          </div>
+          <div class="provider-phone-otp" id="providerPhoneOtpStep" hidden>
+            <p>Código enviado a <strong id="providerPhoneOtpTarget">tu teléfono</strong></p>
+            <label class="provider-phone-field">
+              <span>Código de verificación</span>
+              <input id="providerPhoneCodeInput" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="000000">
+            </label>
+            <button class="provider-phone-resend" id="providerPhoneResend" type="button">Enviar otro código</button>
+            <button class="provider-phone-change" id="providerPhoneChangeNumber" type="button">Cambiar número</button>
+          </div>
+          <div class="provider-phone-status" id="providerPhoneStatus" role="status" aria-live="polite"></div>
+          <button class="provider-phone-submit" id="providerPhoneSubmit" type="submit">Enviar código</button>
+          <button class="provider-phone-switch-account" id="providerPhoneSwitchAccount" type="button">Usar otra cuenta Google</button>
+        </form>
+      </section>
+    </div>
+
+    <!-- Distance Alert -->
+    <div class="distance-alert" id="distanceAlert" hidden>
+      <div class="alert-glass alert-warning" id="alertContent">
+        <div class="alert-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <div class="alert-content">
+          <div class="alert-title" id="alertTitle">Conviene salir ahora</div>
+          <div class="alert-text" id="alertText">Para llegar a tiempo al servicio</div>
+        </div>
+        <button class="alert-action" id="alertAction" type="button">Ver ruta</button>
+      </div>
+    </div>
+
+    <!-- Bottom Sheet -->
+    <div class="bottom-sheet" id="bottomSheet">
+      <button class="sheet-close-btn" id="sheetCloseBtn" type="button" aria-label="Cerrar pantalla">&times;</button>
+      <div class="sheet-handle-container">
+        <div class="sheet-handle"></div>
+      </div>
+
+      <div class="sheet-header" id="sheetHeader">
+        <div class="sheet-summary">
+          <div class="sheet-status" id="sheetStatus">
+            <span class="status-indicator offline" id="sheetStatusDot"></span>
+            <span class="status-text" id="sheetStatusText">Offline</span>
+          </div>
+
+          <div class="sheet-info" id="sheetInfo">
+            <span class="info-price" id="sheetBasePrice">Base -</span>
+            <span class="info-separator">&middot;</span>
+            <span class="info-mode" id="sheetPricingMode">-</span>
+          </div>
+        </div>
+
+        <div class="sheet-upcoming" id="sheetUpcoming">
+          <span class="upcoming-label">Próximo:</span>
+          <span class="upcoming-time" id="sheetUpcomingTime">Sin agenda</span>
+        </div>
+        <button class="sheet-notification-bell" id="sheetNotificationBell" type="button" aria-label="Abrir notificaciones">
+          <span aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.27 21a2 2 0 0 0 3.46 0"></path>
+              <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path>
+            </svg>
+          </span>
+          <b id="sheetNotificationBadge" hidden>0</b>
+        </button>
+      </div>
+
+      <div class="sheet-content" id="sheetContent">
+        <div class="sheet-tabs">
+          <button class="tab-btn active" type="button" data-tab="now">Ahora</button>
+          <button class="tab-btn" type="button" data-tab="scheduled">Agenda</button>
+          <button class="tab-btn" type="button" data-tab="wallet">Wallet</button>
+          <button class="tab-btn" type="button" data-tab="pricing">Servicios</button>
+          <button class="tab-btn" type="button" data-tab="account">Cuenta</button>
+        </div>
+
+        <div class="tab-panel active" id="tabNow">
+          <div class="panel-section">
+            <h3 class="section-title">Estado actual</h3>
+
+            <div class="status-toggle-modern" id="statusToggleModern">
+              <button class="toggle-option active" type="button" data-status="OFFLINE">
+                <span class="toggle-icon">OFF</span>
+                <span>Offline</span>
+              </button>
+              <button class="toggle-option" type="button" data-status="ONLINE_IDLE">
+                <span class="toggle-icon">ON</span>
+                <span>Online</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="panel-section" id="nextServiceSection" hidden>
+            <h3 class="section-title">Próximo servicio</h3>
+            <div class="next-service-card" id="nextServiceCard">
+              <div class="next-time">Hoy 16:30</div>
+              <div class="next-type">Electricista</div>
+              <div class="next-location">Nueva Córdoba</div>
+              <div class="next-distance">A 7.8 km &middot; 18 min</div>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <h3 class="section-title">Acciones rápidas</h3>
+            <div class="quick-actions">
+              <button class="quick-btn" id="quickNotifications" type="button">
+                <span class="quick-icon">N</span>
+                <span>Notificaciones</span>
+                <span class="quick-badge" id="notificationBadge">0</span>
+              </button>
+              <button class="quick-btn" id="quickChat" type="button">
+                <span class="quick-icon">M</span>
+                <span>Mensajes</span>
+                <span class="quick-badge" id="chatBadge">0</span>
+              </button>
+              <button class="quick-btn" id="quickSupport" type="button">
+                <span class="quick-icon">S</span>
+                <span>Soporte</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="tabWallet">
+          <div class="panel-section provider-wallet-section">
+            <h3 class="section-title">Wallet</h3>
+            <div id="providerDashboardPanel"></div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="tabScheduled">
+          <div class="panel-section">
+            <h3 class="section-title">Servicios programados</h3>
+            <div class="scheduled-list" id="scheduledList">
+              <!-- Items injected via JS -->
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="tabPricing">
+          <div id="providerBusinessPanel"></div>
+        </div>
+
+        <div class="tab-panel" id="tabAccount">
+          <div class="panel-section verification-summary-section">
+            <h3 class="section-title">Verificación</h3>
+            <div class="verification-card" id="verificationCard">
+              <div class="verification-status" id="verificationStatus">
+                <span class="status-icon">!</span>
+                <span class="status-text">Pendiente</span>
+              </div>
+              <p class="verification-text">Completá tu verificación para recibir servicios</p>
+              <button class="verification-btn" id="verificationBtn" type="button">Completar ahora</button>
+            </div>
+          </div>
+          <div id="providerTrustPanel"></div>
+          <div id="providerProfilePanel"></div>
+
+          <div class="panel-section">
+            <h3 class="section-title">Tus servicios</h3>
+            <div class="services-chips" id="servicesChips">
+              <span class="service-chip">Cargando tus servicios...</span>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <h3 class="section-title">Estadísticas</h3>
+            <div class="stats-grid-modern">
+              <div class="stat-card">
+                <span class="stat-value" id="statRating">5.0</span>
+                <span class="stat-label">Rating</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-value" id="statCompleted">12</span>
+                <span class="stat-label">Completados</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-value" id="statOffers">24</span>
+                <span class="stat-label">Ofertas</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-section" id="providerSupportPanel">
+            <h3 class="section-title">Ayuda y soporte</h3>
+            <div class="provider-support-live-card">
+              <div>
+                <span class="support-kicker">MIMIGO soporte</span>
+                <strong>Contactarnos</strong>
+                <p class="provider-support-copy">Tu chat con MIMIGO para cuenta, servicios y pagos.</p>
+                <p>Usalo para cuenta, verificación, servicios, pagos o problemas con una solicitud.</p>
+              </div>
+              <button class="provider-support-chat-btn" id="providerSupportChatBtn" type="button">Abrir chat</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Side Drawer -->
+    <div class="drawer-overlay" id="drawerOverlay" hidden></div>
+    <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
+      <div class="drawer-header">
+        <div class="drawer-user">
+          <div class="user-avatar" id="drawerAvatar">
+            <span id="drawerInitials">PR</span>
+          </div>
+          <div class="user-info">
+            <div class="user-name" id="drawerName">Cargando perfil...</div>
+            <div class="user-email" id="drawerEmail">Conectando con Supabase...</div>
+          </div>
+        </div>
+        <button class="drawer-close" id="drawerClose" type="button" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="drawer-stats">
+        <div class="drawer-stat">
+          <span class="drawer-stat-value" id="drawerRating">5.0</span>
+          <span class="drawer-stat-label">Rating</span>
+        </div>
+        <div class="drawer-stat">
+          <span class="drawer-stat-value" id="drawerServices">12</span>
+          <span class="drawer-stat-label">Servicios</span>
+        </div>
+        <div class="drawer-stat">
+          <span class="drawer-stat-value" id="drawerEarnings">$0</span>
+          <span class="drawer-stat-label">Wallet</span>
+        </div>
+      </div>
+
+      <nav class="drawer-nav">
+        <a href="#" class="drawer-link" id="linkProfile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+          </svg>
+          <span>Mi perfil</span>
+        </a>
+
+        <a href="#" class="drawer-link" id="linkDocuments">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <span>Documentos</span>
+          <span class="link-badge" id="docBadge">!</span>
+        </a>
+
+        <a href="#" class="drawer-link" id="linkServices">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          <span>Mis servicios</span>
+        </a>
+
+        <a href="#" class="drawer-link" id="linkEarnings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span>Wallet</span>
+        </a>
+
+        <a href="#" class="drawer-link" id="linkSettings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          <span>Configuración</span>
+        </a>
+
+        <a href="#" class="drawer-link" id="linkPhoneTrust">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="M9 12l2 2 4-4"/>
+          </svg>
+          <span>Teléfono seguro</span>
+        </a>
+
+        <a href="#" class="drawer-link" id="linkSupport">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            <path d="M12 9v2m0 4h.01"/>
+          </svg>
+          <span>Ayuda y soporte</span>
+        </a>
+      </nav>
+
+      <div class="drawer-footer">
+        <button class="logout-btn" id="logoutBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Notifications Drawer -->
+    <div class="notifications-drawer" id="notificationsDrawer" aria-hidden="true">
+      <div class="drawer-handle"></div>
+      <div class="notifications-header">
+        <div>
+          <span class="notifications-eyebrow">Centro de avisos</span>
+          <h3>Notificaciones</h3>
+        </div>
+        <div class="notifications-header-actions">
+          <button class="mark-read-btn" id="markAllRead" type="button">Marcar leídas</button>
+          <button class="notifications-close-btn" id="notificationsClose" type="button" aria-label="Cerrar notificaciones">&times;</button>
+        </div>
+      </div>
+      <div class="notifications-list" id="notificationsList">
+        <!-- Notifications injected via JS -->
+      </div>
+    </div>
+
+    <!-- Chat Drawer -->
+    <div class="chat-drawer" id="chatDrawer" aria-hidden="true">
+      <div class="drawer-handle"></div>
+      <div class="chat-header">
+        <div>
+          <h3 id="chatTitle">Chat con cliente</h3>
+          <p id="chatSubtitle">Conversacion segura vinculada a tu servicio.</p>
+        </div>
+        <button class="chat-close" id="chatClose" type="button" aria-label="Cerrar chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="chat-quick-replies" id="chatQuickReplies">
+        <button type="button" data-chat-quick="Estoy en camino.">Estoy en camino</button>
+        <button type="button" data-chat-quick="Llegue al domicilio.">Llegue</button>
+        <button type="button" data-chat-quick="Necesito un dato más para coordinar.">Necesito datos</button>
+      </div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-area">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Escribí un mensaje...">
+        <button class="chat-send" id="chatSend" type="button" aria-label="Enviar mensaje">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Verification Modal -->
+    <div class="modal-overlay" id="verificationModal" hidden>
+      <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="verificationTitle">
+        <div class="modal-header">
+          <h2 id="verificationTitle">Verificación de perfil</h2>
+          <button class="modal-close" id="modalClose" type="button" aria-label="Cerrar">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="wizard-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" id="wizardProgress" style="width: 25%"></div>
+            </div>
+            <span class="progress-text">Paso 1 de 4</span>
+          </div>
+
+          <div class="wizard-step active" id="step1">
+            <h3>DNI frente</h3>
+            <p>Fotografiá el frente de tu DNI. No podés subir imágenes desde galería.</p>
+
+            <button class="upload-zone camera-start-btn" type="button" data-camera-doc="dni_front">
+              <span class="upload-icon">ID</span>
+              <span class="upload-text">Abrir cámara trasera</span>
+            </button>
+
+            <div class="camera-step-status" id="dniFrontStatus">Pendiente</div>
+          </div>
+
+          <div class="wizard-step" id="step2">
+            <h3>DNI dorso</h3>
+            <p>Fotografiá el dorso de tu DNI. Necesitamos que se vean bien los datos y el código.</p>
+
+            <button class="upload-zone camera-start-btn" type="button" data-camera-doc="dni_back">
+              <span class="upload-icon">ID</span>
+              <span class="upload-text">Abrir cámara trasera</span>
+            </button>
+
+            <div class="camera-step-status" id="dniBackStatus">Pendiente</div>
+          </div>
+
+          <div class="wizard-step" id="step3">
+            <h3>Selfie</h3>
+            <p>Sacate una selfie clara para comparar con el documento.</p>
+
+            <button class="upload-zone camera-start-btn" type="button" data-camera-doc="selfie">
+              <span class="upload-icon">SELF</span>
+              <span class="upload-text">Abrir cámara frontal</span>
+            </button>
+
+            <div class="camera-step-status" id="selfieStatus">Pendiente</div>
+          </div>
+
+          <div class="wizard-step" id="step4">
+            <h3>Antecedentes penales</h3>
+            <p>Podés subirlo ahora o dentro de los próximos 15 días. El trámite oficial corresponde al Registro Nacional de Reincidencia.</p>
+            <button class="upload-zone camera-start-btn" type="button" data-upload="criminal_record_certificate">
+              <span class="upload-icon">PDF</span>
+              <span class="upload-text">Subir PDF o foto</span>
+            </button>
+            <input type="file" class="hidden-input" data-input="criminal_record_certificate" accept="image/*,application/pdf" />
+            <a class="verification-help-link" href="https://www.argentina.gob.ar/justicia/reincidencia/antecedentespenales" target="_blank" rel="noopener">Ir al trámite oficial</a>
+            <div class="camera-step-status" id="criminalRecordStatus">Opcional por 15 días</div>
+          </div>
+
+          <div class="wizard-step verification-result-step" id="step5">
+            <h3>Estado de verificación</h3>
+            <p id="verificationResultText">Tu verificación está pendiente de revisión.</p>
+            <div class="verification-result-list" id="verificationResultList"></div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-secondary" id="wizardPrev" type="button" hidden>Anterior</button>
+          <button class="btn-primary" id="wizardNext" type="button">Continuar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="provider-exit-overlay" id="providerExitOverlay" hidden>
+      <section class="provider-exit-dialog" role="dialog" aria-modal="true" aria-labelledby="providerExitTitle">
+        <span class="provider-exit-kicker">Cuenta de prestador</span>
+        <h2 id="providerExitTitle">Cerrar sesión</h2>
+        <p>Vamos a cerrar la sesión actual y volver al login de Prestador.</p>
+        <div class="provider-exit-actions">
+          <button class="provider-exit-secondary" id="providerExitCancel" type="button">Seguir conectado</button>
+          <button class="provider-exit-primary" id="providerExitConfirm" type="button">Cerrar sesión</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- Camera Capture Modal -->
+    <div class="camera-capture-modal" id="cameraCaptureModal" hidden>
+      <div class="camera-shell">
+        <div class="camera-topbar">
+          <button class="camera-close-btn" id="cameraCancelBtn" type="button" aria-label="Cerrar cámara">&times;</button>
+          <div>
+            <strong id="cameraTitle">Verificación</strong>
+            <span id="cameraHint">Ubicá el documento dentro de la guía</span>
+          </div>
+        </div>
+
+        <div class="camera-preview-wrap">
+          <video id="cameraVideo" class="camera-video" autoplay playsinline muted></video>
+          <img id="cameraStillPreview" class="camera-still-preview" alt="Vista previa de la foto capturada" hidden>
+          <canvas id="cameraCanvas" hidden></canvas>
+          <div class="camera-guide dni" id="cameraGuide" aria-hidden="true">
+            <span class="face-guide-outline"></span>
+            <span class="face-guide-center"></span>
+          </div>
+          <div class="camera-busy-overlay" id="cameraBusyOverlay" hidden>
+            <span class="button-spinner"></span>
+            <strong>Procesando imagen...</strong>
+          </div>
+        </div>
+
+        <div class="camera-actions">
+          <button class="camera-secondary" id="cameraRetakeBtn" type="button" hidden>Repetir</button>
+          <button class="camera-primary" id="cameraCaptureBtn" type="button">Capturar</button>
+          <button class="camera-primary" id="cameraUseBtn" type="button" hidden>Usar foto</button>
+          <button class="camera-support" id="cameraSupportBtn" type="button" hidden>Contactar soporte</button>
+        </div>
+
+        <p class="camera-status" id="cameraStatus">Cámara lista</p>
+      </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Install Prompt -->
+    <div class="install-banner" id="installBanner" hidden>
+      <div class="install-text">Instalá la app de prestadores para gestionar servicios más rápido</div>
+
+      <button class="install-btn" id="installBtn" type="button">
+        Instalar
+      </button>
+
+      <button class="install-dismiss" id="installDismiss" type="button" aria-label="Cerrar">
+        &times;
+      </button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="./env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Push notifications are initialized from src/services/push.js. -->
+  <script type="module" src="./src/main-provider.js?v=2026.05.18.2"></script>
 </body>
 </html>

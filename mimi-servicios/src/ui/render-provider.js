@@ -437,17 +437,204 @@ export function renderOffersList(state) {
       </div>
     `;
 }
+
+function providerPayoutStatusMeta(account, providerReadyForPayoutReview) {
+  if (!account) {
+    return {
+      label: providerReadyForPayoutReview ? "Incompleto" : "Pendiente KYC",
+      className: "is-incomplete",
+      message: providerReadyForPayoutReview
+        ? "Carga CBU, CVU o alias para dejar tus datos pendientes de revision."
+        : "Completa tu identidad/KYC para habilitar la revision de tus datos de cobro."
+    };
+  }
+
+  const status = String(account.status || "").toLowerCase();
+  const ownership = String(account.ownership_verification_status || "").toLowerCase();
+
+  if (status === "verified" || ownership === "ownership_verified") {
+    return {
+      label: "Verificado",
+      className: "is-verified",
+      message: "Cuenta verificada."
+    };
+  }
+
+  if (status === "rejected" || ["ownership_mismatch", "account_inactive", "verification_failed"].includes(ownership)) {
+    return {
+      label: "Requiere revision",
+      className: "is-rejected",
+      message: "No pudimos validar la cuenta. Revisa los datos o contacta soporte."
+    };
+  }
+
+  if (status === "draft") {
+    return {
+      label: "Incompleto",
+      className: "is-incomplete",
+      message: "Completa y envia tus datos para revision."
+    };
+  }
+
+  return {
+    label: "Pendiente",
+    className: "is-pending",
+    message: "Datos enviados a revision."
+  };
+}
+
+function selectedOption(value, current) {
+  return value === current ? " selected" : "";
+}
+
+function payoutMethodClass(account, method) {
+  return account?.account_type === method ? " is-active" : "";
+}
+
 export function renderProviderDashboard(state) {
   const container = document.getElementById("providerDashboardPanel");
   if (!container) return;
 
   const dashboard = state.provider.dashboard ?? {};
+  const availableBalance = dashboard.available_balance ?? dashboard.earnings ?? 0;
+  const pendingBalance = dashboard.pending_balance ?? dashboard.pending_earnings ?? 0;
+  const futureDebtBalance = dashboard.cash_debt_balance ?? dashboard.negative_balance ?? 0;
+  const payoutAccount = state.provider.payoutAccount ?? null;
+  const walletLoading = Boolean(state.provider.walletLoading);
+  const payoutAccountError = state.provider.payoutAccountError || null;
+  const providerReadyForPayoutReview = Boolean(
+    state.provider.profile?.approved ||
+    state.provider.profile?.kyc_approved ||
+    state.provider.profile?.kyc_tax_id_status === "verified" ||
+    state.provider.business?.kyc_tax_id_status === "verified"
+  );
+  const payoutStatusMeta = providerPayoutStatusMeta(payoutAccount, providerReadyForPayoutReview);
+  const accountType = payoutAccount?.account_type || "cbu";
+  const payoutIdentifier =
+    payoutAccount?.cbu_masked ||
+    payoutAccount?.cvu_masked ||
+    payoutAccount?.alias_masked ||
+    "Sin datos cargados";
+  const payoutStatus = payoutStatusMeta.label;
+  const ownershipStatus = payoutAccount?.ownership_verification_status || (providerReadyForPayoutReview ? "no_account" : "pending_missing_tax_id");
+  const ownershipMessages = {
+    no_account: "Carga CBU/CVU o alias para dejar tus datos pendientes de revision.",
+    not_verified: "Datos enviados a revision.",
+    pending_review: "Datos enviados a revision.",
+    pending_external_verification: "Cuenta bancaria en verificacion.",
+    pending_missing_tax_id: "Tus datos fueron enviados. La cuenta se verificara cuando tu identidad/KYC este completo.",
+    verification_failed: "No pudimos verificar titularidad. Queda para revision.",
+    ownership_verified: "Cuenta verificada.",
+    ownership_mismatch: "Cuenta rechazada: no coincide titularidad.",
+    account_inactive: "Cuenta rechazada: cuenta bancaria inactiva.",
+    manual_review: "Cuenta en revision manual.",
+    needs_more_info: "Necesitamos mas informacion para revisar tus datos."
+  };
+  const ownershipCopy = ownershipMessages[ownershipStatus] || "Datos enviados a revision.";
+  const encryptionWarning = payoutAccount?.encrypted_payload_required
+    ? `<p class="provider-wallet-warning">Tus datos quedaron enmascarados y pendientes de recarga cifrada antes de habilitar payouts reales.</p>`
+    : "";
+  const walletLoadingCopy = walletLoading
+    ? `<p class="provider-wallet-loading" role="status">Sincronizando Wallet...</p>`
+    : "";
+  const walletErrorCopy = payoutAccountError
+    ? `<p class="provider-wallet-error" role="alert">${escapeHtml(payoutAccountError)}</p>`
+    : "";
+  const disabledAttr = walletLoading ? " disabled" : "";
 
   container.innerHTML = `
+    <section id="providerWalletOverview" class="provider-wallet-overview" aria-label="Wallet del prestador">
+      <article class="provider-wallet-card">
+        <span>Wallet MIMIGO</span>
+        <strong>${currency(availableBalance)}</strong>
+        <small>Disponible informativo. Payout real todavia desactivado.</small>
+        <button type="button" data-provider-wallet-refresh${disabledAttr}>${walletLoading ? "Actualizando..." : "Actualizar"}</button>
+      </article>
+
+      <article class="provider-wallet-card">
+        <span>Pendiente</span>
+        <strong>${currency(pendingBalance)}</strong>
+        <small>Servicios o liquidaciones aun no liberadas.</small>
+      </article>
+
+      <article class="provider-wallet-card provider-wallet-card-soft">
+        <span>A compensar</span>
+        <strong>${currency(futureDebtBalance)}</strong>
+        <small>Solo foundation futura. No se descuenta dinero real.</small>
+      </article>
+
+      <article class="provider-wallet-card provider-wallet-card-soft">
+        <span>Datos para recibir pagos</span>
+        <strong>${escapeHtml(payoutIdentifier)}</strong>
+        <small>Estado: <b class="provider-wallet-status ${payoutStatusMeta.className}">${escapeHtml(payoutStatus)}</b></small>
+        <small>${escapeHtml(ownershipCopy)}</small>
+        ${encryptionWarning}
+        ${walletLoadingCopy}
+        ${walletErrorCopy}
+      </article>
+    </section>
+
+    <section id="providerPayoutAccountPanel" class="provider-payout-account-panel" aria-label="Datos para recibir pagos">
+      <div class="provider-payout-account-copy">
+        <h3>Datos para recibir pagos</h3>
+        <p>Tus datos de cobro se usaran cuando MIMIGO habilite pagos/liquidaciones. Por seguridad, los cambios pueden requerir revision.</p>
+        <p class="provider-wallet-note">Para proteger tu cuenta, la titularidad debe coincidir con el CUIT/CUIL verificado en KYC. Nunca mostramos CBU/CVU ni CUIT/CUIL completos.</p>
+        <div class="provider-wallet-methods" aria-label="Metodos de cobro admitidos">
+          <span class="provider-wallet-method${payoutMethodClass(payoutAccount, "cbu")}">CBU</span>
+          <span class="provider-wallet-method${payoutMethodClass(payoutAccount, "cvu")}">CVU</span>
+          <span class="provider-wallet-method${payoutMethodClass(payoutAccount, "alias")}">Alias</span>
+          <span class="provider-wallet-method${payoutMethodClass(payoutAccount, "bank_account")}">Cuenta</span>
+        </div>
+        <p class="provider-wallet-current">Estado actual: <strong>${escapeHtml(payoutStatusMeta.label)}</strong>. ${escapeHtml(payoutStatusMeta.message)}</p>
+        ${walletLoadingCopy}
+        ${walletErrorCopy}
+      </div>
+      <form id="providerPayoutAccountForm" class="provider-payout-account-form" aria-busy="${walletLoading ? "true" : "false"}">
+        <label>
+          <span>Tipo de cuenta</span>
+          <select name="account_type"${disabledAttr}>
+            <option value="cbu"${selectedOption("cbu", accountType)}>CBU</option>
+            <option value="cvu"${selectedOption("cvu", accountType)}>CVU</option>
+            <option value="alias"${selectedOption("alias", accountType)}>Alias</option>
+            <option value="bank_account"${selectedOption("bank_account", accountType)}>Cuenta bancaria</option>
+          </select>
+        </label>
+        <label>
+          <span>CBU</span>
+          <input name="cbu" inputmode="numeric" maxlength="22" pattern="[0-9]{22}" autocomplete="off" placeholder="${escapeHtml(payoutAccount?.cbu_masked || "22 digitos")}"${disabledAttr} />
+        </label>
+        <label>
+          <span>CVU</span>
+          <input name="cvu" inputmode="numeric" maxlength="22" pattern="[0-9]{22}" autocomplete="off" placeholder="${escapeHtml(payoutAccount?.cvu_masked || "22 digitos")}"${disabledAttr} />
+        </label>
+        <label>
+          <span>Alias</span>
+          <input name="alias" minlength="6" maxlength="80" autocomplete="off" placeholder="${escapeHtml(payoutAccount?.alias_masked || "tu.alias")}"${disabledAttr} />
+        </label>
+        <label>
+          <span>Banco/billetera</span>
+          <input name="bank_name" maxlength="100" autocomplete="organization" placeholder="Banco o billetera" value="${escapeHtml(payoutAccount?.bank_name || "")}"${disabledAttr} />
+        </label>
+        <label>
+          <span>Titular</span>
+          <input name="holder_name" maxlength="120" autocomplete="name" placeholder="Nombre del titular" value="${escapeHtml(payoutAccount?.holder_name || "")}"${disabledAttr} />
+        </label>
+        <label>
+          <span>CUIT/CUIL titular</span>
+          <input name="holder_tax_id" inputmode="numeric" maxlength="20" autocomplete="off" placeholder="${escapeHtml(payoutAccount?.holder_tax_id_masked || "Opcional")}"${disabledAttr} />
+        </label>
+        <label class="provider-payout-account-reason">
+          <span>Motivo del alta/cambio</span>
+          <input name="change_reason" maxlength="220" autocomplete="off" placeholder="Ej: cargo mi cuenta para futuras liquidaciones" required${disabledAttr} />
+        </label>
+        <button type="submit"${disabledAttr}>${walletLoading ? "Enviando..." : "Enviar a revision"}</button>
+      </form>
+    </section>
+
     <section class="provider-kpi-grid">
 
       <article class="provider-kpi-card">
-        <span>Ganancias</span>
+        <span>Ganancias historicas</span>
         <strong>${currency(dashboard.earnings ?? 0)}</strong>
         <small>Total histórico</small>
       </article>
@@ -2094,6 +2281,7 @@ export function renderProviderScreen(state) {
   renderStatusBanner(state);
   renderAuth(state);
   renderProviderStats(state);
+  renderProviderDashboard(state);
   renderOffersList(state);
   renderProviderActiveService(state);
   renderProviderProfile(state);

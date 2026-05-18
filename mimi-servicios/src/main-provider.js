@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.14.9";
+const MIMI_PROVIDER_BUILD = "2026.05.18.2";
 const PARTNER_PWA_INSTALLED_KEY = "mimi_go_partner_pwa_installed";
 const PARTNER_INSTALL_DISMISSED_KEY = "mimi_go_partner_install_dismissed_until";
 const PARTNER_INSTALL_SESSION_KEY = "mimi_go_partner_install_shown_session";
@@ -69,6 +69,7 @@ import {
   loadOffers,
   loadProviderWorkspace,
   getProviderDashboard,
+  getProviderPayoutAccount,
   approveSecurityChallenge,
   registerDevice,
   requestOtp,
@@ -76,13 +77,14 @@ import {
   saveProviderWorkspace,
   sendMessage,
   startSecurityVerification,
+  submitProviderPayoutAccount,
   touchProviderPresence,
   uploadProviderAvatar,
   uploadProviderDocument,
   signOut,
   updateProviderStatus,
   verifyOtp
-  } from "./services/service-api.js?v=2026.05.14.9";
+  } from "./services/service-api.js?v=2026.05.18.2";
 import {
   detectDefaultCountry,
   loadPhoneCountries,
@@ -90,7 +92,7 @@ import {
 } from "./utils/phone-countries.js";
 
 
-import { renderProviderScreen } from "./ui/render-provider.js";
+import { renderProviderScreen } from "./ui/render-provider.js?v=2026.05.18.2";
 import {
   clearAuthRedirectIntent,
   forceCleanSession,
@@ -114,6 +116,7 @@ import {
   subscribeScopedChannel
 } from "./services/realtime-manager.js";
 import { ensureMapLibreAssets } from "./services/map.js";
+import { recordCriticalRiskEvent } from "./security/risk-events.js";
 
 initObservability("provider");
 markPerformance("provider_module_loaded");
@@ -143,7 +146,7 @@ async function removeConflictingServiceWorkers(expectedScopePath) {
       })
     );
   } catch (error) {
-    console.warn("[MIMI Partner] No se pudieron limpiar service workers previos:", error);
+    console.warn("[MIMI GO Pro] No se pudieron limpiar service workers previos:", error);
   }
 }
 
@@ -2105,7 +2108,7 @@ async loadInitialData() {
       return false;
     }
 
-const [categories, workspace, notifications, offers, activeRequest] = await Promise.all([
+const [categories, workspace, notifications, offers, activeRequest, payoutAccountResult] = await Promise.all([
   // Reusar categorías ya cargadas en init(); si están vacías, recargar
   (this.state?.appConfig?.categories?.length
     ? Promise.resolve(this.state.appConfig.categories)
@@ -2113,7 +2116,8 @@ const [categories, workspace, notifications, offers, activeRequest] = await Prom
   loadProviderWorkspace(session.providerId),
   loadNotifications(session.userId),
   loadOffers(session.providerId),
-  loadActiveRequest({ providerId: session.providerId })
+  loadActiveRequest({ providerId: session.providerId }),
+  getProviderPayoutAccount()
 ]);
 
 if (Array.isArray(categories) && categories.length) {
@@ -2131,7 +2135,8 @@ setTimeout(async () => {
     actions.updateState({
       provider: {
         ...(this.state?.provider ?? {}),
-        dashboard: freshDashboard
+        dashboard: freshDashboard,
+        payoutAccount: payoutAccountResult?.account ?? this.state?.provider?.payoutAccount ?? null
       }
     });
   } catch (err) {
@@ -2143,6 +2148,7 @@ setTimeout(async () => {
     actions.updateState({
       provider: {
         ...(this.state?.provider ?? {}),
+        payoutAccount: payoutAccountResult?.account ?? null,
         offers: this.filterUsableOffers(offers)
       }
     });
@@ -3364,7 +3370,7 @@ stats: {
       profile: { tab: "account", target: "providerProfilePanel" },
       documents: { tab: "account", target: "providerTrustPanel" },
       services: { tab: "pricing", target: "providerBusinessPanel" },
-      earnings: { tab: "now", target: "providerDashboardPanel" },
+      earnings: { tab: "wallet", target: "providerPayoutAccountPanel" },
       settings: { tab: "pricing", target: "providerBusinessPanel" },
       support: { tab: "account", target: "providerSupportPanel" }
     }[section] ?? { tab: "account", target: null };
@@ -3379,6 +3385,10 @@ stats: {
       const target = route.target ? document.getElementById(route.target) : null;
       target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
     });
+
+    if (section === "earnings") {
+      this.refreshProviderPayoutAccount({ silent: true });
+    }
   }
 
   documentByType(type) {
@@ -3526,6 +3536,9 @@ this.elements.tabButtons.forEach((btn) => {
     this.captureSheetReturnTab();
     this.switchTab(tab);
     this.setBottomSheetState("expanded");
+    if (tab === "wallet") {
+      this.refreshProviderPayoutAccount({ silent: true });
+    }
   });
 });
 
@@ -3728,6 +3741,19 @@ document.addEventListener("click", (event) => {
     document.getElementById('linkEarnings')?.addEventListener('click', (e) => {
       e.preventDefault();
       this.openProviderSection("earnings");
+    });
+
+    document.addEventListener("submit", (event) => {
+      const form = event.target?.closest?.("#providerPayoutAccountForm");
+      if (!form) return;
+      this.handleProviderPayoutAccountSubmit(event);
+    });
+
+    document.addEventListener("click", (event) => {
+      const refreshButton = event.target?.closest?.("[data-provider-wallet-refresh]");
+      if (!refreshButton) return;
+      event.preventDefault();
+      this.refreshProviderPayoutAccount();
     });
 
     document.getElementById('linkSettings')?.addEventListener('click', (e) => {
@@ -7367,6 +7393,214 @@ if (this.elements.drawerInitials) {
       setTimeout(() => toast.remove(), 300);
     }, 3000);
   }
+
+providerPayoutErrorMessage(code) {
+  const value = String(code || "").trim();
+  const messages = {
+    AUTH_REQUIRED: "Inicia sesion para configurar tu Wallet.",
+    PROVIDER_NOT_FOUND: "No encontramos tu perfil de prestador.",
+    CBU_REQUIRED: "Carga un CBU valido.",
+    CVU_REQUIRED: "Carga un CVU valido.",
+    ALIAS_REQUIRED: "Carga un alias valido.",
+    CBU_INVALID_LENGTH: "El CBU debe tener 22 digitos.",
+    CVU_INVALID_LENGTH: "El CVU debe tener 22 digitos.",
+    BANK_ACCOUNT_IDENTIFIER_REQUIRED: "Carga CBU, CVU o alias para identificar la cuenta.",
+    PAYOUT_ACCOUNT_TYPE_INVALID: "Selecciona un tipo de cuenta valido.",
+    PAYOUT_ACCOUNT_HASH_SALT_MISSING: "Wallet no disponible: falta configuracion segura del backend.",
+    PAYOUT_ACCOUNT_ENCRYPTION_KEY_MISSING: "Falta configurar cifrado para datos de cobro.",
+    payout_account_unavailable: "No pudimos recuperar tus datos de Wallet."
+  };
+  return messages[value] || "No pudimos procesar tus datos de Wallet.";
+}
+
+async refreshProviderPayoutAccount({ silent = false } = {}) {
+  const actionKey = "provider-payout-account-refresh";
+  if (this.pendingActions.has(actionKey)) return;
+
+  if (!this.state?.session?.isAuthenticated) {
+    if (!silent) this.showToast("Inicia sesion para ver tu Wallet.", "warning");
+    return;
+  }
+
+  this.pendingActions.add(actionKey);
+  actions.updateState({
+    provider: {
+      ...(this.state?.provider ?? {}),
+      walletLoading: true,
+      payoutAccountError: null
+    }
+  });
+
+  try {
+    const result = await getProviderPayoutAccount();
+    const errorCode = result?.ok === false ? result?.error : null;
+    actions.updateState({
+      provider: {
+        ...(this.state?.provider ?? {}),
+        payoutAccount: result?.account ?? null,
+        walletLoading: false,
+        payoutAccountError: errorCode ? this.providerPayoutErrorMessage(errorCode) : null
+      }
+    });
+
+    if (!silent && !errorCode) {
+      this.showToast("Wallet actualizada.", "success");
+    }
+  } catch (error) {
+    const code = error?.details?.error || error?.code || error?.message;
+    const message = this.providerPayoutErrorMessage(code);
+    actions.updateState({
+      provider: {
+        ...(this.state?.provider ?? {}),
+        walletLoading: false,
+        payoutAccountError: message
+      }
+    });
+    if (!silent) this.showToast(message, "error");
+    console.warn("[MIMI] No pudimos refrescar datos de cobro:", error);
+  } finally {
+    this.pendingActions.delete(actionKey);
+  }
+}
+
+async handleProviderPayoutAccountSubmit(event) {
+  event.preventDefault();
+  const form = event.target?.closest?.("#providerPayoutAccountForm");
+  if (!form) return;
+
+  if (!this.state?.session?.isAuthenticated) {
+    this.showToast("Inicia sesion para configurar tu Wallet.", "warning");
+    return;
+  }
+
+  const actionKey = "provider-payout-account-submit";
+  if (this.pendingActions.has(actionKey)) return;
+
+  const submitButton = form?.querySelector?.("button[type='submit']");
+  const originalLabel = submitButton?.textContent;
+  const formData = new FormData(form);
+  const accountType = String(formData.get("account_type") || "cbu").trim().toLowerCase();
+  const cbu = String(formData.get("cbu") || "").replace(/\D/g, "");
+  const cvu = String(formData.get("cvu") || "").replace(/\D/g, "");
+  const alias = String(formData.get("alias") || "").trim().toLowerCase();
+  const changeReason = String(formData.get("change_reason") || "").trim();
+  const focusField = (name) => form.querySelector(`[name='${name}']`)?.focus?.();
+
+  if (!["cbu", "cvu", "alias", "bank_account"].includes(accountType)) {
+    this.showToast("Selecciona un tipo de cuenta valido.", "warning");
+    focusField("account_type");
+    return;
+  }
+
+  if (accountType === "cbu" && cbu.length !== 22) {
+    this.showToast("El CBU debe tener 22 digitos.", "warning");
+    focusField("cbu");
+    return;
+  }
+
+  if (accountType === "cvu" && cvu.length !== 22) {
+    this.showToast("El CVU debe tener 22 digitos.", "warning");
+    focusField("cvu");
+    return;
+  }
+
+  if (accountType === "alias" && alias.length < 6) {
+    this.showToast("El alias debe tener al menos 6 caracteres.", "warning");
+    focusField("alias");
+    return;
+  }
+
+  if (accountType === "bank_account") {
+    if (!cbu && !cvu && alias.length < 6) {
+      this.showToast("Carga CBU, CVU o alias para identificar la cuenta.", "warning");
+      focusField("cbu");
+      return;
+    }
+    if (cbu && cbu.length !== 22) {
+      this.showToast("El CBU debe tener 22 digitos.", "warning");
+      focusField("cbu");
+      return;
+    }
+    if (cvu && cvu.length !== 22) {
+      this.showToast("El CVU debe tener 22 digitos.", "warning");
+      focusField("cvu");
+      return;
+    }
+  }
+
+  if (changeReason.length < 10) {
+    this.showToast("Agrega un motivo breve para auditar el cambio.", "warning");
+    focusField("change_reason");
+    return;
+  }
+
+  this.pendingActions.add(actionKey);
+  actions.updateState({
+    provider: {
+      ...(this.state?.provider ?? {}),
+      walletLoading: true,
+      payoutAccountError: null
+    }
+  });
+
+  try {
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Enviando...";
+    }
+
+    recordCriticalRiskEvent("provider_change_bank_account", {
+      actorRole: "provider",
+      source: "provider_wallet_form",
+      providerId: this.state?.session?.providerId ?? null,
+      accountType,
+      hasCbu: Boolean(cbu),
+      hasCvu: Boolean(cvu),
+      hasAlias: Boolean(alias)
+    });
+
+    const result = await submitProviderPayoutAccount({
+      account_type: accountType,
+      cbu,
+      cvu,
+      alias,
+      bank_name: formData.get("bank_name"),
+      holder_name: formData.get("holder_name"),
+      holder_tax_id: formData.get("holder_tax_id"),
+      change_reason: changeReason
+    });
+
+    actions.updateState({
+      provider: {
+        ...(this.state?.provider ?? {}),
+        payoutAccount: result?.account ?? null,
+        walletLoading: false,
+        payoutAccountError: null
+      }
+    });
+
+    this.showToast("Datos de cobro enviados a revision.", "success");
+    form.reset();
+  } catch (error) {
+    console.error("[MIMI] Error enviando datos de cobro:", error);
+    const code = error?.details?.error || error?.code || error?.message;
+    const message = this.providerPayoutErrorMessage(code);
+    actions.updateState({
+      provider: {
+        ...(this.state?.provider ?? {}),
+        walletLoading: false,
+        payoutAccountError: message
+      }
+    });
+    this.showToast(message, "error");
+  } finally {
+    this.pendingActions.delete(actionKey);
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = originalLabel || "Enviar a revision";
+    }
+  }
+}
 
 async handleSecurityChallengeAction(sourceUrl = window.location.href) {
   let url;
