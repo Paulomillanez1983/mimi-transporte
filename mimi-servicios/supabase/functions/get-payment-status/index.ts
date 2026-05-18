@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders, fail, json, readJson } from "../_shared/payments/http.ts";
+import { postPaymentCaptureLedger } from "../_shared/payments/financial-ledger.ts";
 import { getPaymentProvider } from "../_shared/payments/providers.ts";
 
 const FINAL_PAYMENT_STATUSES = new Set([
@@ -32,6 +33,11 @@ function rawRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
+function numeric(value: unknown) {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function normalizeProviderStatus(status: unknown, currentStatus: string) {
   const next = String(status ?? "").trim().toUpperCase();
   if (!next) return currentStatus;
@@ -40,6 +46,114 @@ function normalizeProviderStatus(status: unknown, currentStatus: string) {
     return next;
   }
   return currentStatus;
+}
+
+async function paymentCaptureLedgerAlreadyPosted(supabase: ReturnType<typeof createClient>, paymentId: string) {
+  const { data } = await supabase
+    .from("financial_transactions")
+    .select("id")
+    .eq("transaction_key", `payment.capture:${paymentId}`)
+    .limit(1)
+    .maybeSingle();
+  return Boolean(data?.id);
+}
+
+async function postApprovedPaymentAccounting(
+  supabase: ReturnType<typeof createClient>,
+  payment: Record<string, unknown>,
+  providerRaw: Record<string, unknown>,
+  eventId: string,
+  environment: string,
+  isTest: boolean,
+  fiscalVisibility: string,
+) {
+  if (isTest || !payment.provider_id) return;
+
+  const paymentId = String(payment.id ?? "");
+  if (!paymentId || await paymentCaptureLedgerAlreadyPosted(supabase, paymentId)) return;
+
+  const traceId = `payment-status-sync:${paymentId}`;
+  const correlationId = eventId;
+  const providerFeeAmount = numeric(providerRaw.fee_amount ?? providerRaw.fee);
+
+  await postPaymentCaptureLedger(supabase, payment, eventId, {
+    source: "payment_status_sync",
+    provider_name: String(payment.provider_name ?? "mercadopago"),
+    provider_event_id: eventId,
+    trace_id: traceId,
+    correlation_id: correlationId,
+    payment_id: paymentId,
+    service_request_id: String(payment.service_request_id ?? "") || null,
+    provider_id: String(payment.provider_id ?? "") || null,
+    environment: environment as "production" | "sandbox",
+    is_test: isTest,
+    fiscal_visibility: fiscalVisibility as "fiscal_reportable" | "sandbox_only" | "excluded_from_accounting",
+    metadata: {
+      provider_status_sync: true,
+      provider_fee_amount: providerFeeAmount
+    }
+  });
+
+  await supabase.from("settlements").upsert({
+    payment_id: payment.id,
+    provider_id: payment.provider_id,
+    gross_amount: payment.total_amount,
+    platform_fee: payment.platform_fee,
+    net_amount: payment.provider_amount,
+    currency: payment.currency,
+    status: "PENDING"
+  }, { onConflict: "payment_id" });
+
+  const { data: ledger } = await supabase
+    .from("financial_ledgers")
+    .select("id")
+    .eq("code", "operational_financial_ledger")
+    .maybeSingle();
+
+  if (ledger?.id) {
+    await supabase.from("provider_earnings").upsert({
+      ledger_id: ledger.id,
+      provider_id: payment.provider_id,
+      payment_id: payment.id,
+      service_request_id: payment.service_request_id ?? null,
+      earning_key: `provider.earning:${payment.id}`,
+      gross_amount: numeric(payment.total_amount),
+      commission_amount: numeric(payment.platform_fee),
+      psp_fee_amount: providerFeeAmount,
+      net_amount: numeric(payment.provider_amount),
+      currency: payment.currency ?? "ARS",
+      status: "available",
+      environment,
+      is_test: isTest,
+      fiscal_visibility: fiscalVisibility,
+      trace_id: traceId,
+      correlation_id: correlationId
+    }, { onConflict: "earning_key", ignoreDuplicates: true });
+
+    await supabase.from("platform_revenue").upsert({
+      ledger_id: ledger.id,
+      payment_id: payment.id,
+      service_request_id: payment.service_request_id ?? null,
+      revenue_key: `platform.revenue:${payment.id}`,
+      revenue_type: "commission",
+      gross_amount: numeric(payment.total_amount),
+      revenue_amount: numeric(payment.platform_fee),
+      net_amount: numeric(payment.platform_fee),
+      currency: payment.currency ?? "ARS",
+      recognized_at: new Date().toISOString(),
+      environment,
+      is_test: isTest,
+      fiscal_visibility: fiscalVisibility,
+      trace_id: traceId,
+      correlation_id: correlationId
+    }, { onConflict: "revenue_key", ignoreDuplicates: true });
+  }
+
+  await supabase.rpc("financial_recompute_provider_wallet_foundation", {
+    p_provider_id: payment.provider_id,
+    p_environment: environment,
+    p_is_test: isTest
+  });
 }
 
 serve(async (req) => {
@@ -137,16 +251,30 @@ serve(async (req) => {
 
     if (updateError) throw updateError;
 
+    const statusSyncEventId = `status-sync:${providerResult.providerName}:${providerResult.providerPaymentId || providerPaymentId}:${nextStatus}`;
+
     if (nextStatus !== currentStatus) {
       await supabase.from("payment_events").insert({
         payment_id: payment.id,
         event_type: "payment_status.synced",
-        provider_event_id: `status-sync:${providerResult.providerName}:${providerResult.providerPaymentId || providerPaymentId}:${nextStatus}`,
+        provider_event_id: statusSyncEventId,
         payload: providerRaw,
         environment: effectiveEnvironment,
         is_test: effectiveIsTest,
         fiscal_visibility: effectiveFiscalVisibility
       });
+
+      if (nextStatus === "APPROVED" && !["APPROVED", "CAPTURED", "SETTLED"].includes(currentStatus)) {
+        await postApprovedPaymentAccounting(
+          supabase,
+          updatedPayment,
+          providerRaw,
+          statusSyncEventId,
+          effectiveEnvironment,
+          effectiveIsTest,
+          effectiveFiscalVisibility,
+        );
+      }
     }
 
     return json({

@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { createUserNotificationWithPush } from "../_shared/push-notifications.ts";
 import {
+  assertRequestPaymentApproved,
   getCorrelationId,
   lifecycleLog,
   sanitizeLifecycleRequest,
@@ -28,6 +29,13 @@ function normalizePin(value: unknown) {
   const pin = String(value || "").replace(/\D/g, "").slice(0, 4);
   if (!/^\d{4}$/.test(pin)) throw new Error("pin_invalid");
   return pin;
+}
+
+function detailsForError(error: unknown) {
+  if (typeof error === "object" && error !== null && "details" in error) {
+    return (error as { details?: unknown }).details;
+  }
+  return null;
 }
 
 function bytesToHex(bytes: Uint8Array) {
@@ -119,6 +127,8 @@ serve(async (req) => {
         correlation_id: correlationId,
       }, 409);
     }
+
+    await assertRequestPaymentApproved(admin, request);
 
     if (!request.service_pin_hash) return json({ ok: false, error: "pin_not_ready", correlation_id: correlationId }, 409);
     if (request.service_pin_verified_at) return json({ ok: false, error: "pin_already_used", correlation_id: correlationId }, 409);
@@ -219,7 +229,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("svc-start-service error:", { correlation_id: correlationId, error });
     const message = error instanceof Error ? error.message : "unexpected_error";
-    const status = message === "AUTH_REQUIRED" ? 401 : message === "pin_invalid" ? 400 : 400;
-    return json({ ok: false, error: message, correlation_id: correlationId }, status);
+    const status = message === "AUTH_REQUIRED" ? 401 : message === "payment_not_approved" ? 402 : message === "pin_invalid" ? 400 : 400;
+    return json({ ok: false, error: message, details: detailsForError(error), correlation_id: correlationId }, status);
   }
 });

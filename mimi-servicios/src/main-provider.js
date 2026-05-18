@@ -2838,6 +2838,29 @@ stats: {
     return "Pago pendiente";
   }
 
+  serviceRequiresApprovedPayment(service = {}) {
+    const raw = service.raw ?? service;
+    const details = service.details ?? this.extractServiceDetails(raw);
+    const total = Number(
+      raw.total_price_snapshot ??
+      raw.total_price ??
+      details.total_price ??
+      service.price ??
+      0
+    );
+    const model = String(details.pricing_model ?? raw.pricing_model ?? "").trim().toUpperCase();
+    return Number.isFinite(total) && total > 0 && model !== "QUOTE";
+  }
+
+  isServicePaymentApproved(service = {}) {
+    const status = this.normalizePaymentStatus(service.paymentStatus ?? service.payment_status ?? service.payment?.status);
+    return ["APPROVED", "CAPTURED", "SETTLED"].includes(status);
+  }
+
+  canAdvancePaidService(service = {}) {
+    return !this.serviceRequiresApprovedPayment(service) || this.isServicePaymentApproved(service);
+  }
+
   distanceKmBetween(latA, lngA, latB, lngB) {
     const aLat = Number(latA);
     const aLng = Number(lngA);
@@ -5966,15 +5989,24 @@ startLocationTracking() {
 
       actions.setActiveService(this.normalizeServiceForState(service));
       actions.clearActiveOffer();
-      actions.setProviderStatus(isImmediate ? "EN_ROUTE" : "BOOKED_UPCOMING");
+      actions.setProviderStatus("BOOKED_UPCOMING");
 
       if (isImmediate) {
-        this.showToast("Solicitud aceptada. Activando ruta...", "success");
-        const enRoute = await invokeFunction("svc-provider-en-route", {
-          request_id: service.id ?? service.request_id
-        });
-        service = enRoute?.service ?? enRoute?.request ?? service;
-        actions.setActiveService(this.normalizeServiceForState(service));
+        const freshRequest = await this.resyncActiveService("after_accept_payment_check");
+        const currentService = freshRequest ? this.normalizeServiceForState(freshRequest) : this.state.activeService;
+        if (!this.canAdvancePaidService(currentService)) {
+          this.showToast("Solicitud aceptada. Esperamos el pago confirmado del cliente para iniciar la ruta.", "warning");
+        } else {
+          this.showToast("Solicitud aceptada. Activando ruta...", "success");
+          const enRoute = await invokeFunction("svc-provider-en-route", {
+            request_id: service.id ?? service.request_id
+          });
+          service = enRoute?.service ?? enRoute?.request ?? service;
+          actions.setActiveService(this.normalizeServiceForState(service));
+          actions.setProviderStatus("EN_ROUTE");
+          this.startLocationTracking();
+          this.showToast("Servicio aceptado. Ruta iniciada.", "success");
+        }
       }
 
       this.subscribeActiveRequestRealtime(service.id ?? service.request_id);
@@ -5984,15 +6016,18 @@ startLocationTracking() {
         this.offerTimer = null;
       }
 
-      if (isImmediate) {
-        this.startLocationTracking();
-        this.showToast("Servicio aceptado. Ruta iniciada.", "success");
-      } else {
+      if (!isImmediate) {
         this.showToast("Servicio programado aceptado.", "success");
       }
     } catch (err) {
       console.error("[MIMI] Error accepting offer:", err);
-      this.showToast("Error aceptando servicio", "error");
+      const code = String(err?.code || err?.message || "");
+      this.showToast(
+        code.includes("payment_not_approved")
+          ? "Solicitud aceptada. Falta que el cliente confirme el pago para avanzar."
+          : "Error aceptando servicio",
+        code.includes("payment_not_approved") ? "warning" : "error"
+      );
     } finally {
       actions.setLoading(false);
     }
@@ -6035,6 +6070,11 @@ startLocationTracking() {
 
     try {
       actions.setLoading(true);
+      if (!this.canAdvancePaidService(service)) {
+        this.showToast("El cliente debe confirmar el pago antes de avanzar el servicio.", "warning");
+        await this.resyncActiveService("payment_required_before_action");
+        return;
+      }
 
       switch (this.normalizeRequestStatus(service.status)) {
         case "ACCEPTED":
@@ -6119,6 +6159,8 @@ startLocationTracking() {
                     ? "El estado del servicio cambio. Actualiza la pantalla e intenta de nuevo."
                     : code.includes("request_forbidden")
                       ? "Esta solicitud no corresponde a tu perfil de prestador."
+                      : code.includes("payment_not_approved")
+                        ? "El cliente debe confirmar el pago antes de avanzar el servicio."
                 : "No pudimos actualizar el servicio. Revisa la conexion e intenta otra vez.";
       this.showToast(message, "error");
     } finally {

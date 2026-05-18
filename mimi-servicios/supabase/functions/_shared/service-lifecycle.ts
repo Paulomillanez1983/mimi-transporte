@@ -104,6 +104,7 @@ function statusCodeForError(error: unknown) {
   const message = messageForError(error);
   if (message === "AUTH_REQUIRED") return 401;
   if (message === "request_forbidden" || message === "provider_not_allowed") return 403;
+  if (message === "payment_not_approved") return 402;
   if (message.endsWith("_invalid")) return 400;
   if (message.endsWith("_not_found")) return 404;
   if (message === "invalid_request_status") return 409;
@@ -118,6 +119,60 @@ function messageForError(error: unknown) {
   }
   const fallback = String(error || "").trim();
   return fallback && fallback !== "[object Object]" ? fallback : "unexpected_error";
+}
+
+function detailsForError(error: unknown) {
+  if (typeof error === "object" && error !== null && "details" in error) {
+    return (error as { details?: unknown }).details;
+  }
+  return null;
+}
+
+function requestRequiresPayment(request: Record<string, unknown>) {
+  const total = Number(request.total_price_snapshot ?? 0);
+  if (!Number.isFinite(total) || total <= 0) return false;
+  const metadata = request.metadata_json && typeof request.metadata_json === "object"
+    ? request.metadata_json as Record<string, unknown>
+    : {};
+  const details = metadata.service_details && typeof metadata.service_details === "object"
+    ? metadata.service_details as Record<string, unknown>
+    : {};
+  const model = String(details.pricing_model ?? "").trim().toUpperCase();
+  return model !== "QUOTE";
+}
+
+export async function assertRequestPaymentApproved(
+  admin: ReturnType<typeof createClient>,
+  request: Record<string, unknown>,
+) {
+  if (!requestRequiresPayment(request)) {
+    return { required: false, approved: true, payment: null };
+  }
+
+  const { data: payment, error } = await admin
+    .from("payments")
+    .select("id,status,provider_name,provider_payment_id,checkout_url,total_amount,provider_amount,currency,is_test,environment,updated_at")
+    .eq("context_type", "SERVICE_REQUEST")
+    .eq("context_id", request.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  const paymentStatus = String(payment?.status ?? "MISSING").trim().toUpperCase();
+  if (!["APPROVED", "CAPTURED", "SETTLED"].includes(paymentStatus)) {
+    const paymentError = new Error("payment_not_approved") as Error & { details?: Record<string, unknown> };
+    paymentError.details = {
+      payment_required: true,
+      payment_status: paymentStatus,
+      payment_id: payment?.id ?? null,
+      provider_name: payment?.provider_name ?? null,
+    };
+    throw paymentError;
+  }
+
+  return { required: true, approved: true, payment };
 }
 
 type TransitionConfig = {
@@ -171,6 +226,8 @@ export async function handleProviderTransition(req: Request, config: TransitionC
       }, 409);
     }
 
+    await assertRequestPaymentApproved(admin, request);
+
     const now = new Date().toISOString();
     const patch: Record<string, unknown> = {
       status: config.targetStatus,
@@ -220,7 +277,7 @@ export async function handleProviderTransition(req: Request, config: TransitionC
   } catch (error) {
     console.error(`${config.functionName} error:`, { correlation_id: correlationId, error });
     return json(
-      { ok: false, error: messageForError(error), correlation_id: correlationId },
+      { ok: false, error: messageForError(error), details: detailsForError(error), correlation_id: correlationId },
       statusCodeForError(error),
     );
   }
@@ -265,6 +322,8 @@ export async function handleProviderComplete(req: Request) {
         correlation_id: correlationId,
       }, 409);
     }
+
+    await assertRequestPaymentApproved(admin, request);
 
     const { data: result, error: rpcError } = await admin.rpc("svc_complete_service_atomic", {
       p_request_id: requestId,
@@ -321,7 +380,7 @@ export async function handleProviderComplete(req: Request) {
   } catch (error) {
     console.error("svc-complete-service error:", { correlation_id: correlationId, error });
     return json(
-      { ok: false, error: messageForError(error), correlation_id: correlationId },
+      { ok: false, error: messageForError(error), details: detailsForError(error), correlation_id: correlationId },
       statusCodeForError(error),
     );
   }

@@ -79,6 +79,16 @@ function mercadoPagoPayloadIsTest(raw: Record<string, unknown>) {
     metadata.is_test === "true";
 }
 
+async function paymentCaptureLedgerAlreadyPosted(supabase: ReturnType<typeof createClient>, paymentId: string) {
+  const { data } = await supabase
+    .from("financial_transactions")
+    .select("id")
+    .eq("transaction_key", `payment.capture:${paymentId}`)
+    .limit(1)
+    .maybeSingle();
+  return Boolean(data?.id);
+}
+
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
@@ -508,23 +518,25 @@ async function handlePaymentWebhook(req: Request) {
 
   if (!outOfOrder && nextStatus === "APPROVED") {
     try {
-      await postPaymentCaptureLedger(supabase, updated, eventId, {
-        source: "payment_webhook",
-        provider_name: provider.name,
-        provider_event_id: eventId,
-        trace_id: traceId,
-        correlation_id: correlationId,
-        payment_id: payment.id,
-        service_request_id: payment.service_request_id ?? null,
-        provider_id: payment.provider_id ?? null,
-        environment: effectiveEnvironment as "production" | "sandbox",
-        is_test: effectiveIsTest,
-        fiscal_visibility: effectiveFiscalVisibility as "fiscal_reportable" | "sandbox_only" | "excluded_from_accounting",
-        metadata: {
-          webhook_type: event.eventType ?? "payment.webhook",
-          provider_fee_amount: providerFeeAmount
-        }
-      });
+      if (!await paymentCaptureLedgerAlreadyPosted(supabase, String(payment.id))) {
+        await postPaymentCaptureLedger(supabase, updated, eventId, {
+          source: "payment_webhook",
+          provider_name: provider.name,
+          provider_event_id: eventId,
+          trace_id: traceId,
+          correlation_id: correlationId,
+          payment_id: payment.id,
+          service_request_id: payment.service_request_id ?? null,
+          provider_id: payment.provider_id ?? null,
+          environment: effectiveEnvironment as "production" | "sandbox",
+          is_test: effectiveIsTest,
+          fiscal_visibility: effectiveFiscalVisibility as "fiscal_reportable" | "sandbox_only" | "excluded_from_accounting",
+          metadata: {
+            webhook_type: event.eventType ?? "payment.webhook",
+            provider_fee_amount: providerFeeAmount
+          }
+        });
+      }
     } catch (ledgerError) {
       console.error("[payment-webhook] financial ledger post failed", {
         paymentId: payment.id,
@@ -605,6 +617,13 @@ async function handlePaymentWebhook(req: Request) {
       }, { onConflict: "revenue_key", ignoreDuplicates: true });
     }
 
+    if (payment.provider_id) {
+      await supabase.rpc("financial_recompute_provider_wallet_foundation", {
+        p_provider_id: payment.provider_id,
+        p_environment: effectiveEnvironment,
+        p_is_test: effectiveIsTest
+      });
+    }
   }
 
   await supabase

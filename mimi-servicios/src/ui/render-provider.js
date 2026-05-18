@@ -499,6 +499,7 @@ export function renderProviderDashboard(state) {
   const availableBalance = dashboard.available_balance ?? dashboard.earnings ?? 0;
   const pendingBalance = dashboard.pending_balance ?? dashboard.pending_earnings ?? 0;
   const futureDebtBalance = dashboard.cash_debt_balance ?? dashboard.negative_balance ?? 0;
+  const payoutHoldBalance = dashboard.payout_hold_balance ?? 0;
   const payoutAccount = state.provider.payoutAccount ?? null;
   const walletLoading = Boolean(state.provider.walletLoading);
   const payoutAccountError = state.provider.payoutAccountError || null;
@@ -562,6 +563,14 @@ export function renderProviderDashboard(state) {
         <strong>${currency(futureDebtBalance)}</strong>
         <small>Solo foundation futura. No se descuenta dinero real.</small>
       </article>
+
+      ${Number(payoutHoldBalance) > 0 ? `
+        <article class="provider-wallet-card provider-wallet-card-soft">
+          <span>En retiro</span>
+          <strong>${currency(payoutHoldBalance)}</strong>
+          <small>Reservado para transferencia. Ya no queda disponible en Wallet.</small>
+        </article>
+      ` : ""}
 
       <article class="provider-wallet-card provider-wallet-card-soft">
         <span>Datos para recibir pagos</span>

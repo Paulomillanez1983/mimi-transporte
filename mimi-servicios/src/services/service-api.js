@@ -2225,7 +2225,7 @@ export async function getProviderDashboard(providerId) {
   // 🔥 servicios completados
   const { data: completedRows, error: completedError } = await supabase
     .from("svc_requests")
-    .select("id,total_price_snapshot,created_at,address_text,status")
+    .select("id,provider_price_snapshot,total_price_snapshot,created_at,address_text,status")
     .or(`selected_provider_id.eq.${providerId},accepted_provider_id.eq.${providerId}`)
     .eq("status", "COMPLETED")
     .order("created_at", { ascending: false })
@@ -2244,7 +2244,7 @@ export async function getProviderDashboard(providerId) {
   const activeWithPayment = await attachPaymentStatusToOffers(activeRows ?? []);
 
 const earnings = (completedRows ?? []).reduce(
-  (acc, item) => acc + Number(item.total_price_snapshot ?? 0),
+  (acc, item) => acc + Number(item.provider_price_snapshot ?? 0),
   0
 );
   return {
