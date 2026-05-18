@@ -1,8 +1,8 @@
 {
   "id": "/mimi-servicios/prestador",
-  "name": "MIMI GO Partners",
-  "short_name": "MIMI Partners",
-  "description": "Panel para prestadores MIMI Go: servicios, solicitudes, seguimiento y cuenta.",
+  "name": "MIMI GO Pro",
+  "short_name": "MIMI GO Pro",
+  "description": "Panel para prestadores MIMI GO: servicios, solicitudes, seguimiento y cuenta.",
   "start_url": "/mimi-servicios/prestador.html",
   "scope": "/mimi-servicios/",
   "display": "standalone",
