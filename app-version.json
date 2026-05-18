@@ -7,11 +7,11 @@
     "message": "Mejoramos estabilidad, velocidad y seguridad."
   },
   "provider": {
-    "version": "2026.05.18.3",
-    "min_supported_version": "2026.05.18.3",
+    "version": "2026.05.18.4",
+    "min_supported_version": "2026.05.18.4",
     "critical": false,
     "force_update": false,
-    "message": "Ajustamos pagos, PIN de inicio y panel del prestador."
+    "message": "Alineamos MIMI GO Pro y desactivamos instalacion duplicada."
   },
   "admin": {
     "version": "2026.05.14.2",

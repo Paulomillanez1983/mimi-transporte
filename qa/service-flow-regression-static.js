@@ -11,6 +11,8 @@ const files = {
   mainProvider: "mimi-servicios/src/main-provider.js",
   providerCss: "mimi-servicios/styles/provider.css",
   clientCss: "mimi-servicios/styles/client.css",
+  rootManifest: "manifest-partners.json",
+  providerManifest: "mimi-servicios/manifest-prestador.json",
   providerHtml: "mimi-servicios/prestador.html",
   publicProviderHtml: "prestador/index.html",
   getPin: "mimi-servicios/supabase/functions/svc-get-service-pin/index.ts",
@@ -56,6 +58,9 @@ check("payment CTA CSS is scoped to client summary", /payment-required-card/.tes
 
 check("provider PWA install copy uses MIMI GO Pro", /Instalá MIMI GO Pro/.test(content.mainProvider) && /Instalar MIMI GO Pro/.test(content.mainProvider));
 check("provider HTML install copy uses MIMI GO Pro", /Instalá MIMI GO Pro/.test(content.providerHtml) && /Instalá MIMI GO Pro/.test(content.publicProviderHtml));
+check("provider uses Pro manifest, not partners manifest", /manifest-prestador\.json\?v=2026\.05\.18\.4/.test(content.providerHtml) && /manifest-prestador\.json\?v=2026\.05\.18\.4/.test(content.publicProviderHtml) && !/manifest-partners\.json/.test(content.providerHtml + content.publicProviderHtml));
+check("provider manifest id is MIMI GO Pro route", /"id":\s*"\/mimi-servicios\/prestador"/.test(content.providerManifest) && /"id":\s*"\/mimi-servicios\/prestador"/.test(content.rootManifest));
+check("provider automatic install prompt is disabled", /const PROVIDER_INSTALL_PROMPT_ENABLED = false/.test(content.mainProvider) && /if \(!PROVIDER_INSTALL_PROMPT_ENABLED\)[\s\S]{0,180}this\.hideInstallBanner\(\)/.test(content.mainProvider));
 check("provider install dismissal persists instead of reopening every refresh", /PARTNER_INSTALL_DISMISSED_KEY[\s\S]*Date\.now\(\) \+ 30 \* 24/.test(content.mainProvider));
 check("provider setup does not clear installed PWA marker", !/removeItem\(PARTNER_PWA_INSTALLED_KEY/.test(content.mainProvider));
 

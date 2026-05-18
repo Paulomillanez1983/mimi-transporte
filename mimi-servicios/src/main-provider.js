@@ -3,10 +3,11 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.18.3";
+const MIMI_PROVIDER_BUILD = "2026.05.18.4";
 const PARTNER_PWA_INSTALLED_KEY = "mimi_go_partner_pwa_installed";
 const PARTNER_INSTALL_DISMISSED_KEY = "mimi_go_partner_install_dismissed_until";
 const PARTNER_INSTALL_SESSION_KEY = "mimi_go_partner_install_shown_session";
+const PROVIDER_INSTALL_PROMPT_ENABLED = false;
 const LEGACY_SW_PATHS = [
   "/mimi-servicios/sw-2026.js",
   "/service-worker.js",
@@ -92,7 +93,7 @@ import {
 } from "./utils/phone-countries.js";
 
 
-import { renderProviderScreen } from "./ui/render-provider.js?v=2026.05.18.3";
+import { renderProviderScreen } from "./ui/render-provider.js?v=2026.05.18.4";
 import {
   clearAuthRedirectIntent,
   forceCleanSession,
@@ -7877,6 +7878,10 @@ setupProviderUpdateManager() {
 
 showInstallBanner({ sessionEntry = false } = {}) {
   const banner = this.elements?.installBanner;
+  if (!PROVIDER_INSTALL_PROMPT_ENABLED) {
+    this.hideInstallBanner();
+    return;
+  }
   if (!banner || this.isRunningAsInstalledPwa()) return;
 
   const hasInstallPrompt = Boolean(this.deferredInstallPrompt || window.deferredInstallPrompt);
@@ -7915,6 +7920,7 @@ showInstallBanner({ sessionEntry = false } = {}) {
 setupInstallPrompt() {
   if (this.installPromptSetupDone) return;
   this.installPromptSetupDone = true;
+  this.hideInstallBanner();
 
   if (this.isRunningAsInstalledPwa()) {
     this.deferredInstallPrompt = null;
@@ -7924,9 +7930,15 @@ setupInstallPrompt() {
     return;
   }
 
-  this.hideInstallBanner();
-
   window.addEventListener("beforeinstallprompt", (e) => {
+    if (!PROVIDER_INSTALL_PROMPT_ENABLED) {
+      e.preventDefault();
+      this.deferredInstallPrompt = null;
+      window.deferredInstallPrompt = null;
+      this.hideInstallBanner();
+      return;
+    }
+
     if (this.isRunningAsInstalledPwa()) {
       e.preventDefault();
       this.hideInstallBanner();
