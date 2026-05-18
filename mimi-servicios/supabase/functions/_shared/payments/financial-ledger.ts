@@ -23,6 +23,12 @@ type LedgerContext = {
   actor_user_id?: string | null;
   provider_name?: string | null;
   provider_event_id?: string | null;
+  refund_id?: string | null;
+  settlement_id?: string | null;
+  payout_id?: string | null;
+  reversal_of?: string | null;
+  reversal_reason?: string | null;
+  reversal_type?: string | null;
   trace_id?: string | null;
   correlation_id?: string | null;
   environment?: "production" | "staging" | "development" | "sandbox" | "qa" | "internal_testing";
@@ -32,9 +38,25 @@ type LedgerContext = {
   metadata?: Record<string, unknown>;
 };
 
+export type RefundAccountingImpact = {
+  refundAmount: number;
+  refundedBeforeAmount: number;
+  refundedAfterAmount: number;
+  refundRatio: number;
+  platformRevenueReversalAmount: number;
+  providerPayableReversalAmount: number;
+  escrowReversalAmount: number;
+  cashRefundAmount: number;
+  ledgerTransactionIds: string[];
+};
+
 function toMoney(value: unknown) {
   const amount = Number(value ?? 0);
   return Number.isFinite(amount) ? Math.round(amount * 100) / 100 : 0;
+}
+
+function toRatio(value: number) {
+  return Number.isFinite(value) ? Math.round(value * 100_000_000) / 100_000_000 : 0;
 }
 
 function ledgerCodeFor(context: LedgerContext) {
@@ -88,6 +110,13 @@ async function postFinancialTransaction(
       service_request_id: params.context.service_request_id ?? null,
       payment_id: params.context.payment_id ?? null,
       payment_intent_id: params.context.payment_intent_id ?? null,
+      refund_id: params.context.refund_id ?? null,
+      settlement_id: params.context.settlement_id ?? null,
+      payout_id: params.context.payout_id ?? null,
+      reversal_of: params.context.reversal_of ?? null,
+      reversal_reason: params.context.reversal_reason ?? null,
+      reversal_type: params.context.reversal_type ?? null,
+      reversal_metadata: params.context.metadata?.reversal_metadata ?? {},
       provider_id: params.context.provider_id ?? null,
       actor_user_id: params.context.actor_user_id ?? null,
       provider_name: params.context.provider_name ?? null,
@@ -109,6 +138,53 @@ async function postFinancialTransaction(
   }
 
   return data;
+}
+
+export function calculateRefundAccountingImpact(
+  payment: Record<string, unknown>,
+  refundAmountInput: unknown,
+  refundedBeforeInput: unknown
+): RefundAccountingImpact {
+  const totalAmount = toMoney(payment.total_amount);
+  const refundAmount = Math.min(toMoney(refundAmountInput), totalAmount);
+  const refundedBeforeAmount = Math.min(toMoney(refundedBeforeInput), totalAmount);
+  const refundedAfterAmount = Math.min(toMoney(refundedBeforeAmount + refundAmount), totalAmount);
+  const effectiveRefundAmount = toMoney(refundedAfterAmount - refundedBeforeAmount);
+  const platformFee = toMoney(payment.platform_fee);
+  const providerAmount = toMoney(payment.provider_amount);
+
+  if (totalAmount <= 0 || effectiveRefundAmount <= 0) {
+    throw new Error("FINANCIAL_REFUND_ACCOUNTING_INVALID_AMOUNT");
+  }
+
+  const previousPlatformReversal = toMoney((platformFee * refundedBeforeAmount) / totalAmount);
+  const cumulativePlatformReversal = refundedAfterAmount >= totalAmount
+    ? platformFee
+    : toMoney((platformFee * refundedAfterAmount) / totalAmount);
+  const platformRevenueReversalAmount = Math.max(toMoney(cumulativePlatformReversal - previousPlatformReversal), 0);
+
+  const previousProviderReversal = toMoney((providerAmount * refundedBeforeAmount) / totalAmount);
+  const cumulativeProviderReversal = refundedAfterAmount >= totalAmount
+    ? providerAmount
+    : toMoney((providerAmount * refundedAfterAmount) / totalAmount);
+  let providerPayableReversalAmount = Math.max(toMoney(cumulativeProviderReversal - previousProviderReversal), 0);
+
+  const componentTotal = toMoney(platformRevenueReversalAmount + providerPayableReversalAmount);
+  if (componentTotal !== effectiveRefundAmount && providerAmount > 0) {
+    providerPayableReversalAmount = Math.max(toMoney(effectiveRefundAmount - platformRevenueReversalAmount), 0);
+  }
+
+  return {
+    refundAmount: effectiveRefundAmount,
+    refundedBeforeAmount,
+    refundedAfterAmount,
+    refundRatio: toRatio(effectiveRefundAmount / totalAmount),
+    platformRevenueReversalAmount,
+    providerPayableReversalAmount,
+    escrowReversalAmount: toMoney(platformRevenueReversalAmount + providerPayableReversalAmount),
+    cashRefundAmount: effectiveRefundAmount,
+    ledgerTransactionIds: []
+  };
 }
 
 export async function postPaymentCaptureLedger(
@@ -223,14 +299,105 @@ export async function postRefundLedger(
   refund: Record<string, unknown>,
   context: LedgerContext
 ) {
-  const amount = toMoney(refund.amount);
+  const priorRefundedAmount = toMoney(context.metadata?.prior_refunded_amount);
+  const impact = calculateRefundAccountingImpact(payment, refund.amount, priorRefundedAmount);
+  const amount = impact.cashRefundAmount;
   const currency = String(payment.currency ?? "ARS");
   const paymentId = String(payment.id ?? "");
   const refundId = String(refund.id ?? crypto.randomUUID());
   const serviceRequestId = String(payment.service_request_id ?? context.service_request_id ?? "") || null;
   const providerId = String(payment.provider_id ?? context.provider_id ?? "") || null;
+  const settlementId = String(refund.provider_settlement_id ?? context.settlement_id ?? "") || null;
+  const paymentMethod = String(payment.payment_method ?? "").toLowerCase();
+  const cashAccountCode = ["cash", "manual", "bank_transfer"].includes(paymentMethod) ? "client_receivable_ars" : "cash_psp_ars";
+  const commonContext: LedgerContext = {
+    ...context,
+    source: context.source ?? "refund_payment",
+    payment_id: paymentId,
+    refund_id: refundId,
+    settlement_id: settlementId,
+    service_request_id: serviceRequestId,
+    provider_id: providerId,
+    reversal_reason: context.reversal_reason ?? "refund",
+    reversal_type: context.reversal_type ?? "refund_compensating_entry",
+    metadata: {
+      ...(context.metadata ?? {}),
+      refund_id: refundId,
+      prior_refunded_amount: impact.refundedBeforeAmount,
+      refunded_after_amount: impact.refundedAfterAmount,
+      refund_ratio: impact.refundRatio
+    }
+  };
 
-  await postFinancialTransaction(supabase, {
+  if (impact.platformRevenueReversalAmount > 0) {
+    const transactionId = await postFinancialTransaction(supabase, {
+      transactionKey: `platform.commission.refund:${refundId}`,
+      transactionType: "platform.commission.refund.reversal",
+      description: "Reversa proporcional de revenue MIMI por refund",
+      currency,
+      idempotencyKey: `platform.commission.refund:${refundId}`,
+      entries: [
+        {
+          account_code: "platform_revenue_ars",
+          entry_side: "debit",
+          amount: impact.platformRevenueReversalAmount,
+          description: "Reversa de revenue por refund",
+          service_request_id: serviceRequestId,
+          payment_id: paymentId,
+          provider_id: providerId,
+          metadata: { refund_id: refundId, reversal_reason: "refund_platform_commission" }
+        },
+        {
+          account_code: "escrow_funds_ars",
+          entry_side: "credit",
+          amount: impact.platformRevenueReversalAmount,
+          description: "Reposicion contable de escrow por revenue revertido",
+          service_request_id: serviceRequestId,
+          payment_id: paymentId,
+          provider_id: providerId,
+          metadata: { refund_id: refundId, reversal_reason: "refund_platform_commission" }
+        }
+      ],
+      context: commonContext
+    });
+    impact.ledgerTransactionIds.push(String(transactionId));
+  }
+
+  if (impact.providerPayableReversalAmount > 0) {
+    const transactionId = await postFinancialTransaction(supabase, {
+      transactionKey: `provider.payable.refund:${refundId}`,
+      transactionType: "provider.payable.refund.reversal",
+      description: "Reversa proporcional de payable prestador por refund",
+      currency,
+      idempotencyKey: `provider.payable.refund:${refundId}`,
+      entries: [
+        {
+          account_code: "provider_payable_ars",
+          entry_side: "debit",
+          amount: impact.providerPayableReversalAmount,
+          description: "Reduccion payable prestador por refund",
+          service_request_id: serviceRequestId,
+          payment_id: paymentId,
+          provider_id: providerId,
+          metadata: { refund_id: refundId, reversal_reason: "refund_provider_payable" }
+        },
+        {
+          account_code: "escrow_funds_ars",
+          entry_side: "credit",
+          amount: impact.providerPayableReversalAmount,
+          description: "Reposicion contable de escrow por payable revertido",
+          service_request_id: serviceRequestId,
+          payment_id: paymentId,
+          provider_id: providerId,
+          metadata: { refund_id: refundId, reversal_reason: "refund_provider_payable" }
+        }
+      ],
+      context: commonContext
+    });
+    impact.ledgerTransactionIds.push(String(transactionId));
+  }
+
+  const cashRefundTransactionId = await postFinancialTransaction(supabase, {
     transactionKey: `payment.refund:${refundId}`,
     transactionType: "payment.refund.compensating",
     description: "Movimiento compensatorio por devolucion al cliente",
@@ -241,28 +408,24 @@ export async function postRefundLedger(
         account_code: "escrow_funds_ars",
         entry_side: "debit",
         amount,
-        description: "Reduccion de fondos retenidos por refund",
+        description: "Aplicacion de escrow al refund",
         service_request_id: serviceRequestId,
         payment_id: paymentId,
         provider_id: providerId
       },
       {
-        account_code: "cash_psp_ars",
+        account_code: cashAccountCode,
         entry_side: "credit",
         amount,
-        description: "Salida de fondos por refund procesado en PSP",
+        description: cashAccountCode === "cash_psp_ars" ? "Salida de fondos por refund procesado en PSP" : "Ajuste de receivable futuro cash/manual por refund",
         service_request_id: serviceRequestId,
         payment_id: paymentId,
         provider_id: providerId
       }
     ],
-    context: {
-      ...context,
-      source: context.source ?? "refund_payment",
-      payment_id: paymentId,
-      service_request_id: serviceRequestId,
-      provider_id: providerId,
-      metadata: { ...(context.metadata ?? {}), refund_id: refundId }
-    }
+    context: commonContext
   });
+  impact.ledgerTransactionIds.push(String(cashRefundTransactionId));
+
+  return impact;
 }

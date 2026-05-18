@@ -11,6 +11,34 @@ function normalizeContextType(value: unknown) {
   return "SERVICE_REQUEST";
 }
 
+function envFlag(name: string, fallback = false) {
+  const raw = Deno.env.get(name);
+  if (raw == null) return fallback;
+  return ["true", "1", "yes", "on"].includes(raw.toLowerCase());
+}
+
+function normalizeProviderName(value: string) {
+  const provider = String(value || "mock").toLowerCase().replace(/[^a-z0-9_]/g, "");
+  if (provider === "mercado_pago") return "mercadopago";
+  if (provider === "test") return "mock";
+  return provider || "mock";
+}
+
+function paymentExecutionContext(providerName: string) {
+  const environmentName = String(Deno.env.get("PAYMENT_ENVIRONMENT") ?? "test").toLowerCase();
+  const paymentsRealEnabled = envFlag("PAYMENTS_REAL_ENABLED", false);
+  const provider = normalizeProviderName(providerName);
+  const isTest = provider === "mock" || environmentName !== "production" || !paymentsRealEnabled;
+  return {
+    provider,
+    paymentEnvironment: environmentName === "production" ? "production" : "test",
+    paymentsRealEnabled,
+    environment: isTest ? "sandbox" : "production",
+    isTest,
+    fiscalVisibility: isTest ? "excluded_from_accounting" : "fiscal_reportable"
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return fail("Method not allowed", 405);
@@ -26,6 +54,9 @@ serve(async (req) => {
   const { data: userData, error: userError } = await supabase.auth.getUser(token);
   const userId = userData?.user?.id;
   if (userError || !userId) return fail("Invalid JWT", 401, userError);
+  const userEmail = userData.user?.email ?? null;
+  const configuredProvider = Deno.env.get("PAYMENT_PROVIDER") ?? "mock";
+  const executionContext = paymentExecutionContext(configuredProvider);
 
   const body = await readJson(req);
   const contextType = normalizeContextType(body.context_type);
@@ -140,6 +171,7 @@ serve(async (req) => {
     .select("*")
     .eq("context_type", contextType)
     .eq("context_id", contextId)
+    .eq("is_test", executionContext.isTest)
     .in("status", ["PENDING", "CHECKOUT_CREATED", "APPROVED"])
     .order("created_at", { ascending: false })
     .limit(1)
@@ -161,8 +193,20 @@ serve(async (req) => {
       provider_amount: amounts.provider_amount,
       currency,
       status: "PENDING",
-      provider_name: Deno.env.get("PAYMENT_PROVIDER") ?? "mock",
-      metadata_json: { commission_rule: amounts.rule, fiscal_note: "MIMI factura solo platform_fee. El servicio lo presta el proveedor independiente." }
+      provider_name: executionContext.provider,
+      payment_method: executionContext.provider === "mock" ? "mock" : "card",
+      payment_method_status: "intent_created",
+      environment: executionContext.environment,
+      is_test: executionContext.isTest,
+      fiscal_visibility: executionContext.fiscalVisibility,
+      metadata_json: {
+        commission_rule: amounts.rule,
+        fiscal_note: "MIMI factura solo platform_fee. El servicio lo presta el proveedor independiente.",
+        payment_environment: executionContext.paymentEnvironment,
+        payments_real_enabled: executionContext.paymentsRealEnabled,
+        is_test: executionContext.isTest,
+        fiscal_visibility: executionContext.fiscalVisibility
+      }
     })
     .select("*")
     .single();
@@ -170,18 +214,33 @@ serve(async (req) => {
   if (insertError || !payment) return fail("Payment insert failed", 500, insertError);
 
   const provider = getPaymentProvider(payment.provider_name);
-  const providerResult = await provider.createPaymentIntent({
-    paymentId: payment.id,
-    contextType,
-    contextId,
-    totalAmount: amounts.total_amount,
-    platformFee: amounts.platform_fee,
-    providerAmount: amounts.provider_amount,
-    currency,
-    customerId,
-    providerId,
-    description: "Uso de plataforma MIMI y servicio prestado por proveedor independiente"
-  });
+  let providerResult;
+  try {
+    providerResult = await provider.createPaymentIntent({
+      paymentId: payment.id,
+      contextType,
+      contextId,
+      totalAmount: amounts.total_amount,
+      platformFee: amounts.platform_fee,
+      providerAmount: amounts.provider_amount,
+      currency,
+      customerId,
+      providerId,
+      description: "Uso de plataforma MIMI y servicio prestado por proveedor independiente",
+      customerEmail: userEmail
+    });
+  } catch (providerError) {
+    const message = providerError instanceof Error ? providerError.message : String(providerError);
+    await supabase
+      .from("payments")
+      .update({
+        status: "PENDING",
+        payment_method_status: "provider_not_configured",
+        raw_response: { error: "PAYMENT_PROVIDER_NOT_CONFIGURED", message }
+      })
+      .eq("id", payment.id);
+    return fail("PAYMENT_PROVIDER_NOT_CONFIGURED", 503, { provider: payment.provider_name, message });
+  }
 
   const { data: updated, error: updateError } = await supabase
     .from("payments")
@@ -190,7 +249,12 @@ serve(async (req) => {
       provider_name: providerResult.providerName,
       provider_payment_id: providerResult.providerPaymentId,
       checkout_url: providerResult.checkoutUrl,
-      raw_response: providerResult.rawResponse
+      payment_method: providerResult.providerName === "mock" ? "mock" : "card",
+      payment_method_status: "checkout_created",
+      raw_response: providerResult.rawResponse,
+      environment: executionContext.environment,
+      is_test: executionContext.isTest,
+      fiscal_visibility: executionContext.fiscalVisibility
     })
     .eq("id", payment.id)
     .select("*")
@@ -201,7 +265,14 @@ serve(async (req) => {
   await supabase.from("payment_events").insert({
     payment_id: payment.id,
     event_type: "payment_intent.created",
-    payload: providerResult.rawResponse
+    payload: {
+      ...providerResult.rawResponse,
+      payment_environment: executionContext.paymentEnvironment,
+      payments_real_enabled: executionContext.paymentsRealEnabled
+    },
+    environment: executionContext.environment,
+    is_test: executionContext.isTest,
+    fiscal_visibility: executionContext.fiscalVisibility
   });
 
   return json({ ok: true, payment: updated });
