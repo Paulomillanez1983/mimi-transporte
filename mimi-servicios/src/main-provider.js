@@ -564,6 +564,7 @@ verificationResultList: document.getElementById("verificationResultList"),
       activeServiceType: document.getElementById('activeServiceType'),
       activeServiceLocation: document.getElementById('activeServiceLocation'),
       activeServiceClient: document.getElementById('activeServiceClient'),
+      activeServicePayment: document.getElementById('activeServicePayment'),
       activeServiceNavigation: document.getElementById('activeServiceNavigation'),
       serviceEta: document.getElementById('serviceEta'),
       serviceDistance: document.getElementById('serviceDistance'),
@@ -2794,6 +2795,8 @@ stats: {
       address: safeService.address_text ?? null,
       price:
         Number(details.provider_price ?? safeService.provider_price_snapshot ?? safeService.provider_amount ?? 0),
+      payment: safeService.payment ?? null,
+      paymentStatus: this.normalizePaymentStatus(safeService.payment_status ?? safeService.payment?.status ?? "PENDING"),
       details,
       scheduledFor: safeService.scheduled_for ?? null,
       startedAt: safeService.started_at ?? null,
@@ -2817,6 +2820,16 @@ stats: {
       currency,
       maximumFractionDigits: 0
     }).format(amount);
+  }
+
+  normalizePaymentStatus(status = "PENDING") {
+    return String(status || "PENDING").trim().toUpperCase();
+  }
+
+  providerPaymentStatusLabel(status = "PENDING") {
+    const normalized = this.normalizePaymentStatus(status);
+    if (["APPROVED", "CAPTURED", "SETTLED"].includes(normalized)) return "Pago confirmado";
+    return "Pago pendiente";
   }
 
   distanceKmBetween(latA, lngA, latB, lngB) {
@@ -2862,8 +2875,8 @@ stats: {
     const unitName = details.unit_name || "";
     const unitPrice = Number(details.unit_price || 0);
     const providerAmount = Number(details.provider_price ?? request.provider_price_snapshot ?? offer.provider_price_snapshot ?? 0);
-    const clientAmount = Number(details.total_price ?? request.total_price_snapshot ?? offer.total_price_snapshot ?? 0);
     const currency = details.currency || request.currency || "ARS";
+    const paymentStatus = this.normalizePaymentStatus(offer.payment_status ?? offer.payment?.status ?? request.payment_status ?? request.payment?.status ?? "PENDING");
 
     if (quantity > 0 && unitName) {
       rows.push({
@@ -2890,9 +2903,7 @@ stats: {
       rows.push({ label: "Precio", value: "A coordinar" });
     }
 
-    if (clientAmount > 0 && clientAmount !== providerAmount) {
-      rows.push({ label: "Cliente paga", value: this.formatMoney(clientAmount, currency) });
-    }
+    rows.push({ label: "Pago", value: this.providerPaymentStatusLabel(paymentStatus) });
 
     const notes = String(details.client_notes || request.notes || "").trim();
     if (notes) {
@@ -2927,6 +2938,8 @@ stats: {
       location: offer.address_text ?? request.address_text ?? "Ubicacin a confirmar",
       price: displayAmount,
       priceLabel: displayAmount > 0 ? `Tu precio ${this.formatMoney(displayAmount, details.currency || request.currency || "ARS")}` : "Precio a coordinar",
+      payment: offer.payment ?? null,
+      paymentStatus: this.normalizePaymentStatus(offer.payment_status ?? offer.payment?.status ?? "PENDING"),
       detailRows,
       details,
       mode: request.request_type ?? "IMMEDIATE",
@@ -6940,6 +6953,9 @@ renderOnlineButton() {
       }
       if (this.elements.activeServiceClient) {
         this.elements.activeServiceClient.textContent = service.clientName;
+      }
+      if (this.elements.activeServicePayment) {
+        this.elements.activeServicePayment.textContent = this.providerPaymentStatusLabel(service.paymentStatus ?? service.payment?.status);
       }
       
       // Button text

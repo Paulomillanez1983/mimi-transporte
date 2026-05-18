@@ -13,6 +13,7 @@ const closuresListEl = document.getElementById("financeClosuresList");
 const exportsListEl = document.getElementById("financeExportsList");
 const settlementBatchesListEl = document.getElementById("financeSettlementBatchesList");
 const payoutBatchesListEl = document.getElementById("financePayoutBatchesList");
+const paymentProviderHealthListEl = document.getElementById("paymentProviderHealthList");
 const runReconciliationBtn = document.getElementById("financeRunReconciliationBtn");
 const calculateSettlementsBtn = document.getElementById("financeCalculateSettlementsBtn");
 const approveLatestSettlementBtn = document.getElementById("financeApproveLatestSettlementBtn");
@@ -78,8 +79,14 @@ async function fetchFinancialDashboard() {
   }
 
   const includeTests = includeTestsInput?.checked ? "1" : "0";
+  const range = currentMonthRange();
+  const params = new URLSearchParams({
+    include_tests: includeTests,
+    period_start: range.start,
+    period_end: range.end
+  });
   const response = await fetch(
-    `${supabaseAdminService.client.supabaseUrl}/functions/v1/admin-financial-dashboard?include_tests=${includeTests}`,
+    `${supabaseAdminService.client.supabaseUrl}/functions/v1/admin-financial-dashboard?${params.toString()}`,
     {
       headers: {
         Authorization: `Bearer ${auth.session.access_token}`,
@@ -107,6 +114,32 @@ function renderDashboard(data) {
   reconciliationBadgeEl.textContent = openDifferences > 0 ? `${openDifferences} diferencias` : "Sin diferencias abiertas";
   reconciliationBadgeEl.className = openDifferences > 0 ? "financial-row-badge danger" : "financial-row-badge success";
   modeBadgeEl.textContent = data?.mode === "test" ? "Test / QA" : "Produccion";
+  const paymentHealth = data?.payment_health || {};
+  renderList(
+    paymentProviderHealthListEl,
+    [
+      {
+        title: "Checkouts abiertos",
+        subtitle: "Pagos sandbox/preparados que todavia no estan aprobados.",
+        value: Number(paymentHealth.open_checkouts ?? metrics.open_checkouts ?? 0),
+        tone: Number(paymentHealth.open_checkouts ?? metrics.open_checkouts ?? 0) > 0 ? "danger" : "success"
+      },
+      {
+        title: "Webhooks no recibidos",
+        subtitle: "Checkouts abiertos sin eventos de procesador en el periodo.",
+        value: Number(paymentHealth.missing_webhooks ?? metrics.missing_webhooks ?? 0),
+        tone: Number(paymentHealth.missing_webhooks ?? metrics.missing_webhooks ?? 0) > 0 ? "danger" : "success"
+      },
+      {
+        title: "Servicios sin pago aprobado",
+        subtitle: "Solicitudes avanzadas o completadas sin payment APPROVED.",
+        value: Number(paymentHealth.advanced_without_approved ?? metrics.advanced_without_approved ?? 0),
+        tone: Number(paymentHealth.advanced_without_approved ?? metrics.advanced_without_approved ?? 0) > 0 ? "danger" : "success"
+      }
+    ],
+    (row) => rowTemplate(row.title, row.subtitle, String(row.value), row.tone),
+    "Sin alertas operativas de pago."
+  );
   const canApproveLatest = latestSettlementBatch
     && ["calculated", "pending_review"].includes(String(latestSettlementBatch.status || "").toLowerCase());
   const canCreatePayout = latestSettlementBatch

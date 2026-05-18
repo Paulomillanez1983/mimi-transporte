@@ -13,7 +13,10 @@ function normalizePayment(row = null) {
     currency: row.currency ?? "ARS",
     status: String(row.status ?? "PENDING").toUpperCase(),
     checkout_url: row.checkout_url ?? row.checkoutUrl ?? null,
-    provider_name: row.provider_name ?? row.providerName ?? "mock"
+    provider_name: row.provider_name ?? row.providerName ?? "mock",
+    provider_payment_id: row.provider_payment_id ?? row.providerPaymentId ?? null,
+    sync_warning: row.sync_warning ?? row.syncWarning ?? null,
+    provider_warning: row.provider_warning ?? row.providerWarning ?? null
   };
 }
 
@@ -27,12 +30,24 @@ export async function createPaymentIntent(input = {}) {
   return normalizePayment(data?.payment ?? data);
 }
 
-export async function getPaymentStatus(paymentId) {
+export async function getPaymentStatus(paymentId, options = {}) {
   const data = await invokeFunction(appConfig.functions.getPaymentStatus, {
-    payment_id: paymentId
+    payment_id: paymentId,
+    provider_payment_id:
+      options.providerPaymentId ??
+      options.provider_payment_id ??
+      options.collectionId ??
+      options.collection_id ??
+      null,
+    preference_id: options.preferenceId ?? options.preference_id ?? null
   });
 
-  return normalizePayment(data?.payment ?? data);
+  const payment = normalizePayment(data?.payment ?? data);
+  if (payment) {
+    payment.sync_warning = payment.sync_warning ?? data?.sync_warning ?? null;
+    payment.provider_warning = payment.provider_warning ?? data?.provider_warning ?? null;
+  }
+  return payment;
 }
 
 export async function cancelPayment(paymentId, reason = "cancelled_from_client_ui") {

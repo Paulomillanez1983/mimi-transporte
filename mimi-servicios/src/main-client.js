@@ -2451,7 +2451,7 @@ async function handleProviderSelection(providerId) {
     };
     draft.meta.error = null;
     draft.meta.info = paymentIntent?.checkout_url
-      ? "Solicitud creada. El intento de pago quedo preparado."
+      ? "Solicitud creada. Pago requerido para confirmar. Abrilo en Mercado Pago y volve a MIMIGO para verificarlo."
       : "Solicitud creada correctamente.";
   });
 
@@ -2567,13 +2567,23 @@ async function handlePaymentAction(action) {
       return;
     }
 
-    setInfo("Checkout mock preparado. Cuando conectes el PSP real, acá redirige al checkout seguro.");
+    setInfo("Pago requerido para confirmar. No encontramos el link de checkout, actualiza el estado del pago.");
     return;
   }
 
   if (action === "refresh") {
     const updated = await getPaymentStatus(payment.id);
     patchState("client.insights.paymentIntent", updated);
+    const status = String(updated?.status || "").toUpperCase();
+    if (["APPROVED", "CAPTURED", "SETTLED"].includes(status)) {
+      setInfo("Pago confirmado. Mercado Pago aprobo la operacion.");
+    } else if (updated?.sync_warning) {
+      setInfo("Estamos verificando el pago. Conservamos el estado local hasta recibir confirmacion de Mercado Pago.");
+    } else if (["REJECTED", "CANCELLED", "FAILED"].includes(status)) {
+      setInfo(null, "Pago no completado. Podes volver a intentarlo desde MIMIGO.");
+    } else {
+      setInfo("Pago pendiente. El servicio se confirma cuando Mercado Pago informa aprobacion.");
+    }
     return;
   }
 
@@ -2581,6 +2591,78 @@ async function handlePaymentAction(action) {
     const updated = await cancelPayment(payment.id);
     patchState("client.insights.paymentIntent", updated);
   }
+}
+
+async function handlePaymentReturnFromUrl(sourceUrl = window.location.href) {
+  const url = new URL(sourceUrl, window.location.origin);
+  const paymentResult = String(
+    url.searchParams.get("payment") ||
+      url.searchParams.get("collection_status") ||
+      url.searchParams.get("status") ||
+      ""
+  ).toLowerCase();
+
+  const handledReturnModes = new Set([
+    "payment=success",
+    "payment=failure",
+    "payment=pending",
+    "success",
+    "approved",
+    "failure",
+    "failed",
+    "rejected",
+    "pending"
+  ]);
+  const directMode = url.searchParams.get("payment") ? `payment=${paymentResult}` : paymentResult;
+  if (!handledReturnModes.has(directMode)) return false;
+
+  const providerPaymentId =
+    url.searchParams.get("payment_id") ||
+    url.searchParams.get("collection_id") ||
+    url.searchParams.get("provider_payment_id") ||
+    "";
+  const preferenceId = url.searchParams.get("preference_id") || "";
+  const localPaymentId =
+    url.searchParams.get("external_reference") ||
+    state.client.insights?.paymentIntent?.id ||
+    "";
+
+  if (directMode === "payment=failure" || ["failure", "failed", "rejected"].includes(paymentResult)) {
+    setInfo(null, "Pago no completado. Si Mercado Pago rechazo o cancelaste el pago, podes intentarlo nuevamente.");
+  } else if (directMode === "payment=pending" || paymentResult === "pending") {
+    setInfo("Pago pendiente. Mercado Pago todavia esta procesando la operacion.");
+  } else {
+    setInfo("Estamos verificando el pago con Mercado Pago.");
+  }
+
+  if (localPaymentId) {
+    try {
+      const updated = await getPaymentStatus(localPaymentId, {
+        providerPaymentId,
+        preferenceId
+      });
+      patchState("client.insights.paymentIntent", updated);
+      const status = String(updated?.status || "").toUpperCase();
+      if (["APPROVED", "CAPTURED", "SETTLED"].includes(status)) {
+        setInfo("Pago confirmado. Mercado Pago aprobo la operacion.");
+      } else if (["REJECTED", "CANCELLED", "FAILED"].includes(status)) {
+        setInfo(null, "Pago no completado. Podes volver a intentarlo desde MIMIGO.");
+      } else if (updated?.sync_warning) {
+        setInfo("Estamos verificando el pago. Seguimos mostrando el estado local hasta recibir confirmacion.");
+      } else {
+        setInfo("Pago pendiente. El pago todavia no esta aprobado.");
+      }
+    } catch (error) {
+      console.warn("[MIMI Pago] no se pudo sincronizar retorno Mercado Pago:", error);
+      setInfo("Estamos verificando el pago. Si no se actualiza, toca Actualizar pago en unos segundos.");
+    }
+  }
+
+  ["payment", "collection_status", "status", "payment_id", "collection_id", "provider_payment_id", "preference_id", "external_reference", "merchant_order_id"].forEach((key) => {
+    url.searchParams.delete(key);
+  });
+  history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
+  return true;
 }
 
 
@@ -3791,6 +3873,7 @@ if (CLIENT_SW_ENABLED && "serviceWorker" in navigator) {
     });
 }
   await bootstrapAsyncData();
+  await handlePaymentReturnFromUrl();
 
   if (window.location.hash && window.location.hash.includes("access_token")) {
     history.replaceState(

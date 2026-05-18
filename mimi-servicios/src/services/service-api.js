@@ -1335,7 +1335,7 @@ export async function loadOffers(providerId) {
   await requireSession();
   const nowIso = new Date().toISOString();
 
-  return fetchTable("svc_request_offers", (query) =>
+  const offers = await fetchTable("svc_request_offers", (query) =>
     query
       .select(`
         *,
@@ -1369,6 +1369,51 @@ export async function loadOffers(providerId) {
       .order("created_at", { ascending: false })
       .limit(20)
   );
+
+  return attachPaymentStatusToOffers(offers ?? []);
+}
+
+async function attachPaymentStatusToOffers(offers = []) {
+  if (!offers.length) return offers;
+
+  const requestIds = [
+    ...new Set(
+      offers
+        .map((offer) => offer?.request_id ?? offer?.svc_requests?.id ?? offer?.request?.id ?? offer?.id)
+        .filter(Boolean)
+    )
+  ];
+  if (!requestIds.length) return offers;
+
+  try {
+    const paymentRows = await fetchTable("payments", (query) =>
+      query
+        .select("id,context_id,service_request_id,status,provider_name,provider_payment_id,checkout_url,total_amount,provider_amount,currency,is_test,created_at")
+        .eq("context_type", "SERVICE_REQUEST")
+        .in("context_id", requestIds)
+        .order("created_at", { ascending: false })
+        .limit(100)
+    );
+
+    const byRequest = new Map();
+    (paymentRows ?? []).forEach((payment) => {
+      const requestId = payment.context_id ?? payment.service_request_id;
+      if (requestId && !byRequest.has(requestId)) byRequest.set(requestId, payment);
+    });
+
+    return offers.map((offer) => {
+      const requestId = offer?.request_id ?? offer?.svc_requests?.id ?? offer?.request?.id ?? offer?.id;
+      const payment = byRequest.get(requestId) ?? null;
+      return {
+        ...offer,
+        payment,
+        payment_status: String(payment?.status ?? "PENDING").toUpperCase()
+      };
+    });
+  } catch (error) {
+    console.warn("[service-api] provider payment status lookup skipped", error);
+    return offers;
+  }
 }
 
 export async function loadOfferDetails(offerId) {
@@ -1408,7 +1453,8 @@ export async function loadOfferDetails(offerId) {
       .limit(1)
   );
 
-  return rows?.[0] ?? null;
+  const enriched = await attachPaymentStatusToOffers(rows ?? []);
+  return enriched?.[0] ?? null;
 }
 
 export async function updateRequestStatus(functionName, payload = {}) {
@@ -2171,6 +2217,7 @@ export async function getProviderDashboard(providerId) {
     .eq("selected_provider_id", providerId)
     .not("status", "in", '("COMPLETED","CANCELLED")')
     .limit(1);
+  const activeWithPayment = await attachPaymentStatusToOffers(activeRows ?? []);
 
 const earnings = (completedRows ?? []).reduce(
   (acc, item) => acc + Number(item.total_price_snapshot ?? 0),
@@ -2179,7 +2226,7 @@ const earnings = (completedRows ?? []).reduce(
   return {
     earnings,
     completed: completedRows?.length ?? 0,
-    active: activeRows?.[0] ?? null,
+    active: activeWithPayment?.[0] ?? null,
     history: completedRows ?? []
   };
 }

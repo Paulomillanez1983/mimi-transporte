@@ -18,6 +18,23 @@ function money(rows: Record<string, unknown>[] | null | undefined, key: string) 
   return Number((rows ?? []).reduce((sum, row) => sum + Number(row[key] ?? 0), 0).toFixed(2));
 }
 
+function validDateOrNull(value: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : null;
+}
+
+function defaultPeriod() {
+  const now = new Date();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+function applyCreatedRange(query: any, start: string, end: string) {
+  return query.gte("created_at", start).lt("created_at", end);
+}
+
 async function requireAdmin(supabase: ReturnType<typeof createClient>, req: Request) {
   const authHeader = req.headers.get("Authorization") ?? "";
   if (!authHeader.startsWith("Bearer ")) {
@@ -65,32 +82,35 @@ serve(async (req) => {
   const url = new URL(req.url);
   const includeTests = url.searchParams.get("include_tests") === "1";
   const fiscalVisibility = includeTests ? undefined : "fiscal_reportable";
+  const fallbackPeriod = defaultPeriod();
+  const periodStart = validDateOrNull(url.searchParams.get("period_start")) ?? fallbackPeriod.start;
+  const periodEnd = validDateOrNull(url.searchParams.get("period_end")) ?? fallbackPeriod.end;
 
-  const [revenueRes, earningsRes, payoutsRes, refundsRes, reportsRes, itemsRes, closesRes, exportsRes, batchesRes, payoutBatchesRes] = await Promise.all([
-    supabase
+  const [revenueRes, earningsRes, payoutsRes, refundsRes, reportsRes, itemsRes, closesRes, exportsRes, batchesRes, payoutBatchesRes, openCheckoutRes, processorEventsRes, advancedRequestsRes, servicePaymentsRes] = await Promise.all([
+    applyCreatedRange(supabase
       .from("platform_revenue")
       .select("gross_amount,revenue_amount,currency,created_at,fiscal_visibility,is_test")
       .eq("is_test", includeTests ? true : false)
-      .match(fiscalVisibility ? { fiscal_visibility: fiscalVisibility } : {})
-      .limit(5000),
-    supabase
+      .match(fiscalVisibility ? { fiscal_visibility: fiscalVisibility } : {}), periodStart, periodEnd)
+      .limit(1000),
+    applyCreatedRange(supabase
       .from("provider_earnings")
       .select("gross_amount,commission_amount,psp_fee_amount,net_amount,status,currency,created_at,fiscal_visibility,is_test")
       .eq("is_test", includeTests ? true : false)
-      .match(fiscalVisibility ? { fiscal_visibility: fiscalVisibility } : {})
-      .limit(5000),
-    supabase
+      .match(fiscalVisibility ? { fiscal_visibility: fiscalVisibility } : {}), periodStart, periodEnd)
+      .limit(1000),
+    applyCreatedRange(supabase
       .from("payouts")
       .select("amount,status,currency,created_at,fiscal_visibility,is_test")
       .eq("is_test", includeTests ? true : false)
-      .match(fiscalVisibility ? { fiscal_visibility: fiscalVisibility } : {})
-      .limit(5000),
-    supabase
+      .match(fiscalVisibility ? { fiscal_visibility: fiscalVisibility } : {}), periodStart, periodEnd)
+      .limit(1000),
+    applyCreatedRange(supabase
       .from("refunds")
       .select("amount,status,currency,created_at,fiscal_visibility,is_test")
       .eq("is_test", includeTests ? true : false)
-      .match(fiscalVisibility ? { fiscal_visibility: fiscalVisibility } : {})
-      .limit(5000),
+      .match(fiscalVisibility ? { fiscal_visibility: fiscalVisibility } : {}), periodStart, periodEnd)
+      .limit(1000),
     supabase
       .from("reconciliation_reports")
       .select("report_key,report_type,status,difference_amount,differences_count,period_start,period_end,created_at")
@@ -120,7 +140,32 @@ serve(async (req) => {
       .from("payout_batches")
       .select("id,batch_key,status,provider_count,payout_count,net_amount,created_at")
       .order("created_at", { ascending: false })
-      .limit(8)
+      .limit(8),
+    applyCreatedRange(supabase
+      .from("payments")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["PENDING", "CHECKOUT_CREATED"])
+      .eq("is_test", includeTests ? true : false)
+      .match(fiscalVisibility ? { fiscal_visibility: fiscalVisibility } : {}), periodStart, periodEnd),
+    applyCreatedRange(supabase
+      .from("payment_processor_events")
+      .select("id", { count: "exact", head: true })
+      .eq("is_test", includeTests ? true : false)
+      .match(fiscalVisibility ? { fiscal_visibility: fiscalVisibility } : {}), periodStart, periodEnd),
+    applyCreatedRange(supabase
+      .from("svc_requests")
+      .select("id,status,created_at")
+      .in("status", ["ACCEPTED", "SCHEDULED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "IN_PROGRESS", "COMPLETED"]), periodStart, periodEnd)
+      .order("created_at", { ascending: false })
+      .limit(500),
+    applyCreatedRange(supabase
+      .from("payments")
+      .select("id,context_id,service_request_id,status,created_at")
+      .eq("context_type", "SERVICE_REQUEST")
+      .eq("is_test", includeTests ? true : false)
+      .match(fiscalVisibility ? { fiscal_visibility: fiscalVisibility } : {}), periodStart, periodEnd)
+      .order("created_at", { ascending: false })
+      .limit(1000)
   ]);
 
   const revenueRows = revenueRes.data ?? [];
@@ -136,13 +181,26 @@ serve(async (req) => {
   );
   const p0Alerts = reconciliationItems.filter((row) => row.severity === "critical").length;
   const p1Alerts = reconciliationItems.filter((row) => row.severity === "high").length;
+  const approvedPaymentRequestIds = new Set(
+    (servicePaymentsRes.data ?? [])
+      .filter((row) => ["APPROVED", "CAPTURED", "SETTLED"].includes(String(row.status ?? "").toUpperCase()))
+      .map((row) => String(row.context_id ?? row.service_request_id ?? ""))
+      .filter(Boolean)
+  );
+  const advancedWithoutApproved = (advancedRequestsRes.data ?? [])
+    .filter((row) => !approvedPaymentRequestIds.has(String(row.id ?? ""))).length;
+  const openCheckouts = Number(openCheckoutRes.count ?? 0);
+  const processorEventCount = Number(processorEventsRes.count ?? 0);
+  const missingWebhooks = openCheckouts > 0 && processorEventCount === 0 ? openCheckouts : 0;
 
   return json({
     ok: true,
     mode: includeTests ? "test" : "production",
     filters: {
       include_tests: includeTests,
-      fiscal_visibility: fiscalVisibility ?? "all_test_visible"
+      fiscal_visibility: fiscalVisibility ?? "all_test_visible",
+      period_start: periodStart,
+      period_end: periodEnd
     },
     metrics: {
       gmv: money(revenueRows, "gross_amount"),
@@ -158,7 +216,17 @@ serve(async (req) => {
       p1_alerts: p1Alerts,
       reconciliation_open_differences: openDifferences,
       payout_count: payoutRows.length,
-      provider_earning_count: earningRows.length
+      provider_earning_count: earningRows.length,
+      open_checkouts: openCheckouts,
+      missing_webhooks: missingWebhooks,
+      advanced_without_approved: advancedWithoutApproved
+    },
+    payment_health: {
+      open_checkouts: openCheckouts,
+      missing_webhooks: missingWebhooks,
+      advanced_without_approved: advancedWithoutApproved,
+      payment_processor_events: processorEventCount,
+      mode: includeTests ? "test" : "production"
     },
     reconciliation: reconciliationRows,
     reconciliation_items: reconciliationItems,

@@ -17,6 +17,38 @@ const stateLabels = {
   PENDING: "Solicitud creada"
 };
 
+function paymentStatusCopy(payment = null) {
+  const status = String(payment?.status ?? "PENDING").toUpperCase();
+  if (["APPROVED", "CAPTURED", "SETTLED"].includes(status)) {
+    return {
+      label: "Pago confirmado",
+      note: "El pago fue aprobado por Mercado Pago."
+    };
+  }
+  if (["REJECTED", "CANCELLED", "FAILED"].includes(status)) {
+    return {
+      label: "Pago no completado",
+      note: "El pago no se completo. Podes volver a intentarlo desde MIMIGO."
+    };
+  }
+  if (payment?.sync_warning) {
+    return {
+      label: "Estamos verificando el pago",
+      note: "Consultamos Mercado Pago y seguimos mostrando el estado local hasta recibir confirmacion."
+    };
+  }
+  if (status === "CHECKOUT_CREATED") {
+    return {
+      label: "Pago requerido para confirmar",
+      note: "Abrilo en Mercado Pago y volve a MIMIGO para verificar la confirmacion."
+    };
+  }
+  return {
+    label: "Pago pendiente",
+    note: "Pago requerido para confirmar. El servicio se confirma cuando Mercado Pago informa aprobacion."
+  };
+}
+
 const categoryIcons = {
   SERVICIO_DOMESTICO: "SD",
   LIMPIEZA: "LI",
@@ -1202,14 +1234,15 @@ function renderFinancialPanel(state) {
   }
 
   const total = payment?.total_amount ?? request.total_price ?? request.total_price_snapshot ?? 0;
-  const paymentStatus = payment?.status ?? "PENDING";
+  const paymentStatus = String(payment?.status ?? "PENDING").toUpperCase();
+  const copy = paymentStatusCopy(payment);
 
   container.innerHTML = `
     <details class="summary-card payment-details-card">
       <summary>
         <span>
-          <strong>Total estimado</strong>
-          <small>${escapeHtml(paymentStatus === "PENDING" ? "Pendiente de confirmacion" : paymentStatus)}</small>
+          <strong>${escapeHtml(copy.label)}</strong>
+          <small>${escapeHtml(copy.note)}</small>
         </span>
         <b>${currency(total)}</b>
       </summary>
@@ -1218,10 +1251,10 @@ function renderFinancialPanel(state) {
         <div class="metric"><span>Moneda</span><strong>${escapeHtml(request.currency ?? payment?.currency ?? escrow?.currency ?? "ARS")}</strong></div>
         <div class="metric"><span>Estado</span><strong>${escapeHtml(paymentStatus)}</strong></div>
       </div>
-      <p class="muted payment-note">Este es el total estimado para tu solicitud. El servicio lo presta un proveedor independiente.</p>
+      <p class="muted payment-note">${escapeHtml(copy.note)}</p>
       <div class="chip-row">
-        <span class="inline-chip">${escapeHtml(paymentStatus)}</span>
-        ${payment?.checkout_url ? `<button class="btn-primary" type="button" data-payment-action="checkout">Abrir checkout mock</button>` : ""}
+        <span class="inline-chip">${escapeHtml(paymentStatus === "CHECKOUT_CREATED" ? "Pago preparado" : copy.label)}</span>
+        ${payment?.checkout_url ? `<button class="btn-primary" type="button" data-payment-action="checkout">Ir a Mercado Pago</button>` : ""}
         ${payment?.id ? `<button class="btn-secondary" type="button" data-payment-action="refresh">Actualizar pago</button>` : ""}
         ${["PENDING", "CHECKOUT_CREATED", "REJECTED"].includes(paymentStatus) ? `<button class="btn-secondary" type="button" data-payment-action="cancel">Cancelar pago</button>` : ""}
       </div>

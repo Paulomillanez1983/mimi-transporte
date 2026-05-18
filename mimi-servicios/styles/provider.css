@@ -14122,6 +14122,7 @@ body.provider-authenticated .header-glass { min-height: 66px !important; border-
 .offer-body { gap: 7px !important; }
 .offer-service, .service-title { font-size: 24px !important; line-height: 1.02 !important; }
 .offer-location, .offer-client, .service-location, .service-client { font-size: 14px !important; line-height: 1.22 !important; }
+.service-payment { display: inline-flex !important; align-items: center !important; width: fit-content !important; margin-top: 3px !important; padding: 5px 9px !important; border-radius: 999px !important; background: rgba(34,197,94,.16) !important; color: #bbf7d0 !important; font-size: 12px !important; font-weight: 800 !important; line-height: 1 !important; }
 .offer-price { font-size: 21px !important; line-height: 1.08 !important; }
 .offer-detail-grid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; gap: 7px !important; margin-top: 3px !important; }
 .offer-detail-pill { padding: 8px 9px !important; border-radius: 12px !important; }

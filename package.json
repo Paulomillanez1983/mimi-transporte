@@ -10,7 +10,8 @@
     "test:e2e:mobile": "playwright test qa/mobile-ux-confirmation.spec.js",
     "qa:mercadopago-sandbox": "node qa/mercadopago-sandbox-static.js",
     "qa:payment-provider-admin-config": "node qa/payment-provider-admin-config-static.js",
-    "qa:financial-hardening": "node qa/financial-core-hardening-static.js"
+    "qa:financial-hardening": "node qa/financial-core-hardening-static.js",
+    "qa:mercadopago-phase1": "node qa/mercadopago-phase1-static.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",

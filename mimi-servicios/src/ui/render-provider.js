@@ -122,6 +122,12 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
+function providerPaymentStatusLabel(status = "PENDING") {
+  const normalized = String(status || "PENDING").trim().toUpperCase();
+  if (["APPROVED", "CAPTURED", "SETTLED"].includes(normalized)) return "Pago confirmado";
+  return "Pago pendiente";
+}
+
 function offerServiceDetails(offer = {}) {
   const request = offer.svc_requests ?? offer.request ?? {};
   const metadata = request.metadata_json ?? offer.metadata_json ?? {};
@@ -138,10 +144,12 @@ function offerDetailRows(offer = {}) {
   const unitPrice = Number(details.unit_price || 0);
   const providerAmount = Number(details.provider_price ?? request.provider_price_snapshot ?? offer.provider_price_snapshot ?? 0);
   const currencyCode = details.currency || request.currency || "ARS";
+  const paymentStatus = offer.payment_status ?? offer.payment?.status ?? request.payment_status ?? request.payment?.status ?? "PENDING";
 
   if (quantity > 0 && unitName) rows.push(["Cantidad", `${quantity.toLocaleString("es-AR")} ${unitName}`]);
   if (unitPrice > 0 && unitName) rows.push(["Precio publicado", `${currency(unitPrice, currencyCode)} / ${unitName}`]);
   rows.push(["Tu precio", providerAmount > 0 ? currency(providerAmount, currencyCode) : "A coordinar"]);
+  rows.push(["Pago", providerPaymentStatusLabel(paymentStatus)]);
 
   const notes = String(details.client_notes || request.notes || "").trim();
   if (notes) rows.push(["Detalle", notes.split("\n")[0]]);
@@ -503,6 +511,7 @@ export function renderProviderActiveService(state) {
       activeService?.price ??
       0
   );
+  const activePaymentStatus = activeService?.payment_status ?? activeService?.payment?.status ?? "PENDING";
 
   providerActiveService.innerHTML = activeService
     ? `
@@ -534,6 +543,10 @@ export function renderProviderActiveService(state) {
           <div class="metric">
             <span>Tu precio</span>
             <strong>${currency(activeProviderAmount)}</strong>
+          </div>
+          <div class="metric">
+            <span>Pago</span>
+            <strong>${escapeHtml(providerPaymentStatusLabel(activePaymentStatus))}</strong>
           </div>
           <div class="metric">
             <span>Tracking</span>
