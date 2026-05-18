@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-14-mimigo-pro-provider-46";
+const APP_VERSION = "2026-05-18-mimigo-pro-provider-47";
 const CACHE_PREFIX = "mimi-go-partner-";
 const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 const LEGACY_CACHE_PREFIXES = ["mimi-servicios-provider-"];
@@ -198,7 +198,7 @@ function shouldCache(response) {
 }
 
 function offlineResponse() {
-  return new Response("MIMI GO Partner no tiene conexion en este momento.", {
+  return new Response("MIMI GO Pro no tiene conexion en este momento.", {
     status: 503,
     headers: { "Content-Type": "text/plain; charset=utf-8" }
   });

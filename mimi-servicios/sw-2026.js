@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-12-prod-otp-install-2";
+const APP_VERSION = "2026-05-18-provider-pwa-name-1";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [
