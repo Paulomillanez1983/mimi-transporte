@@ -456,9 +456,7 @@ export class MercadoPagoPaymentProvider extends PreparedProvider {
       body: JSON.stringify(preferencePayload)
     });
 
-    const checkoutUrl = sandbox
-      ? stringValue(preference.sandbox_init_point ?? preference.init_point)
-      : stringValue(preference.init_point ?? preference.sandbox_init_point);
+    const checkoutUrl = stringValue(preference.init_point ?? preference.sandbox_init_point);
     const preferenceId = stringValue(preference.id);
     if (!preferenceId || !checkoutUrl) {
       throw new Error("MERCADOPAGO_PREFERENCE_INCOMPLETE: respuesta sin id o checkout URL.");

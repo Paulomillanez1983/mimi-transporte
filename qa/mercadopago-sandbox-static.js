@@ -28,7 +28,7 @@ function before(source, earlier, later) {
   return left >= 0 && right >= 0 && left < right;
 }
 
-check("Mercado Pago adapter creates Checkout Pro preferences", /\/checkout\/preferences/.test(content.providers) && /sandbox_init_point/.test(content.providers));
+check("Mercado Pago adapter creates Checkout Pro preferences", /\/checkout\/preferences/.test(content.providers) && /init_point \?\? preference\.sandbox_init_point/.test(content.providers));
 check("Mercado Pago adapter requires test token while real money is disabled", /MERCADOPAGO_TEST_TOKEN_REQUIRED/.test(content.providers) && /PAYMENTS_REAL_ENABLED=false/.test(content.providers));
 check("Mercado Pago adapter stores payment external_reference", /external_reference: input\.paymentId/.test(content.providers));
 check("Mercado Pago adapter includes webhook notification URL", /notification_url/.test(content.providers) && /paymentWebhookUrl/.test(content.providers));
