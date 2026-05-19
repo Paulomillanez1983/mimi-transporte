@@ -1,10 +1,10 @@
 {
   "client": {
-    "version": "2026.05.18.3",
+    "version": "2026.05.18.4",
     "min_supported_version": "2026.05.13.8",
     "critical": false,
     "force_update": false,
-    "message": "Mejoramos estabilidad, velocidad y seguridad."
+    "message": "Agregamos cancelacion segura de solicitud y pago pendiente."
   },
   "provider": {
     "version": "2026.05.18.4",

@@ -54,7 +54,7 @@ import {
   state,
   subscribe
 } from "./state/app-state.js";
-import { renderClientScreen } from "./ui/render-client.js?v=2026.05.18.3";
+import { renderClientScreen } from "./ui/render-client.js?v=2026.05.18.4";
 import { cancelPayment, createPaymentIntent, getPaymentStatus } from "./payments/payment-api.js";
 import {
   detectDefaultCountry,
@@ -122,8 +122,37 @@ const SERVICE_PIN_FETCH_STATUSES = new Set([
   "PROVIDER_ARRIVED"
 ]);
 
+const CLIENT_SELF_CANCEL_STATUSES = new Set([
+  "SEARCHING",
+  "PENDING_PROVIDER_RESPONSE",
+  "PENDING",
+  "ACCEPTED",
+  "SCHEDULED",
+  "PROVIDER_EN_ROUTE"
+]);
+
+const PAYMENT_CANCELABLE_STATUSES = new Set([
+  "PENDING",
+  "CHECKOUT_CREATED",
+  "REJECTED"
+]);
+
+const PAYMENT_APPROVED_STATUSES = new Set([
+  "APPROVED",
+  "CAPTURED",
+  "SETTLED"
+]);
+
 function activeRequestStatus(request = {}) {
   return String(request?.status || "").toUpperCase();
+}
+
+function canClientSelfCancelRequest(request = {}) {
+  return Boolean(request?.id) && CLIENT_SELF_CANCEL_STATUSES.has(activeRequestStatus(request));
+}
+
+function canCancelPaymentLocally(payment = null) {
+  return Boolean(payment?.id) && PAYMENT_CANCELABLE_STATUSES.has(String(payment?.status || "").toUpperCase());
 }
 
 function shouldFetchServicePin(request = {}) {
@@ -2546,11 +2575,29 @@ async function handleRequestAction(action) {
   if (action !== "cancel") return;
 
   const requestId = state.client.activeRequest?.id;
-  console.log("[MIMI Cancel] step 1: cancel clicked", { requestId, hasActiveRequest: !!state.client.activeRequest });
+  const payment = state.client.insights?.paymentIntent ?? null;
+  console.log("[MIMI Cancel] step 1: cancel clicked", {
+    requestId,
+    hasActiveRequest: !!state.client.activeRequest,
+    requestStatus: state.client.activeRequest?.status,
+    paymentId: payment?.id,
+    paymentStatus: payment?.status
+  });
 
   if (!requestId) {
     console.warn("[MIMI Cancel] BLOCKED: no hay request activo en state.client.activeRequest");
     setInfo(null, "No hay una solicitud activa para cancelar.");
+    return;
+  }
+
+  if (!canClientSelfCancelRequest(state.client.activeRequest)) {
+    setInfo(null, "Esta solicitud ya no se puede cancelar desde la app. Contacta soporte para revisar el caso.");
+    return;
+  }
+
+  const paymentStatus = String(payment?.status || "").toUpperCase();
+  if (payment?.id && PAYMENT_APPROVED_STATUSES.has(paymentStatus)) {
+    setInfo(null, "El pago ya fue confirmado. Contacta soporte para cancelar y revisar la devolucion.");
     return;
   }
 
@@ -2567,16 +2614,37 @@ async function handleRequestAction(action) {
     throw err;
   }
 
+  let paymentCancelled = false;
+  let paymentCancelFailed = false;
+  if (canCancelPaymentLocally(payment)) {
+    try {
+      console.log("[MIMI Cancel] step 3: cancelling pending payment", { paymentId: payment.id });
+      const updatedPayment = await cancelPayment(payment.id, "service_request_cancelled_from_client_ui");
+      paymentCancelled = String(updatedPayment?.status || "").toUpperCase() === "CANCELLED";
+      patchState("client.insights.paymentIntent", updatedPayment);
+    } catch (paymentError) {
+      paymentCancelFailed = true;
+      console.warn("[MIMI Cancel] payment cancel failed:", paymentError);
+      setInfo("Solicitud cancelada. No pudimos cerrar el pago pendiente automaticamente; soporte puede revisarlo.");
+    }
+  }
+
   setState((draft) => {
     if (draft.client.activeRequest) {
       draft.client.activeRequest.status = "CANCELLED";
     }
     draft.client.selectedProvider = null;
-    draft.meta.info = "Solicitud cancelada correctamente.";
+    draft.meta.info = payment?.id
+      ? paymentCancelled
+        ? "Solicitud y pago pendiente cancelados correctamente."
+        : paymentCancelFailed
+          ? "Solicitud cancelada. El pago pendiente quedo para revision."
+        : "Solicitud cancelada correctamente."
+      : "Solicitud cancelada correctamente.";
   });
 
   await hydrateLiveContext();
-  console.log("[MIMI Cancel] step 3 OK: state actualizado y context refrescado");
+  console.log("[MIMI Cancel] step 4 OK: state actualizado y context refrescado");
 }
 
 function openProviderSortSheet() {
@@ -2643,6 +2711,10 @@ async function handlePaymentAction(action) {
   }
 
   if (action === "cancel") {
+    if (state.client.activeRequest?.id) {
+      await handleRequestAction("cancel");
+      return;
+    }
     const updated = await cancelPayment(payment.id);
     patchState("client.insights.paymentIntent", updated);
   }

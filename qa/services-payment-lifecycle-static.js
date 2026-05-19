@@ -46,6 +46,10 @@ check("client creates payment intent only for positive total", /const totalForPa
 check("client skips immediate payment for quote or zero total", /step 6 SKIPPED/.test(content.mainClient) && /quote_required/.test(content.mainClient));
 check("client shows Mercado Pago required copy", /Pago requerido para confirmar/.test(content.mainClient) && /Ir a Mercado Pago/.test(content.renderClient));
 check("client payment refresh uses get-payment-status", /getPaymentStatus\(payment\.id\)/.test(content.mainClient) && /sync_warning/.test(content.paymentApi));
+check("client can cancel accepted unpaid requests", /CLIENT_SELF_CANCEL_STATUSES[\s\S]*PROVIDER_EN_ROUTE/.test(content.renderClient) && /CLIENT_SELF_CANCEL_STATUSES[\s\S]*PROVIDER_EN_ROUTE/.test(content.mainClient));
+check("client cancel action closes request before pending payment", ordered(content.mainClient, "updateRequestStatus(appConfig.functions.cancelRequest", "cancelPayment(payment.id, \"service_request_cancelled_from_client_ui\")"));
+check("client blocks self-cancel after approved payment", /PAYMENT_APPROVED_STATUSES/.test(content.mainClient) && /El pago ya fue confirmado/.test(content.mainClient));
+check("client payment cancel routes through request cancellation", /data-request-action=\"cancel\">Cancelar solicitud y pago/.test(content.renderClient) && !/data-payment-action=\"cancel\">Cancelar pago/.test(content.renderClient));
 check("client does not call provider acceptance directly", !/provider-respond-offer|svc-provider-respond-offer/.test(content.mainClient));
 
 check("provider offer card exposes provider price only", /Tu precio/.test(content.renderProvider) && !/Cliente paga|CLIENTE PAGA/.test(providerBundle));

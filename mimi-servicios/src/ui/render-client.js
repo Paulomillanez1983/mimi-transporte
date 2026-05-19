@@ -17,6 +17,17 @@ const stateLabels = {
   PENDING: "Solicitud creada"
 };
 
+const CLIENT_SELF_CANCEL_STATUSES = new Set([
+  "SEARCHING",
+  "PENDING_PROVIDER_RESPONSE",
+  "PENDING",
+  "ACCEPTED",
+  "SCHEDULED",
+  "PROVIDER_EN_ROUTE"
+]);
+
+const PAYMENT_APPROVED_STATUSES = new Set(["APPROVED", "CAPTURED", "SETTLED"]);
+
 function paymentStatusCopy(payment = null) {
   const status = String(payment?.status ?? "PENDING").toUpperCase();
   if (["APPROVED", "CAPTURED", "SETTLED"].includes(status)) {
@@ -1147,8 +1158,9 @@ export function renderRequestSummary(state) {
   const compactAddress = compactServiceAddress(rawAddress);
   const payment = state.client.insights?.paymentIntent ?? null;
   const paymentStatus = String(payment?.status || "").toUpperCase();
-  const paymentApproved = ["APPROVED", "CAPTURED", "SETTLED"].includes(paymentStatus);
+  const paymentApproved = PAYMENT_APPROVED_STATUSES.has(paymentStatus);
   const paymentNeedsAction = Boolean(payment?.checkout_url) && !paymentApproved;
+  const canCancelRequest = CLIENT_SELF_CANCEL_STATUSES.has(currentStatus) && !paymentApproved;
   const servicePin = state.client.insights?.servicePin?.pin ?? null;
   const showServicePin = currentStatus === "PROVIDER_ARRIVED" && servicePin;
 
@@ -1161,6 +1173,7 @@ export function renderRequestSummary(state) {
         <div class="summary-actions-inline">
           <button class="btn-primary" type="button" data-payment-action="checkout">Ir a Mercado Pago</button>
           ${payment?.id ? `<button class="btn-secondary" type="button" data-payment-action="refresh">Actualizar pago</button>` : ""}
+          ${canCancelRequest ? `<button class="btn-secondary" type="button" data-request-action="cancel">Cancelar solicitud</button>` : ""}
         </div>
       </div>
     ` : ""}
@@ -1220,7 +1233,7 @@ export function renderRequestSummary(state) {
     !["COMPLETED", "CANCELLED"].includes(currentStatus)
       ? `<button class="btn-secondary" data-request-action="refresh" type="button">Actualizar estado</button>`
       : "",
-    ["SEARCHING", "PENDING_PROVIDER_RESPONSE", "PENDING"].includes(currentStatus)
+    canCancelRequest
       ? `<button class="btn-secondary" data-request-action="cancel" type="button">Cancelar</button>`
       : "",
     ["PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "IN_PROGRESS"].includes(currentStatus)
@@ -1273,7 +1286,7 @@ function renderFinancialPanel(state) {
         <span class="inline-chip">${escapeHtml(paymentStatus === "CHECKOUT_CREATED" ? "Pago preparado" : copy.label)}</span>
         ${payment?.checkout_url ? `<button class="btn-primary" type="button" data-payment-action="checkout">Ir a Mercado Pago</button>` : ""}
         ${payment?.id ? `<button class="btn-secondary" type="button" data-payment-action="refresh">Actualizar pago</button>` : ""}
-        ${["PENDING", "CHECKOUT_CREATED", "REJECTED"].includes(paymentStatus) ? `<button class="btn-secondary" type="button" data-payment-action="cancel">Cancelar pago</button>` : ""}
+        ${CLIENT_SELF_CANCEL_STATUSES.has(String(request.status || "").toUpperCase()) && !PAYMENT_APPROVED_STATUSES.has(paymentStatus) ? `<button class="btn-secondary" type="button" data-request-action="cancel">Cancelar solicitud y pago</button>` : ""}
       </div>
     </details>
   `;
