@@ -8,6 +8,8 @@ const PARTNER_PWA_INSTALLED_KEY = "mimi_go_partner_pwa_installed";
 const PARTNER_INSTALL_DISMISSED_KEY = "mimi_go_partner_install_dismissed_until";
 const PARTNER_INSTALL_SESSION_KEY = "mimi_go_partner_install_shown_session";
 const PROVIDER_INSTALL_PROMPT_ENABLED = false;
+const PROVIDER_EXTERNAL_NAVIGATION_STARTED_KEY = "mimi_provider_external_navigation_started";
+const PROVIDER_EXTERNAL_NAVIGATION_RETURN_DEBOUNCE_MS = 5000;
 const LEGACY_SW_PATHS = [
   "/mimi-servicios/sw-2026.js",
   "/service-worker.js",
@@ -117,6 +119,7 @@ import {
   subscribeScopedChannel
 } from "./services/realtime-manager.js";
 import { ensureMapLibreAssets } from "./services/map.js";
+import { buildProviderNavigationUrl } from "./services/provider-navigation.js";
 import { recordCriticalRiskEvent } from "./security/risk-events.js";
 
 initObservability("provider");
@@ -324,6 +327,8 @@ class MimiProviderApp {
     this.sheetReturnTab = null;
     this.verificationReturnStep = null;
     this.installPromptSetupDone = false;
+    this.externalNavigationReturnInFlight = false;
+    this.externalNavigationLastResyncAt = 0;
     
     // DOM Elements cache
     this.elements = {};
@@ -452,6 +457,7 @@ if (!canBootProviderPanel) {
   this.checkLocationPermission();
   this.startBackgroundSync();
   this.subscribeRealtime();
+  window.setTimeout(() => this.handleExternalNavigationReturn("boot"), 0);
 
   // Push notifications: si Firebase Messaging logró obtener token FCM,
   // lo registramos en svc_user_devices para que el backend pueda enviar
@@ -1543,13 +1549,91 @@ setTimeout(() => {
 
   openExternalNavigation() {
     const destination = this.servicePositionFromState();
-    if (!this.isValidServiceLatLng(destination)) {
-      this.showToast("Todavia no tenemos la ubicacion del cliente", "warning");
+    const url = buildProviderNavigationUrl({
+      lat: destination.lat,
+      lng: destination.lng,
+      addressText: this.providerNavigationAddressText(),
+      app: "google"
+    });
+
+    if (!url) {
+      this.showToast("Todavia no tenemos la ubicacion o direccion del cliente", "warning");
       return;
     }
 
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${destination.lat},${destination.lng}`)}&travelmode=driving`;
+    this.markProviderExternalNavigationStarted();
     window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  providerNavigationAddressText(service = this.state?.activeService) {
+    const raw = service?.raw ?? {};
+    const candidates = [
+      service?.address,
+      raw.address_text,
+      raw.service_address,
+      raw.formatted_address,
+      raw.address,
+      service?.location,
+      raw.location
+    ];
+
+    return candidates
+      .map((value) => String(value ?? "").trim())
+      .find(Boolean) || "";
+  }
+
+  markProviderExternalNavigationStarted() {
+    try {
+      localStorage.setItem(PROVIDER_EXTERNAL_NAVIGATION_STARTED_KEY, String(Date.now()));
+    } catch (_) {}
+  }
+
+  hasProviderExternalNavigationStarted() {
+    try {
+      return Boolean(localStorage.getItem(PROVIDER_EXTERNAL_NAVIGATION_STARTED_KEY));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  clearProviderExternalNavigationStarted() {
+    try {
+      localStorage.removeItem(PROVIDER_EXTERNAL_NAVIGATION_STARTED_KEY);
+    } catch (_) {}
+  }
+
+  async handleExternalNavigationReturn(trigger = "focus", { skipResync = false } = {}) {
+    if (!this.hasProviderExternalNavigationStarted()) return null;
+    if (this.externalNavigationReturnInFlight) return null;
+
+    const now = Date.now();
+    if (now - this.externalNavigationLastResyncAt < PROVIDER_EXTERNAL_NAVIGATION_RETURN_DEBOUNCE_MS) {
+      return null;
+    }
+
+    const providerId = this.state?.session?.providerId;
+    if (!providerId && !this.state?.activeService) return null;
+
+    this.externalNavigationReturnInFlight = true;
+    this.externalNavigationLastResyncAt = now;
+
+    try {
+      const activeRequest = skipResync ? null : await this.resyncActiveService(`external-navigation:${trigger}`);
+      const activeService = activeRequest
+        ? this.normalizeServiceForState(activeRequest)
+        : this.state?.activeService;
+
+      if (activeService) {
+        this.showToast("\u00bfYa llegaste? Toc\u00e1 'Llegu\u00e9' para continuar con el PIN.", "info");
+        this.clearProviderExternalNavigationStarted();
+        return activeRequest ?? activeService;
+      }
+
+      this.clearProviderExternalNavigationStarted();
+      return null;
+    } finally {
+      this.externalNavigationReturnInFlight = false;
+    }
   }
 
   /**
@@ -3902,9 +3986,18 @@ document.addEventListener("change", (event) => {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         this.onAppForeground();
+        this.handleExternalNavigationReturn("visibilitychange");
       } else {
         this.onAppBackground();
       }
+    });
+
+    window.addEventListener("focus", () => {
+      this.handleExternalNavigationReturn("focus");
+    });
+
+    window.addEventListener("pageshow", () => {
+      this.handleExternalNavigationReturn("pageshow");
     });
 
     // Online/offline
