@@ -928,6 +928,416 @@ h1 span {
   }
 }
 
+@media (max-width: 640px) {
+  .site-header {
+    width: calc(100% - 18px);
+    padding: 10px 0;
+    gap: 8px;
+  }
+
+  .brand {
+    min-height: 30px;
+  }
+
+  .brand-text {
+    font-size: clamp(18px, 5.5vw, 24px);
+  }
+
+  .login-link {
+    min-height: 30px;
+    padding: 0 9px;
+    border-radius: 7px;
+    font-size: 10px;
+  }
+
+  .hero {
+    gap: 14px;
+    min-height: 0;
+    padding: 58px 10px 22px;
+  }
+
+  .hero-copy {
+    gap: 9px;
+  }
+
+  .eyebrow,
+  .section-kicker {
+    padding: 5px 8px;
+    border-radius: 7px;
+    font-size: 8px;
+    letter-spacing: 0.04em;
+  }
+
+  h1 {
+    max-width: 350px;
+    font-size: clamp(25px, 7.8vw, 33px);
+    line-height: 1.03;
+  }
+
+  .hero-lead {
+    max-width: 340px;
+    font-size: clamp(12px, 3.4vw, 14px);
+    line-height: 1.32;
+  }
+
+  .hero-points {
+    gap: 7px;
+    margin-top: 1px;
+  }
+
+  .hero-point {
+    grid-template-columns: 30px 1fr;
+    gap: 8px;
+  }
+
+  .point-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .hero-point strong {
+    font-size: 11px;
+  }
+
+  .hero-point small {
+    margin-top: 1px;
+    font-size: 9.5px;
+    line-height: 1.25;
+  }
+
+  .hero-actions {
+    gap: 7px;
+    margin-top: 3px;
+  }
+
+  .button {
+    min-height: 42px;
+    padding: 8px 12px;
+    font-size: 12px;
+    gap: 2px;
+  }
+
+  .button small {
+    margin-top: 2px;
+    font-size: 9.5px;
+  }
+
+  .hero-preview {
+    min-height: clamp(276px, 72vw, 306px);
+  }
+
+  .preview-rings {
+    width: min(330px, 82vw);
+    box-shadow:
+      0 0 0 42px rgba(29, 108, 255, 0.055),
+      0 0 0 92px rgba(53, 184, 255, 0.03);
+  }
+
+  .phone-preview {
+    width: clamp(122px, 33vw, 144px);
+    padding: 8px;
+    border-radius: 30px;
+    box-shadow:
+      0 24px 52px rgba(0, 0, 0, 0.48),
+      0 0 0 1px rgba(255, 255, 255, 0.2) inset,
+      0 0 34px rgba(53, 184, 255, 0.2);
+  }
+
+  .phone-hardware {
+    top: 13px;
+    gap: 5px;
+  }
+
+  .phone-speaker {
+    width: 36px;
+    height: 5px;
+  }
+
+  .phone-camera {
+    width: 6px;
+    height: 6px;
+  }
+
+  .screen-stack {
+    border-radius: 23px;
+  }
+
+  .preview-status {
+    bottom: 13px;
+    gap: 5px;
+    min-height: 25px;
+    padding: 5px 8px;
+    border-radius: 7px;
+    font-size: 10px;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    box-shadow: 0 0 0 3px rgba(40, 211, 157, 0.14);
+  }
+
+  .preview-controls {
+    bottom: -22px;
+    gap: 6px;
+  }
+
+  .preview-controls button {
+    width: 22px;
+    height: 5px;
+  }
+
+  .paths {
+    padding: 26px 10px 18px;
+  }
+
+  .paths h2 {
+    margin-top: 11px;
+    font-size: clamp(22px, 7vw, 29px);
+  }
+
+  .section-copy {
+    margin-top: 6px;
+    font-size: 12px;
+  }
+
+  .path-grid {
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .path-card {
+    gap: 10px;
+    padding: 14px;
+    box-shadow: 0 12px 34px rgba(15, 23, 42, 0.08);
+  }
+
+  .path-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 25px;
+  }
+
+  .path-card h3 {
+    font-size: 18px;
+  }
+
+  .path-card p {
+    margin-top: 7px;
+    font-size: 12px;
+    line-height: 1.42;
+  }
+
+  .path-card ul {
+    gap: 6px;
+    margin: 11px 0 13px;
+    font-size: 11px;
+  }
+
+  .path-card li {
+    padding-left: 18px;
+  }
+
+  .path-card li::before {
+    top: 0.42em;
+    width: 7px;
+    height: 7px;
+    border-width: 1.5px;
+  }
+
+  .path-link {
+    margin-top: 8px;
+    font-size: 11px;
+  }
+
+  .trust-band {
+    gap: 8px;
+    margin-top: 12px;
+    margin-bottom: 18px;
+    padding: 0 10px;
+  }
+
+  .trust-band article {
+    grid-template-columns: 34px 1fr;
+    gap: 9px;
+    padding: 12px;
+  }
+
+  .trust-band svg {
+    width: 34px;
+    height: 34px;
+    padding: 7px;
+  }
+
+  .trust-band h3 {
+    font-size: 12px;
+  }
+
+  .trust-band p {
+    margin-top: 3px;
+    font-size: 10.5px;
+    line-height: 1.35;
+  }
+
+  .join-band {
+    gap: 10px;
+    margin: 16px 10px 18px;
+    padding: 15px;
+  }
+
+  .join-mark {
+    width: 48px;
+    height: 48px;
+    font-size: 40px;
+  }
+
+  .join-band h2 {
+    font-size: 16px;
+  }
+
+  .join-band p {
+    margin-top: 5px;
+    font-size: 11px;
+  }
+
+  .join-actions {
+    gap: 8px;
+  }
+
+  .site-footer {
+    gap: 10px;
+    padding: 22px 10px 28px;
+  }
+
+  .site-footer strong {
+    font-size: 21px;
+  }
+
+  .site-footer span,
+  .site-footer nav {
+    font-size: 11px;
+  }
+
+  .site-footer nav {
+    gap: 9px 14px;
+  }
+}
+
+@media (max-width: 380px) {
+  .hero {
+    padding-top: 52px;
+  }
+
+  h1 {
+    font-size: clamp(23px, 7.5vw, 28px);
+  }
+
+  .hero-lead {
+    font-size: 11.5px;
+  }
+
+  .hero-point small {
+    font-size: 9px;
+  }
+
+  .hero-preview {
+    min-height: clamp(258px, 72vw, 286px);
+  }
+
+  .phone-preview {
+    width: clamp(116px, 32vw, 132px);
+  }
+}
+
+@media (max-width: 640px) and (max-height: 760px) {
+  .site-header {
+    padding-top: 8px;
+  }
+
+  .brand-text {
+    font-size: clamp(17px, 5vw, 20px);
+  }
+
+  .login-link {
+    min-height: 28px;
+    font-size: 9px;
+  }
+
+  .hero {
+    gap: 10px;
+    padding-top: 48px;
+    padding-bottom: 16px;
+  }
+
+  .hero-copy {
+    gap: 7px;
+  }
+
+  .eyebrow,
+  .section-kicker {
+    padding: 4px 7px;
+    font-size: 7.5px;
+  }
+
+  h1 {
+    font-size: clamp(22px, 7vw, 26px);
+  }
+
+  .hero-lead {
+    font-size: 11px;
+  }
+
+  .hero-points {
+    gap: 5px;
+  }
+
+  .hero-point {
+    grid-template-columns: 28px 1fr;
+    gap: 7px;
+  }
+
+  .point-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .hero-point strong {
+    font-size: 10.5px;
+  }
+
+  .hero-point small {
+    font-size: 8.6px;
+  }
+
+  .button {
+    min-height: 38px;
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+
+  .button small {
+    font-size: 9px;
+  }
+
+  .hero-preview {
+    min-height: clamp(238px, 67vw, 270px);
+  }
+
+  .phone-preview {
+    width: clamp(106px, 30vw, 124px);
+  }
+
+  .preview-status {
+    bottom: 10px;
+    min-height: 23px;
+    font-size: 9px;
+  }
+
+  .preview-controls {
+    bottom: -16px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
