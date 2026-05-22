@@ -24,7 +24,7 @@ function check(name, pass) {
 }
 
 const authenticatedBootBlock = source.main.slice(
-  source.main.indexOf("const canBootProviderPanel = await this.loadInitialData("),
+  source.main.indexOf("const canBootProviderPanel = await this.loadInitialData()"),
   source.main.indexOf("this.setupEventListeners();")
 );
 const servicesFocusCss = source.css.slice(
@@ -48,7 +48,7 @@ check("services focus CSS does not hide map container", !/data-provider-tab="pri
 check("MapLibre assets loader is preserved", /MAPLIBRE_CSS_URL/.test(source.map) && /MAPLIBRE_JS_URL/.test(source.map) && /waitForMapLibre|window\.maplibregl/.test(source.map));
 check("no Mapbox or Google Maps Platform API dependency", !/MAPBOX_TOKEN|GOOGLE_MAPS_API_KEY|google\.maps|maps\.googleapis\.com/i.test(source.main + source.map + source.packageJson));
 check("wallet/login guardrails remain present", /provider-login-google/.test(source.html) && /tabWallet/.test(source.html) && /notificationsDrawer/.test(source.html));
-check("provider build bumped for hotfix", /MIMI_PROVIDER_BUILD\s*=\s*"2026\.05\.22\.(map|boot)-hotfix1"/.test(source.main));
+check("provider build bumped for hotfix", /MIMI_PROVIDER_BUILD\s*=\s*"2026\.05\.22\.map-hotfix1"/.test(source.main));
 
 for (const result of checks) {
   console.log(`${result.pass ? "PASS" : "FAIL"} ${result.name}`);
