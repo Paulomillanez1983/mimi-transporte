@@ -175,14 +175,19 @@ svg {
   display: grid;
   align-content: end;
   gap: 18px;
+  overflow: hidden;
   transition:
-    opacity 180ms ease,
-    transform 180ms ease;
+    opacity 360ms ease,
+    filter 360ms ease,
+    min-height 360ms ease,
+    transform 360ms ease;
+  will-change: opacity, filter, min-height, transform;
 }
 
 .hero-copy.is-switching {
-  opacity: 0;
-  transform: translateY(6px);
+  opacity: 0.82;
+  filter: blur(0.4px);
+  transform: translateY(2px);
 }
 
 .eyebrow,

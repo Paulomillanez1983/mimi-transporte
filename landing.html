@@ -23,7 +23,7 @@
 
   <link rel="icon" type="image/png" sizes="32x32" href="./assets/icons/mimigo-client-icon-32.png?v=landing-v1">
   <link rel="apple-touch-icon" href="./assets/icons/mimigo-client-apple-touch-icon.png?v=landing-v1">
-  <link rel="stylesheet" href="./landing.css?v=2026.05.22-dual-copy-v1">
+  <link rel="stylesheet" href="./landing.css?v=2026.05.22-copy-transition-v1">
 </head>
 <body>
   <a class="skip-link" href="#main">Saltar al contenido</a>
@@ -236,6 +236,8 @@
       let activeIndex = 0;
       let intervalId = 0;
       let resumeTimer = 0;
+      let copyTimer = 0;
+      let activeHeroLabel = "Cliente";
       let failed = false;
       const heroStates = {
         Cliente: {
@@ -260,8 +262,11 @@
         }
       };
 
-      function setHeroCopy(label) {
+      function setHeroCopy(label, options = {}) {
         const nextState = heroStates[label] || heroStates.Cliente;
+        if (!options.force && activeHeroLabel === label) return;
+        activeHeroLabel = label;
+
         const apply = () => {
           if (heroEyebrow) heroEyebrow.textContent = nextState.eyebrow;
           if (heroTitle) heroTitle.innerHTML = nextState.title;
@@ -272,16 +277,26 @@
           });
         };
 
-        if (!heroCopy || reduceMotion.matches) {
+        if (!heroCopy || reduceMotion.matches || options.immediate) {
           apply();
           return;
         }
 
+        if (copyTimer) window.clearTimeout(copyTimer);
+        const currentHeight = heroCopy.offsetHeight;
+        heroCopy.style.minHeight = `${currentHeight}px`;
         heroCopy.classList.add("is-switching");
-        window.setTimeout(() => {
+        copyTimer = window.setTimeout(() => {
           apply();
-          heroCopy.classList.remove("is-switching");
-        }, 140);
+          const nextHeight = heroCopy.scrollHeight;
+          window.requestAnimationFrame(() => {
+            heroCopy.style.minHeight = `${nextHeight}px`;
+            heroCopy.classList.remove("is-switching");
+          });
+          window.setTimeout(() => {
+            if (activeHeroLabel === label) heroCopy.style.minHeight = "";
+          }, 420);
+        }, 180);
       }
 
       function setActive(nextIndex) {
