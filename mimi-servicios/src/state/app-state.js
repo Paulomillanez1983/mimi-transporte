@@ -7,6 +7,7 @@
 const STORAGE_KEYS = {
   UI_STATE: 'mimi_provider_ui_state',
   SESSION: 'mimi_provider_session',
+  CLIENT_SESSION: 'mimi_client_session',
   ACTIVE_SERVICE: 'mimi_provider_active_service',
   SCHEDULED: 'mimi_provider_scheduled',
   OFFER: 'mimi_provider_offer',
@@ -19,6 +20,19 @@ const STORAGE_KEYS = {
   CLIENT_UI: 'mimi_client_ui_state',
   CLIENT_TRACKING: 'mimi_client_tracking'
 };
+
+function currentRuntimeMode() {
+  try {
+    const page = (window.location.pathname.split("/").pop() || "").toLowerCase();
+    if (page === "prestador" || page === "prestador.html" || page === "auth-provider-callback.html") {
+      return "provider";
+    }
+  } catch {
+    // noop
+  }
+
+  return "client";
+}
 
 // Initial State
 const initialState = {
@@ -85,6 +99,7 @@ const initialState = {
       profile: null,
       pricing: [],
       offerings: [],
+      addons: [],
       availability: [],
       documents: [],
       reviews: []
@@ -113,6 +128,11 @@ const initialState = {
     activeRequest: null,
     serviceHistory: [],
     activeConversationId: null,
+    trustProfile: null,
+    verificationRequests: [],
+    identityChecks: [],
+    verificationEvents: [],
+    riskSignals: [],
     insights: {
       paymentIntent: null,
       escrowHold: null,
@@ -131,6 +151,12 @@ const initialState = {
     address: '',
     lat: null,
     lng: null,
+    locationAccuracyM: null,
+    locationSource: null,
+    geocodeSource: null,
+    locationQuality: null,
+    locationConfirmedAt: null,
+    locationNeedsReview: false,
     requestType: 'IMMEDIATE',
     scheduledFor: '',
     requestedHours: 2
@@ -278,27 +304,46 @@ function isObject(item) {
 
 function persistState() {
   try {
-    localStorage.setItem(
-      STORAGE_KEYS.UI_STATE,
-      JSON.stringify({
-        activeTab: currentState.ui.activeTab,
-        isOnline: currentState.ui.isOnline
-      })
-    );
+    const runtimeMode = currentRuntimeMode();
 
-    localStorage.setItem(
-      STORAGE_KEYS.SESSION,
-      JSON.stringify({
-        userId: currentState.session.userId,
-        providerId: currentState.session.providerId,
-        userEmail: currentState.session.userEmail,
-        userName: currentState.session.userName,
-        userAvatar: currentState.session.userAvatar,
-        isAuthenticated: currentState.session.isAuthenticated
-      })
-    );
+    if (runtimeMode === "provider") {
+      localStorage.setItem(
+        STORAGE_KEYS.UI_STATE,
+        JSON.stringify({
+          activeTab: currentState.ui.activeTab,
+          isOnline: currentState.ui.isOnline
+        })
+      );
 
-    if (currentState.activeService) {
+      localStorage.setItem(
+        STORAGE_KEYS.SESSION,
+        JSON.stringify({
+          userId: currentState.session.userId,
+          providerId: currentState.session.providerId,
+          userEmail: currentState.session.userEmail,
+          userName: currentState.session.userName,
+          userAvatar: currentState.session.userAvatar,
+          isAuthenticated: currentState.session.isAuthenticated
+        })
+      );
+    } else {
+      localStorage.setItem(
+        STORAGE_KEYS.CLIENT_SESSION,
+        JSON.stringify({
+          userId: currentState.session.userId,
+          clientProfileId: currentState.session.clientProfileId,
+          userEmail: currentState.session.userEmail,
+          userName: currentState.session.userName,
+          userAvatar: currentState.session.userAvatar,
+          userPhone: currentState.session.userPhone,
+          userPhoneCountryCode: currentState.session.userPhoneCountryCode,
+          userPhoneVerified: currentState.session.userPhoneVerified,
+          isAuthenticated: currentState.session.isAuthenticated
+        })
+      );
+    }
+
+    if (runtimeMode === "provider" && currentState.activeService) {
       localStorage.setItem(
         STORAGE_KEYS.ACTIVE_SERVICE,
         JSON.stringify({
@@ -306,11 +351,11 @@ function persistState() {
           persistedAt: Date.now()
         })
       );
-    } else {
+    } else if (runtimeMode === "provider") {
       localStorage.removeItem(STORAGE_KEYS.ACTIVE_SERVICE);
     }
 
-    if (currentState.scheduledServices.length > 0) {
+    if (runtimeMode === "provider" && currentState.scheduledServices.length > 0) {
       localStorage.setItem(
         STORAGE_KEYS.SCHEDULED,
         JSON.stringify({
@@ -318,11 +363,11 @@ function persistState() {
           persistedAt: Date.now()
         })
       );
-    } else {
+    } else if (runtimeMode === "provider") {
       localStorage.removeItem(STORAGE_KEYS.SCHEDULED);
     }
 
-    if (currentState.activeOffer) {
+    if (runtimeMode === "provider" && currentState.activeOffer) {
       localStorage.setItem(
         STORAGE_KEYS.OFFER,
         JSON.stringify({
@@ -330,40 +375,44 @@ function persistState() {
           persistedAt: Date.now()
         })
       );
-    } else {
+    } else if (runtimeMode === "provider") {
       localStorage.removeItem(STORAGE_KEYS.OFFER);
     }
 
-    localStorage.setItem(
-      STORAGE_KEYS.SETTINGS,
-      JSON.stringify({
-        pricing: currentState.provider.pricing,
-        categories: currentState.provider.categories
-      })
-    );
+    if (runtimeMode === "provider") {
+      localStorage.setItem(
+        STORAGE_KEYS.SETTINGS,
+        JSON.stringify({
+          pricing: currentState.provider.pricing,
+          categories: currentState.provider.categories
+        })
+      );
+    }
 
-    localStorage.setItem(
-      STORAGE_KEYS.CLIENT_UI,
-      JSON.stringify({
-        appEntered: currentState.ui.appEntered,
-        selectedCategoryId: currentState.ui.selectedCategoryId,
-        selectedProviderCandidateId: currentState.ui.selectedProviderCandidateId,
-        categorySearchTerm: currentState.ui.categorySearchTerm,
-        intentResolution: currentState.ui.intentResolution,
-        showAllCategories: currentState.ui.showAllCategories,
-        hasCompletedClientSearch: currentState.ui.hasCompletedClientSearch,
-        showClientOnboarding: currentState.ui.showClientOnboarding,
-        providerSortMode: currentState.ui.providerSortMode,
-        activeMode: currentState.ui.activeMode
-      })
-    );
+    if (runtimeMode === "client") {
+      localStorage.setItem(
+        STORAGE_KEYS.CLIENT_UI,
+        JSON.stringify({
+          appEntered: currentState.ui.appEntered,
+          selectedCategoryId: currentState.ui.selectedCategoryId,
+          selectedProviderCandidateId: currentState.ui.selectedProviderCandidateId,
+          categorySearchTerm: currentState.ui.categorySearchTerm,
+          intentResolution: currentState.ui.intentResolution,
+          showAllCategories: currentState.ui.showAllCategories,
+          hasCompletedClientSearch: currentState.ui.hasCompletedClientSearch,
+          showClientOnboarding: currentState.ui.showClientOnboarding,
+          providerSortMode: currentState.ui.providerSortMode,
+          activeMode: "client"
+        })
+      );
 
-    localStorage.setItem(
-      STORAGE_KEYS.CLIENT_DRAFT,
-      JSON.stringify(currentState.requestDraft)
-    );
+      localStorage.setItem(
+        STORAGE_KEYS.CLIENT_DRAFT,
+        JSON.stringify(currentState.requestDraft)
+      );
+    }
 
-    if (currentState.client.activeRequest) {
+    if (runtimeMode === "client" && currentState.client.activeRequest) {
       localStorage.setItem(
         STORAGE_KEYS.CLIENT_ACTIVE_REQUEST,
         JSON.stringify({
@@ -371,23 +420,25 @@ function persistState() {
           persistedAt: Date.now()
         })
       );
-    } else {
+    } else if (runtimeMode === "client") {
       localStorage.removeItem(STORAGE_KEYS.CLIENT_ACTIVE_REQUEST);
     }
 
-    if (currentState.client.selectedProvider) {
+    if (runtimeMode === "client" && currentState.client.selectedProvider) {
       localStorage.setItem(
         STORAGE_KEYS.CLIENT_SELECTED_PROVIDER,
         JSON.stringify(currentState.client.selectedProvider)
       );
-    } else {
+    } else if (runtimeMode === "client") {
       localStorage.removeItem(STORAGE_KEYS.CLIENT_SELECTED_PROVIDER);
     }
 
-    localStorage.setItem(
-      STORAGE_KEYS.CLIENT_TRACKING,
-      JSON.stringify(currentState.tracking)
-    );
+    if (runtimeMode === "client") {
+      localStorage.setItem(
+        STORAGE_KEYS.CLIENT_TRACKING,
+        JSON.stringify(currentState.tracking)
+      );
+    }
 
     localStorage.setItem(STORAGE_KEYS.LAST_SEEN, Date.now().toString());
   } catch (error) {
@@ -397,7 +448,10 @@ function persistState() {
 
 export function rehydrateState() {
   try {
-    const uiState = safeParse(localStorage.getItem(STORAGE_KEYS.UI_STATE));
+    const runtimeMode = currentRuntimeMode();
+    const uiState = runtimeMode === "provider"
+      ? safeParse(localStorage.getItem(STORAGE_KEYS.UI_STATE))
+      : null;
 
     if (uiState) {
       currentState.ui = {
@@ -406,7 +460,9 @@ export function rehydrateState() {
       };
     }
 
-    const session = safeParse(localStorage.getItem(STORAGE_KEYS.SESSION));
+    const session = safeParse(localStorage.getItem(
+      runtimeMode === "provider" ? STORAGE_KEYS.SESSION : STORAGE_KEYS.CLIENT_SESSION
+    ));
 
     if (session) {
       currentState.session = {
@@ -415,28 +471,34 @@ export function rehydrateState() {
       };
     }
 
-    const activeService = safeParse(
-      localStorage.getItem(STORAGE_KEYS.ACTIVE_SERVICE)
-    );
+    const activeService = runtimeMode === "provider"
+      ? safeParse(localStorage.getItem(STORAGE_KEYS.ACTIVE_SERVICE))
+      : null;
 
     if (activeService && isServiceValid(activeService)) {
       currentState.activeService = activeService;
     }
 
-    const scheduled = safeParse(localStorage.getItem(STORAGE_KEYS.SCHEDULED));
+    const scheduled = runtimeMode === "provider"
+      ? safeParse(localStorage.getItem(STORAGE_KEYS.SCHEDULED))
+      : null;
 
     if (scheduled && Array.isArray(scheduled.services)) {
       currentState.scheduledServices =
         scheduled.services.filter(isScheduledValid);
     }
 
-    const offer = safeParse(localStorage.getItem(STORAGE_KEYS.OFFER));
+    const offer = runtimeMode === "provider"
+      ? safeParse(localStorage.getItem(STORAGE_KEYS.OFFER))
+      : null;
 
     if (offer && isOfferValid(offer)) {
       currentState.activeOffer = offer;
     }
 
-    const settings = safeParse(localStorage.getItem(STORAGE_KEYS.SETTINGS));
+    const settings = runtimeMode === "provider"
+      ? safeParse(localStorage.getItem(STORAGE_KEYS.SETTINGS))
+      : null;
 
     if (settings) {
       if (settings.pricing) {
@@ -451,7 +513,9 @@ export function rehydrateState() {
       }
     }
 
-    const clientUi = safeParse(localStorage.getItem(STORAGE_KEYS.CLIENT_UI));
+    const clientUi = runtimeMode === "client"
+      ? safeParse(localStorage.getItem(STORAGE_KEYS.CLIENT_UI))
+      : null;
     if (clientUi) {
       currentState.ui = {
         ...currentState.ui,
@@ -463,7 +527,9 @@ export function rehydrateState() {
       };
     }
 
-    const clientDraft = safeParse(localStorage.getItem(STORAGE_KEYS.CLIENT_DRAFT));
+    const clientDraft = runtimeMode === "client"
+      ? safeParse(localStorage.getItem(STORAGE_KEYS.CLIENT_DRAFT))
+      : null;
     if (clientDraft) {
       currentState.requestDraft = {
         ...currentState.requestDraft,
@@ -471,21 +537,23 @@ export function rehydrateState() {
       };
     }
 
-    const clientActiveRequest = safeParse(
-      localStorage.getItem(STORAGE_KEYS.CLIENT_ACTIVE_REQUEST)
-    );
+    const clientActiveRequest = runtimeMode === "client"
+      ? safeParse(localStorage.getItem(STORAGE_KEYS.CLIENT_ACTIVE_REQUEST))
+      : null;
     if (clientActiveRequest && isClientRequestValid(clientActiveRequest)) {
       currentState.client.activeRequest = clientActiveRequest;
     }
 
-    const selectedProvider = safeParse(
-      localStorage.getItem(STORAGE_KEYS.CLIENT_SELECTED_PROVIDER)
-    );
+    const selectedProvider = runtimeMode === "client"
+      ? safeParse(localStorage.getItem(STORAGE_KEYS.CLIENT_SELECTED_PROVIDER))
+      : null;
     if (selectedProvider) {
       currentState.client.selectedProvider = selectedProvider;
     }
 
-    const clientTracking = safeParse(localStorage.getItem(STORAGE_KEYS.CLIENT_TRACKING));
+    const clientTracking = runtimeMode === "client"
+      ? safeParse(localStorage.getItem(STORAGE_KEYS.CLIENT_TRACKING))
+      : null;
     if (clientTracking) {
       currentState.tracking = {
         ...currentState.tracking,
@@ -719,14 +787,48 @@ export const actions = {
   },
 
   markNotificationsRead: () => {
+    const readAt = new Date().toISOString();
     const items = currentState.notifications.items.map((notification) => ({
       ...notification,
-      unread: false
+      unread: false,
+      read_at: notification.read_at ?? readAt,
+      raw: notification.raw
+        ? { ...notification.raw, read_at: notification.raw.read_at ?? readAt }
+        : notification.raw
     }));
 
     patchState('notifications', {
       items,
       unreadCount: 0
+    });
+  },
+
+  markNotificationRead: (notificationIds) => {
+    const ids = new Set(
+      (Array.isArray(notificationIds) ? notificationIds : [notificationIds])
+        .map((id) => String(id || "").trim())
+        .filter(Boolean)
+    );
+
+    if (ids.size === 0) return;
+
+    const readAt = new Date().toISOString();
+    const items = currentState.notifications.items.map((notification) => {
+      if (!ids.has(String(notification.id || ""))) return notification;
+
+      return {
+        ...notification,
+        unread: false,
+        read_at: notification.read_at ?? readAt,
+        raw: notification.raw
+          ? { ...notification.raw, read_at: notification.raw.read_at ?? readAt }
+          : notification.raw
+      };
+    });
+
+    patchState('notifications', {
+      items,
+      unreadCount: items.filter((notification) => notification.unread).length
     });
   },
 
@@ -812,11 +914,9 @@ export function setActiveMode(mode) {
 
 export function getActiveMode() {
   try {
-    return (
-      sessionStorage.getItem("mimi_services_active_mode") ||
-      localStorage.getItem("mimi_services_active_mode") ||
-      "client"
-    );
+    const runtimeMode = currentRuntimeMode();
+    if (runtimeMode === "provider") return "provider";
+    return "client";
   } catch (_) {
     return "client";
   }

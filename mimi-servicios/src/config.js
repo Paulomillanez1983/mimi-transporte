@@ -1,6 +1,4 @@
 const DEFAULT_ENDPOINTS = {
-  providerDashboard: "svc-provider-dashboard",
-  updateAvailability: "svc-provider-availability",
   respondOffer: "svc-provider-respond-offer",
   markEnRoute: "svc-provider-en-route",
   markArrived: "svc-provider-arrived",
@@ -34,8 +32,7 @@ export const appConfig = {
   functions: {
     searchProviders: "svc-search-providers",
     createRequest: "svc-create-request",
-    providerDashboard: "svc-provider-dashboard",
-    updateAvailability: "svc-provider-availability",
+    saveProviderService: "svc-save-provider-service",
     providerRespondOffer: "svc-provider-respond-offer",
     providerEnRoute: "svc-provider-en-route",
     providerArrived: "svc-provider-arrived",
@@ -55,12 +52,38 @@ export const appConfig = {
     otpVerify: "otp-verify",
     deviceTrustCheck: "device-trust-check",
     authRiskEvaluation: "auth-risk-evaluation",
+    authRegisterDevice: "auth-register-device",
+    authStartVerification: "auth-start-verification",
+    authApproveChallenge: "auth-approve-challenge",
+    authCheckChallenge: "auth-check-challenge",
+    authCleanupVerification: "auth-cleanup-verification",
+    markNotificationRead: "mark-notification-read",
+    securityRiskEvent: "security-risk-event",
+    providerPayoutAccount: "provider-payout-account",
+    customerTrustProfile: "customer-trust-profile",
+    customerIdentityVerification: "customer-identity-verification",
     createPaymentIntent: "create-payment-intent",
     getPaymentStatus: "get-payment-status",
     cancelPayment: "cancel-payment",
-    refundPayment: "refund-payment",
-    providerPayoutAccount: "provider-payout-account",
-    securityRiskEvent: "security-risk-event"
+    refundPayment: "refund-payment"
+  },
+
+  securityFlags: {
+    ENABLE_DEVICE_TRUST: true,
+    ENABLE_PUSH_APPROVAL: true,
+    ENABLE_PUSH_UPDATE_NOTICES: false,
+    ENABLE_EMAIL_FALLBACK: true,
+    ENABLE_WHATSAPP_FALLBACK: true,
+    ENABLE_SMS_FALLBACK: false,
+    ENABLE_STRICT_RISK_MODE: false,
+    ENABLE_UPDATE_BANNER: true,
+    ENABLE_FORCE_UPDATE: false,
+    ENABLE_SECURITY_ANALYTICS: true,
+    ENABLE_CUSTOMER_TRUST_CENTER: true,
+    ENABLE_CUSTOMER_KYC: true,
+    ENABLE_DOCUMENT_AUTO_OPTIMIZATION: true,
+    ...(window.MIMI_SERVICES_ENV?.SECURITY_FLAGS || {}),
+    ...(window.MIMI_SERVICES_CONFIG?.securityFlags || {})
   },
 
   serviceStates: [

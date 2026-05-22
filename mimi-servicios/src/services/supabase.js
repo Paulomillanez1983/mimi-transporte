@@ -10,6 +10,9 @@ const CLIENT_AUTH_STORAGE_KEY = "mimi_services_client_auth";
 const PROVIDER_AUTH_STORAGE_KEY = "mimi_services_provider_auth";
 const PROVIDER_AUTH_LOCK_KEY = "mimi_services_provider_auth_lock";
 const CLIENT_AUTH_LOCK_KEY = "mimi_services_client_auth_lock";
+const PROVIDER_REGISTRATION_INTENT_KEY = "mimi_services_provider_registration_intent";
+const PROVIDER_REGISTRATION_INTENT_TTL_MS = 15 * 60 * 1000;
+const AUTH_LOCK_TTL_MS = 15 * 60 * 1000;
 
 function currentPageName() {
   const cleanPath = window.location.pathname.replace(/\/+$/, "");
@@ -34,7 +37,17 @@ function servicesBasePath() {
 }
 
 function servicePageUrl(pageName) {
-  return new URL(`${servicesBasePath()}${pageName}`, window.location.origin).toString();
+  const page = String(pageName || "").replace(/^\.\//, "");
+
+  if (page === "cliente.html" || page === "cliente" || page === "servicios") {
+    return new URL("/servicios", window.location.origin).toString();
+  }
+
+  if (page === "prestador.html" || page === "prestador") {
+    return new URL("/prestador", window.location.origin).toString();
+  }
+
+  return new URL(`${servicesBasePath()}${page}`, window.location.origin).toString();
 }
 
 function authCallbackUrl(mode = "client", targetPage = "cliente.html") {
@@ -98,10 +111,112 @@ export function forceCleanSession(mode = currentEntryMode()) {
     localStorage.removeItem(PROVIDER_AUTH_LOCK_KEY);
     sessionStorage.removeItem(CLIENT_AUTH_LOCK_KEY);
     localStorage.removeItem(CLIENT_AUTH_LOCK_KEY);
+    sessionStorage.removeItem(PROVIDER_REGISTRATION_INTENT_KEY);
+    localStorage.removeItem(PROVIDER_REGISTRATION_INTENT_KEY);
     client = null;
   } catch {
     // noop
   }
+}
+
+function readProviderRegistrationIntentPayload() {
+  const parse = (raw) => {
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  };
+
+  try {
+    return (
+      parse(sessionStorage.getItem(PROVIDER_REGISTRATION_INTENT_KEY)) ||
+      parse(localStorage.getItem(PROVIDER_REGISTRATION_INTENT_KEY))
+    );
+  } catch {
+    return null;
+  }
+}
+
+export function markProviderRegistrationIntent(source = "provider_login") {
+  const payload = JSON.stringify({
+    mode: "provider",
+    source,
+    startedAt: Date.now()
+  });
+
+  try {
+    sessionStorage.setItem(PROVIDER_REGISTRATION_INTENT_KEY, payload);
+    localStorage.setItem(PROVIDER_REGISTRATION_INTENT_KEY, payload);
+  } catch {
+    // noop
+  }
+}
+
+export function clearProviderRegistrationIntent() {
+  try {
+    sessionStorage.removeItem(PROVIDER_REGISTRATION_INTENT_KEY);
+    localStorage.removeItem(PROVIDER_REGISTRATION_INTENT_KEY);
+  } catch {
+    // noop
+  }
+}
+
+export function hasFreshProviderRegistrationIntent() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const explicitQuery =
+      params.get("intent") === "register_provider" ||
+      params.get("register_provider") === "1";
+
+    if (explicitQuery) {
+      markProviderRegistrationIntent("provider_query");
+      return true;
+    }
+  } catch {
+    // noop
+  }
+
+  const payload = readProviderRegistrationIntentPayload();
+  const startedAt = Number(payload?.startedAt ?? 0);
+  const isFresh = startedAt > 0 && Date.now() - startedAt <= PROVIDER_REGISTRATION_INTENT_TTL_MS;
+  return payload?.mode === "provider" && isFresh;
+}
+
+function readFreshStoragePayload(key, ttlMs) {
+  const read = (storage) => {
+    const raw = storage.getItem(key);
+    if (!raw) return null;
+
+    let payload = null;
+    try {
+      payload = JSON.parse(raw);
+    } catch {
+      storage.removeItem(key);
+      return null;
+    }
+
+    const startedAt = Number(payload?.startedAt ?? 0);
+    const isFresh = startedAt > 0 && Date.now() - startedAt <= ttlMs;
+    if (!isFresh) {
+      storage.removeItem(key);
+      return null;
+    }
+
+    return payload;
+  };
+
+  try {
+    return read(sessionStorage) || read(localStorage);
+  } catch {
+    return null;
+  }
+}
+
+function hasFreshAuthLock(key, expectedMode) {
+  const payload = readFreshStoragePayload(key, AUTH_LOCK_TTL_MS);
+  return payload?.mode === expectedMode;
 }
 
 function isInvalidRefreshTokenError(error) {
@@ -258,13 +373,15 @@ function setAuthRedirectIntent(mode = currentEntryMode()) {
 
 export function hasProviderAuthIntent() {
   try {
-    return (
+    const hasProviderLock = hasFreshAuthLock(PROVIDER_AUTH_LOCK_KEY, "provider");
+    const sessionProviderIntent =
       sessionStorage.getItem(AUTH_REDIRECT_KEY) === "prestador.html" ||
       sessionStorage.getItem(AUTH_REDIRECT_KEY) === "./prestador.html" ||
-      sessionStorage.getItem(AUTH_INTENT_KEY) === "provider" ||
-      localStorage.getItem(AUTH_INTENT_KEY) === "provider" ||
-      Boolean(sessionStorage.getItem(PROVIDER_AUTH_LOCK_KEY)) ||
-      Boolean(localStorage.getItem(PROVIDER_AUTH_LOCK_KEY))
+      sessionStorage.getItem(AUTH_INTENT_KEY) === "provider";
+
+    return (
+      (sessionProviderIntent && hasProviderLock) ||
+      hasFreshProviderRegistrationIntent()
     );
   } catch {
     return false;
@@ -287,7 +404,7 @@ export async function signInWithGoogle(options = {}) {
     provider: "google",
     options: {
       redirectTo,
-      skipBrowserRedirect: false,
+      skipBrowserRedirect: true,
       queryParams: {
         prompt: "select_account"
       }
@@ -296,6 +413,12 @@ export async function signInWithGoogle(options = {}) {
 
   if (error) {
     throw error;
+  }
+
+  if (data?.url) {
+    window.location.assign(data.url);
+  } else {
+    throw new Error("No pudimos generar la URL de Google.");
   }
 
   return data;
@@ -362,6 +485,12 @@ export async function resolveSessionRole(session) {
 }
 
 export async function redirectAfterLoginByRole(session) {
+  if (!session?.user?.id) {
+    clearAuthRedirectIntent();
+    window.location.href = servicePageUrl("cliente.html");
+    return;
+  }
+
   const entryMode = currentEntryMode();
   const providerIntent = hasProviderAuthIntent();
   const preferred =

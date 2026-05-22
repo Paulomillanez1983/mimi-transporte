@@ -1,10 +1,10 @@
 {
-  "id": "/mimi-servicios/prestador",
-  "name": "MIMI GO Pro",
-  "short_name": "MIMI GO Pro",
-  "description": "MIMI GO Pro para prestadores independientes.",
+  "id": "/partners",
+  "name": "MIMI GO Partners",
+  "short_name": "MIMI Partners",
+  "description": "App para prestadores independientes de MIMI Servicios.",
   "start_url": "/mimi-servicios/prestador.html",
-  "scope": "/mimi-servicios/",
+  "scope": "/",
   "display": "standalone",
   "display_override": [
     "standalone"

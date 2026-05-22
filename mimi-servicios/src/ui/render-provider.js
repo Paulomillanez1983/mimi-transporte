@@ -34,7 +34,7 @@ const reviewStatusLabels = {
 const dayLabels = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
 const pricingModelLabels = {
-  QUOTE: "A coordinar con el cliente",
+  QUOTE: "Cotizar antes de confirmar",
   FIXED: "Precio cerrado por trabajo",
   HOURLY: "Por hora",
   BASE_VISIT: "Por visita",
@@ -42,6 +42,8 @@ const pricingModelLabels = {
   SQUARE_METER: "Por m2 / unidad",
   LINEAR_METER: "Por metro lineal"
 };
+
+const quotePricingHelp = "El presupuesto, la aceptación y el pago se realizan dentro de MIMIGO.";
 
 const serviceModeLabels = {
   IN_PERSON: "Presencial",
@@ -53,7 +55,7 @@ const locationPolicyLabels = {
   CLIENT_ADDRESS: "Domicilio del cliente",
   PROVIDER_ADDRESS: "Consultorio / base del prestador",
   ONLINE_ONLY: "Videollamada",
-  FLEXIBLE: "A coordinar"
+  FLEXIBLE: "Ubicacion flexible"
 };
 
 const categoryGroupLabels = {
@@ -122,10 +124,167 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
-function providerPaymentStatusLabel(status = "PENDING") {
-  const normalized = String(status || "PENDING").trim().toUpperCase();
-  if (["APPROVED", "CAPTURED", "SETTLED"].includes(normalized)) return "Pago confirmado";
-  return "Pago pendiente";
+const PROVIDER_LEGAL_FALLBACKS = [
+  {
+    code: "terms_providers",
+    document_code: "terms_providers",
+    actor_type: "provider",
+    title: "Términos para prestadores",
+    version: "2026.1.0",
+    version_label: "Versión 2026.1.0"
+  },
+  {
+    code: "privacy_policy",
+    document_code: "privacy_policy",
+    actor_type: "all",
+    title: "Política de privacidad",
+    version: "2026.1.0",
+    version_label: "Versión 2026.1.0"
+  }
+];
+
+function providerLegalRequirements(state = {}) {
+  const requirements = state.provider?.business?.legalRequirements;
+  const source = Array.isArray(requirements) && requirements.length
+    ? requirements
+    : PROVIDER_LEGAL_FALLBACKS;
+
+  return source
+    .map((item) => {
+      const code = item.code || item.document_code;
+      return code && item.version
+        ? {
+            ...item,
+            code,
+            document_code: code,
+            version: String(item.version),
+            title: item.title || code,
+            actor_type: item.actor_type || "provider"
+          }
+        : null;
+    })
+    .filter(Boolean);
+}
+
+function isProviderLegalAccepted(requirement = {}, acceptances = []) {
+  if (requirement.accepted === true) {
+    return true;
+  }
+
+  const expectedActor = requirement.accept_actor_type || (requirement.actor_type === "all" ? "provider" : requirement.actor_type || "provider");
+
+  return acceptances.some((acceptance) =>
+    acceptance?.document_code === requirement.document_code &&
+    acceptance?.document_version === requirement.version &&
+    (!acceptance?.actor_type || acceptance.actor_type === expectedActor) &&
+    acceptance?.accepted_at
+  );
+}
+
+function providerLegalStatus(state = {}) {
+  const requirements = providerLegalRequirements(state);
+  const acceptances = state.provider?.business?.legalAcceptances ?? [];
+  const missing = requirements.filter((requirement) =>
+    !isProviderLegalAccepted(requirement, acceptances)
+  );
+  const acceptedAt = acceptances
+    .filter((acceptance) =>
+      requirements.some((requirement) =>
+        requirement.document_code === acceptance?.document_code &&
+        requirement.version === acceptance?.document_version &&
+        (!acceptance?.actor_type || acceptance.actor_type === (requirement.accept_actor_type || (requirement.actor_type === "all" ? "provider" : requirement.actor_type || "provider")))
+      )
+    )
+    .map((acceptance) => acceptance.accepted_at)
+    .concat(requirements.map((requirement) => requirement.accepted_at).filter(Boolean))
+    .filter(Boolean)
+    .sort()
+    .pop();
+
+  return {
+    requirements,
+    missing,
+    accepted: requirements.length > 0 && missing.length === 0,
+    acceptedAt
+  };
+}
+
+function renderProviderLegalAcceptance(state = {}) {
+  const legal = providerLegalStatus(state);
+  const latestLabel = legal.requirements
+    .map((requirement) => requirement.version_label || requirement.version)
+    .filter(Boolean)
+    .join(" · ");
+  const hadPreviousAcceptance = Boolean(
+    state.provider?.business?.legalAcceptances?.some((acceptance) =>
+      ["terms_providers", "privacy_policy"].includes(acceptance?.document_code)
+    )
+  );
+
+  if (legal.accepted) {
+    const acceptedDate = legal.acceptedAt
+      ? new Date(legal.acceptedAt).toLocaleDateString("es-AR")
+      : "vigente";
+
+    return `
+      <div class="provider-terms-accepted">
+        <span>Términos vigentes aceptados · ${escapeHtml(acceptedDate)}</span>
+        <small>${escapeHtml(latestLabel)}</small>
+        <input name="providerTermsAccepted" type="checkbox" checked hidden>
+      </div>
+    `;
+  }
+
+  return `
+    <label class="provider-check-item provider-terms-box">
+      <input name="providerTermsAccepted" type="checkbox" required>
+      <span>
+        <strong>${hadPreviousAcceptance ? "Actualizamos las condiciones legales." : "Antes de publicar, aceptá las condiciones vigentes."}</strong>
+        Acepto los <a href="/terminos" target="_blank" rel="noopener">Términos para prestadores</a> y la <a href="/privacidad" target="_blank" rel="noopener">Política de privacidad</a>. Entiendo que MIMI GO es una plataforma tecnológica intermediaria: no contrata prestadores, no garantiza ingresos ni resultados, y no responde por la ejecución material del servicio entre partes independientes.
+        <small>Se registrará tu aceptación con la versión vigente${latestLabel ? `: ${escapeHtml(latestLabel)}` : ""}.</small>
+      </span>
+    </label>
+  `;
+}
+
+function renderProviderLegalGate(state = {}) {
+  const legal = providerLegalStatus(state);
+  const versionLabels = [
+    ...new Set(
+      legal.requirements
+        .map((requirement) => requirement.version_label || requirement.version)
+        .filter(Boolean)
+    )
+  ];
+  const versionText = versionLabels.length ? versionLabels.join(" / ") : "vigente";
+
+  return `
+    <section class="provider-legal-gate" data-provider-legal-gate>
+      <div class="provider-legal-gate-header">
+        <span class="eyebrow">Condiciones legales</span>
+        <h3>Antes de publicar tus servicios</h3>
+        <p>Para usar MIMI GO como prestador, necesitás aceptar las condiciones legales vigentes.</p>
+      </div>
+
+      <label class="provider-check-item provider-legal-gate-check">
+        <input name="providerLegalGateAccepted" type="checkbox" aria-describedby="providerLegalGateDisclaimer">
+        <span>Acepto los <a href="/terminos.html" target="_blank" rel="noopener">Términos para prestadores</a> y la <a href="/privacidad.html" target="_blank" rel="noopener">Política de privacidad</a>.</span>
+      </label>
+
+      <p class="provider-legal-disclaimer" id="providerLegalGateDisclaimer">
+        Entiendo que MIMI GO es una plataforma tecnológica intermediaria: no contrata prestadores, no garantiza ingresos ni resultados, y no responde por la ejecución material del servicio entre partes independientes.
+      </p>
+
+      <p class="provider-legal-version">Se registrará tu aceptación con la versión vigente: ${escapeHtml(versionText)}.</p>
+
+      <div class="provider-legal-links" aria-label="Documentos legales">
+        <a href="/terminos.html" target="_blank" rel="noopener">Ver términos</a>
+        <a href="/privacidad.html" target="_blank" rel="noopener">Ver política de privacidad</a>
+      </div>
+
+      <button class="btn-primary provider-legal-accept-button" type="button" data-provider-business-action="accept-provider-legal-gate" disabled>Aceptar y continuar</button>
+    </section>
+  `;
 }
 
 function offerServiceDetails(offer = {}) {
@@ -144,17 +303,22 @@ function offerDetailRows(offer = {}) {
   const unitPrice = Number(details.unit_price || 0);
   const providerAmount = Number(details.provider_price ?? request.provider_price_snapshot ?? offer.provider_price_snapshot ?? 0);
   const currencyCode = details.currency || request.currency || "ARS";
-  const paymentStatus = offer.payment_status ?? offer.payment?.status ?? request.payment_status ?? request.payment?.status ?? "PENDING";
 
   if (quantity > 0 && unitName) rows.push(["Cantidad", `${quantity.toLocaleString("es-AR")} ${unitName}`]);
   if (unitPrice > 0 && unitName) rows.push(["Precio publicado", `${currency(unitPrice, currencyCode)} / ${unitName}`]);
-  rows.push(["Tu precio", providerAmount > 0 ? currency(providerAmount, currencyCode) : "A coordinar"]);
-  rows.push(["Pago", providerPaymentStatusLabel(paymentStatus)]);
+  rows.push(["Tu precio", providerAmount > 0 ? currency(providerAmount, currencyCode) : "Cotizar antes de confirmar"]);
 
   const notes = String(details.client_notes || request.notes || "").trim();
   if (notes) rows.push(["Detalle", notes.split("\n")[0]]);
 
   return rows.slice(0, 5);
+}
+
+function providerPaymentStatusLabel(status) {
+  const value = String(status || "").trim().toUpperCase();
+  if (value === "APPROVED" || value === "CAPTURED") return "Pago confirmado";
+  if (value === "REJECTED" || value === "CANCELLED") return "Pago no completado";
+  return "Pago pendiente";
 }
 
 function categoryGroup(category = {}) {
@@ -264,6 +428,12 @@ function initialsFromName(name) {
   return parts.map((part) => part[0]?.toUpperCase() ?? "").join("");
 }
 
+function firstNameFromText(value) {
+  const clean = String(value ?? "").trim().replace(/\s+/g, " ");
+  if (!clean) return "";
+  return clean.split(" ")[0] || "";
+}
+
 function renderStatusBanner(state) {
   const banner = document.getElementById("statusBanner");
   if (!banner) return;
@@ -367,15 +537,17 @@ export function renderOffersList(state) {
           const serviceName = details.category_name ?? offer.title ?? request.svc_categories?.name ?? "Nueva solicitud";
           const providerAmount = Number(details.provider_price ?? offer.provider_price_snapshot ?? request.provider_price_snapshot ?? 0);
           const displayAmount = providerAmount;
+          const addressText = details.address_text ?? offer.address_text ?? request.address_text ?? "Ubicación a confirmar";
+          const clientName = details.client_name ?? offer.client_name ?? request.client_name ?? "Cliente";
 
           return `
             <article class="offer-card">
               <header>
                 <div>
                   <strong>${escapeHtml(serviceName)}</strong>
-                  <span class="muted">${escapeHtml(offer.address_text ?? request.address_text ?? "Ubicación a confirmar")}</span>
+                  <span class="muted">${escapeHtml(addressText)}</span>
                 </div>
-                <strong>${displayAmount > 0 ? `Tu precio ${currency(displayAmount, details.currency ?? request.currency)}` : "A coordinar"}</strong>
+                <strong>${displayAmount > 0 ? `Tu precio ${currency(displayAmount, details.currency ?? request.currency)}` : "Cotizar antes de confirmar"}</strong>
               </header>
 
               ${detailRows.length ? `
@@ -392,7 +564,7 @@ export function renderOffersList(state) {
               <div class="result-meta">
                 <div class="metric">
                   <span>Cliente</span>
-                  <strong>${escapeHtml(offer.client_name ?? request.client_name ?? "Cliente")}</strong>
+                  <strong>${escapeHtml(clientName)}</strong>
                 </div>
                 <div class="metric">
                   <span>Duración</span>
@@ -491,6 +663,115 @@ function payoutMethodClass(account, method) {
   return account?.account_type === method ? " is-active" : "";
 }
 
+function payoutMethodLabel(method) {
+  const labels = {
+    cbu: "CBU",
+    cvu: "CVU",
+    alias: "Alias",
+    bank_account: "Cuenta bancaria"
+  };
+  return labels[method] || "CBU";
+}
+
+function payoutMethodHelp(method) {
+  const labels = {
+    cbu: "Cuenta bancaria tradicional de 22 digitos.",
+    cvu: "Billetera virtual con CVU de 22 digitos.",
+    alias: "Alias de CBU/CVU, facil de recordar.",
+    bank_account: "Cuenta bancaria con CBU y datos del titular."
+  };
+  return labels[method] || labels.cbu;
+}
+
+function payoutVisibleFor(field) {
+  const map = {
+    cbu: ["cbu", "bank_account"],
+    cvu: ["cvu"],
+    alias: ["alias"],
+    bank_name: ["bank_account"],
+    holder_name: ["bank_account"],
+    holder_tax_id: ["bank_account"],
+    change_reason: ["cbu", "cvu", "alias", "bank_account"]
+  };
+  return map[field] || [];
+}
+
+function payoutFieldWrapAttrs(field, accountType, className = "") {
+  const visibleFor = payoutVisibleFor(field);
+  const visible = visibleFor.includes(accountType);
+  return `class="provider-payout-field ${className}" data-payout-field="${field}" data-visible-for="${visibleFor.join(" ")}"${visible ? "" : " hidden aria-hidden=\"true\""}`;
+}
+
+function payoutInputStateAttrs(field, accountType, walletLoading, requiredFor = []) {
+  const visible = payoutVisibleFor(field).includes(accountType);
+  const disabled = walletLoading || !visible;
+  const required = visible && requiredFor.includes(accountType);
+  const requiredForAttr = requiredFor.length ? ` data-required-for="${requiredFor.join(" ")}"` : "";
+  return `${requiredForAttr}${disabled ? " disabled" : ""}${required ? " required" : ""}`;
+}
+
+function payoutAccountTypeChecked(value, current, walletLoading) {
+  return `${value === current ? " checked" : ""}${walletLoading ? " disabled" : ""}`;
+}
+
+function compactWalletAddress(value) {
+  const text = String(value || "Servicio").replace(/\s+/g, " ").trim();
+  if (!text) return "Servicio";
+  const parts = text.split(",").map((part) => part.trim()).filter(Boolean);
+  const compact = parts.length > 1 ? parts.slice(0, 2).join(", ") : text;
+  return compact.length > 66 ? `${compact.slice(0, 63).trim()}...` : compact;
+}
+
+function walletHistoryTitle(item = {}, details = {}) {
+  return details.category_name ||
+    item.category_name ||
+    item.svc_categories?.name ||
+    item.title ||
+    "Servicio completado";
+}
+
+function walletHistoryStatus(item = {}) {
+  const status = item.status || item.request_status || item.payment_status;
+  return stateLabels[status] || providerPaymentStatusLabel(item.payment_status) || "Completado";
+}
+
+function syncRenderedPayoutAccountFields(form, { clearHidden = false } = {}) {
+  if (!form) return;
+
+  const selected =
+    form.querySelector("[name='account_type']:checked")?.value ||
+    form.querySelector("[name='account_type']")?.value ||
+    "cbu";
+  const accountType = ["cbu", "cvu", "alias", "bank_account"].includes(selected) ? selected : "cbu";
+  const walletBusy = form.dataset.walletBusy === "true" || form.getAttribute("aria-busy") === "true";
+  form.dataset.accountType = accountType;
+
+  form.querySelectorAll("[data-payout-field]").forEach((field) => {
+    const visibleFor = String(field.dataset.visibleFor || "")
+      .split(/\s+/)
+      .filter(Boolean);
+    const visible = visibleFor.includes(accountType);
+    field.hidden = !visible;
+    field.setAttribute("aria-hidden", String(!visible));
+
+    field.querySelectorAll("input, select, textarea").forEach((control) => {
+      control.disabled = walletBusy || !visible;
+      const requiredFor = String(control.dataset.requiredFor || "")
+        .split(/\s+/)
+        .filter(Boolean);
+      control.required = visible && requiredFor.includes(accountType);
+      if (!visible && clearHidden && ["cbu", "cvu", "alias"].includes(control.name)) {
+        control.value = "";
+      }
+    });
+  });
+
+  const title = form.querySelector("[data-payout-mode-title]");
+  const copy = form.querySelector("[data-payout-mode-copy]");
+  if (title) title.textContent = payoutMethodLabel(accountType);
+  if (copy) copy.textContent = payoutMethodHelp(accountType);
+}
+
 export function renderProviderDashboard(state) {
   const container = document.getElementById("providerDashboardPanel");
   if (!container) return;
@@ -499,7 +780,6 @@ export function renderProviderDashboard(state) {
   const availableBalance = dashboard.available_balance ?? dashboard.earnings ?? 0;
   const pendingBalance = dashboard.pending_balance ?? dashboard.pending_earnings ?? 0;
   const futureDebtBalance = dashboard.cash_debt_balance ?? dashboard.negative_balance ?? 0;
-  const payoutHoldBalance = dashboard.payout_hold_balance ?? 0;
   const payoutAccount = state.provider.payoutAccount ?? null;
   const walletLoading = Boolean(state.provider.walletLoading);
   const payoutAccountError = state.provider.payoutAccountError || null;
@@ -536,58 +816,115 @@ export function renderProviderDashboard(state) {
     ? `<p class="provider-wallet-warning">Tus datos quedaron enmascarados y pendientes de recarga cifrada antes de habilitar payouts reales.</p>`
     : "";
   const walletLoadingCopy = walletLoading
-    ? `<p class="provider-wallet-loading" role="status">Sincronizando Wallet...</p>`
+    ? `<p class="provider-wallet-loading" role="status" aria-live="polite">Sincronizando Wallet...</p>`
     : "";
   const walletErrorCopy = payoutAccountError
-    ? `<p class="provider-wallet-error" role="alert">${escapeHtml(payoutAccountError)}</p>`
+    ? `<p class="provider-wallet-error" role="alert" aria-live="assertive">${escapeHtml(payoutAccountError)}</p>`
     : "";
   const disabledAttr = walletLoading ? " disabled" : "";
+  const payoutMethodTitle = payoutMethodLabel(accountType);
+  const payoutMethodCopy = payoutMethodHelp(accountType);
+  const hasPayoutAccount = Boolean(payoutAccount);
+  const payoutStatusValue = String(payoutAccount?.status || "").toLowerCase();
+  const payoutSetupRequired = !hasPayoutAccount;
+  const shouldOpenPayoutDetails =
+    payoutSetupRequired ||
+    payoutStatusValue === "draft" ||
+    payoutStatusMeta.className === "is-rejected" ||
+    Boolean(payoutAccountError);
+  const withdrawDisabledAttr = !hasPayoutAccount || walletLoading ? " disabled aria-disabled=\"true\"" : "";
+  const walletAmountLabel = hasPayoutAccount ? currency(availableBalance) : "Configura cobro";
+  const walletAmountHelp = hasPayoutAccount
+    ? "Saldo informativo para pruebas. Payout real todavia desactivado."
+    : "Primero carga CBU, CVU o alias para preparar retiros.";
+  const payoutSummaryTitle = hasPayoutAccount ? payoutIdentifier : "Sin metodo cargado";
+  const payoutDetailsAction = hasPayoutAccount ? "Editar datos" : "Cargar ahora";
+  const historyItems = Array.isArray(dashboard.history) ? dashboard.history.slice(0, 5) : [];
+  const historyHtml = historyItems.length
+    ? historyItems.map((item) => {
+        const details = offerServiceDetails(item);
+        const providerAmount = Number(details.provider_price ?? item.provider_price_snapshot ?? item.provider_amount ?? 0);
+        const address = compactWalletAddress(item.address_text ?? details.address_text ?? item.location_text ?? "Servicio");
+        const title = walletHistoryTitle(item, details);
+        const status = walletHistoryStatus(item);
+        const date = formatDate(item.completed_at ?? item.updated_at ?? item.created_at);
+        return `
+          <article class="provider-history-card">
+            <div class="provider-history-card-main">
+              <span>${escapeHtml(title)}</span>
+              <strong>${escapeHtml(address)}</strong>
+              <small>${escapeHtml(date)} - ${escapeHtml(status)}</small>
+            </div>
+            <b>${currency(providerAmount)}</b>
+          </article>
+        `;
+      }).join("")
+    : `<div class="provider-history-empty">Sin historial aun.</div>`;
 
   container.innerHTML = `
-    <section id="providerWalletOverview" class="provider-wallet-overview" aria-label="Wallet del prestador">
-      <article class="provider-wallet-card">
-        <span>Wallet MIMIGO</span>
-        <strong>${currency(availableBalance)}</strong>
-        <small>Disponible informativo. Payout real todavia desactivado.</small>
-        <button type="button" data-provider-wallet-refresh${disabledAttr}>${walletLoading ? "Actualizando..." : "Actualizar"}</button>
-      </article>
-
-      <article class="provider-wallet-card">
-        <span>Pendiente</span>
-        <strong>${currency(pendingBalance)}</strong>
-        <small>Servicios o liquidaciones aun no liberadas.</small>
-      </article>
-
-      <article class="provider-wallet-card provider-wallet-card-soft">
-        <span>A compensar</span>
-        <strong>${currency(futureDebtBalance)}</strong>
-        <small>Solo foundation futura. No se descuenta dinero real.</small>
-      </article>
-
-      ${Number(payoutHoldBalance) > 0 ? `
-        <article class="provider-wallet-card provider-wallet-card-soft">
-          <span>En retiro</span>
-          <strong>${currency(payoutHoldBalance)}</strong>
-          <small>Reservado para transferencia. Ya no queda disponible en Wallet.</small>
+    <section id="providerWalletOverview" class="provider-wallet-shell ${payoutSetupRequired ? "is-setup-required" : "is-ready"}" aria-label="Wallet del prestador">
+      ${payoutSetupRequired ? `
+        <article class="provider-wallet-gate">
+          <span>Antes de retirar</span>
+          <strong>Carga un CBU, CVU o alias</strong>
+          <p>El saldo de retiro queda preparado cuando hay un metodo de cobro pendiente o verificado.</p>
         </article>
       ` : ""}
 
-      <article class="provider-wallet-card provider-wallet-card-soft">
-        <span>Datos para recibir pagos</span>
-        <strong>${escapeHtml(payoutIdentifier)}</strong>
-        <small>Estado: <b class="provider-wallet-status ${payoutStatusMeta.className}">${escapeHtml(payoutStatus)}</b></small>
-        <small>${escapeHtml(ownershipCopy)}</small>
-        ${encryptionWarning}
-        ${walletLoadingCopy}
-        ${walletErrorCopy}
+      <article class="provider-wallet-hero-card">
+        <div class="provider-wallet-card-top">
+          <span>Wallet MIMIGO</span>
+          <b class="provider-wallet-live-pill">Test</b>
+        </div>
+        <strong>${escapeHtml(walletAmountLabel)}</strong>
+        <small>${escapeHtml(walletAmountHelp)}</small>
+        <div class="provider-wallet-actions">
+          <button type="button" data-provider-wallet-refresh${disabledAttr}>${walletLoading ? "Actualizando..." : "Actualizar"}</button>
+          <button type="button" data-provider-wallet-withdraw${withdrawDisabledAttr}>Retirar</button>
+        </div>
       </article>
+
+      <div class="provider-wallet-metrics">
+        <article>
+          <span>A liberar</span>
+          <strong>${currency(pendingBalance)}</strong>
+          <small>Liquidaciones pendientes.</small>
+        </article>
+        <article>
+          <span>A compensar</span>
+          <strong>${currency(futureDebtBalance)}</strong>
+          <small>No se descuenta dinero real.</small>
+        </article>
+      </div>
+
+      <article class="provider-wallet-payout-summary">
+        <div>
+          <span>Metodo de cobro</span>
+          <strong>${escapeHtml(payoutSummaryTitle)}</strong>
+          <small><b class="provider-wallet-status ${payoutStatusMeta.className}">${escapeHtml(payoutStatus)}</b> - ${escapeHtml(ownershipCopy)}</small>
+        </div>
+        <span class="provider-wallet-method-chip">${escapeHtml(hasPayoutAccount ? payoutMethodLabel(accountType) : "Requerido")}</span>
+      </article>
+
+      ${encryptionWarning}
+      ${walletLoadingCopy}
+      ${walletErrorCopy}
     </section>
 
-    <section id="providerPayoutAccountPanel" class="provider-payout-account-panel" aria-label="Datos para recibir pagos">
+    <details id="providerPayoutAccountPanel" class="provider-payout-account-panel provider-payout-account-details" aria-label="Datos para recibir pagos"${shouldOpenPayoutDetails ? " open" : ""}>
+      <summary>
+        <span>
+          <b>Datos para recibir pagos</b>
+          <small>${hasPayoutAccount ? "Tus datos quedan protegidos y colapsados. Abrilo solo para editar." : "Obligatorio para preparar retiros."}</small>
+        </span>
+        <strong>${escapeHtml(payoutDetailsAction)}</strong>
+      </summary>
+
       <div class="provider-payout-account-copy">
-        <h3>Datos para recibir pagos</h3>
-        <p>Tus datos de cobro se usaran cuando MIMIGO habilite pagos/liquidaciones. Por seguridad, los cambios pueden requerir revision.</p>
-        <p class="provider-wallet-note">Para proteger tu cuenta, la titularidad debe coincidir con el CUIT/CUIL verificado en KYC. Nunca mostramos CBU/CVU ni CUIT/CUIL completos.</p>
+        <span class="provider-wallet-eyebrow">Metodo de cobro</span>
+        <h3>${hasPayoutAccount ? "Editar datos de cobro" : "Cargar datos de cobro"}</h3>
+        <p>Elegis un metodo y solo aparecen los campos necesarios. Queda pendiente de revision; Payout real todavia desactivado.</p>
+        <p class="provider-wallet-note">Nunca mostramos CBU/CVU ni CUIT/CUIL completos; el alias tambien queda enmascarado.</p>
         <div class="provider-wallet-methods" aria-label="Metodos de cobro admitidos">
           <span class="provider-wallet-method${payoutMethodClass(payoutAccount, "cbu")}">CBU</span>
           <span class="provider-wallet-method${payoutMethodClass(payoutAccount, "cvu")}">CVU</span>
@@ -595,50 +932,67 @@ export function renderProviderDashboard(state) {
           <span class="provider-wallet-method${payoutMethodClass(payoutAccount, "bank_account")}">Cuenta</span>
         </div>
         <p class="provider-wallet-current">Estado actual: <strong>${escapeHtml(payoutStatusMeta.label)}</strong>. ${escapeHtml(payoutStatusMeta.message)}</p>
-        ${walletLoadingCopy}
-        ${walletErrorCopy}
       </div>
-      <form id="providerPayoutAccountForm" class="provider-payout-account-form" aria-busy="${walletLoading ? "true" : "false"}">
-        <label>
-          <span>Tipo de cuenta</span>
-          <select name="account_type"${disabledAttr}>
-            <option value="cbu"${selectedOption("cbu", accountType)}>CBU</option>
-            <option value="cvu"${selectedOption("cvu", accountType)}>CVU</option>
-            <option value="alias"${selectedOption("alias", accountType)}>Alias</option>
-            <option value="bank_account"${selectedOption("bank_account", accountType)}>Cuenta bancaria</option>
-          </select>
-        </label>
-        <label>
+      <form id="providerPayoutAccountForm" class="provider-payout-account-form provider-payout-account-form-v2" aria-busy="${walletLoading ? "true" : "false"}" data-wallet-busy="${walletLoading ? "true" : "false"}" data-account-type="${escapeHtml(accountType)}">
+        <fieldset class="provider-payout-method-picker">
+          <legend>Elegi como queres cargar la cuenta</legend>
+          <label class="provider-payout-method-option">
+            <input type="radio" name="account_type" value="cbu"${payoutAccountTypeChecked("cbu", accountType, walletLoading)}>
+            <span><b>CBU</b><small>Banco</small></span>
+          </label>
+          <label class="provider-payout-method-option">
+            <input type="radio" name="account_type" value="cvu"${payoutAccountTypeChecked("cvu", accountType, walletLoading)}>
+            <span><b>CVU</b><small>Billetera</small></span>
+          </label>
+          <label class="provider-payout-method-option">
+            <input type="radio" name="account_type" value="alias"${payoutAccountTypeChecked("alias", accountType, walletLoading)}>
+            <span><b>Alias</b><small>CBU/CVU</small></span>
+          </label>
+          <label class="provider-payout-method-option">
+            <input type="radio" name="account_type" value="bank_account"${payoutAccountTypeChecked("bank_account", accountType, walletLoading)}>
+            <span><b>Cuenta</b><small>CBU + titular</small></span>
+          </label>
+        </fieldset>
+
+        <div class="provider-payout-selected-summary" data-payout-selected-summary>
+          <span data-payout-mode-title>${escapeHtml(payoutMethodTitle)}</span>
+          <small data-payout-mode-copy>${escapeHtml(payoutMethodCopy)}</small>
+        </div>
+
+        <label ${payoutFieldWrapAttrs("cbu", accountType)}>
           <span>CBU</span>
-          <input name="cbu" inputmode="numeric" maxlength="22" pattern="[0-9]{22}" autocomplete="off" placeholder="${escapeHtml(payoutAccount?.cbu_masked || "22 digitos")}"${disabledAttr} />
+          <input name="cbu" inputmode="numeric" maxlength="22" pattern="[0-9]{22}" autocomplete="off" placeholder="${escapeHtml(payoutAccount?.cbu_masked || "22 digitos")}"${payoutInputStateAttrs("cbu", accountType, walletLoading, ["cbu", "bank_account"])} />
+          <small>Usamos solo datos enmascarados para revision.</small>
         </label>
-        <label>
+        <label ${payoutFieldWrapAttrs("cvu", accountType)}>
           <span>CVU</span>
-          <input name="cvu" inputmode="numeric" maxlength="22" pattern="[0-9]{22}" autocomplete="off" placeholder="${escapeHtml(payoutAccount?.cvu_masked || "22 digitos")}"${disabledAttr} />
+          <input name="cvu" inputmode="numeric" maxlength="22" pattern="[0-9]{22}" autocomplete="off" placeholder="${escapeHtml(payoutAccount?.cvu_masked || "22 digitos")}"${payoutInputStateAttrs("cvu", accountType, walletLoading, ["cvu"])} />
+          <small>Para billeteras virtuales con CVU.</small>
         </label>
-        <label>
+        <label ${payoutFieldWrapAttrs("alias", accountType)}>
           <span>Alias</span>
-          <input name="alias" minlength="6" maxlength="80" autocomplete="off" placeholder="${escapeHtml(payoutAccount?.alias_masked || "tu.alias")}"${disabledAttr} />
+          <input name="alias" minlength="6" maxlength="80" autocomplete="off" placeholder="${escapeHtml(payoutAccount?.alias_masked || "tu.alias")}"${payoutInputStateAttrs("alias", accountType, walletLoading, ["alias"])} />
+          <small>Al elegir Alias solo cargamos este dato y el motivo.</small>
         </label>
-        <label>
+        <label ${payoutFieldWrapAttrs("bank_name", accountType)}>
           <span>Banco/billetera</span>
-          <input name="bank_name" maxlength="100" autocomplete="organization" placeholder="Banco o billetera" value="${escapeHtml(payoutAccount?.bank_name || "")}"${disabledAttr} />
+          <input name="bank_name" maxlength="100" autocomplete="organization" placeholder="Banco o billetera" value="${escapeHtml(payoutAccount?.bank_name || "")}"${payoutInputStateAttrs("bank_name", accountType, walletLoading)} />
         </label>
-        <label>
+        <label ${payoutFieldWrapAttrs("holder_name", accountType)}>
           <span>Titular</span>
-          <input name="holder_name" maxlength="120" autocomplete="name" placeholder="Nombre del titular" value="${escapeHtml(payoutAccount?.holder_name || "")}"${disabledAttr} />
+          <input name="holder_name" maxlength="120" autocomplete="name" placeholder="Nombre del titular" value="${escapeHtml(payoutAccount?.holder_name || "")}"${payoutInputStateAttrs("holder_name", accountType, walletLoading)} />
         </label>
-        <label>
+        <label ${payoutFieldWrapAttrs("holder_tax_id", accountType)}>
           <span>CUIT/CUIL titular</span>
-          <input name="holder_tax_id" inputmode="numeric" maxlength="20" autocomplete="off" placeholder="${escapeHtml(payoutAccount?.holder_tax_id_masked || "Opcional")}"${disabledAttr} />
+          <input name="holder_tax_id" inputmode="numeric" maxlength="20" autocomplete="off" placeholder="${escapeHtml(payoutAccount?.holder_tax_id_masked || "Opcional")}"${payoutInputStateAttrs("holder_tax_id", accountType, walletLoading)} />
         </label>
-        <label class="provider-payout-account-reason">
+        <label ${payoutFieldWrapAttrs("change_reason", accountType, "provider-payout-account-reason")}>
           <span>Motivo del alta/cambio</span>
-          <input name="change_reason" maxlength="220" autocomplete="off" placeholder="Ej: cargo mi cuenta para futuras liquidaciones" required${disabledAttr} />
+          <input name="change_reason" maxlength="220" autocomplete="off" placeholder="Ej: cargo mi cuenta para futuras liquidaciones"${payoutInputStateAttrs("change_reason", accountType, walletLoading, ["cbu", "cvu", "alias", "bank_account"])} />
         </label>
         <button type="submit"${disabledAttr}>${walletLoading ? "Enviando..." : "Enviar a revision"}</button>
       </form>
-    </section>
+    </details>
 
     <section class="provider-kpi-grid">
 
@@ -666,29 +1020,23 @@ export function renderProviderDashboard(state) {
 
     </section>
 
-    <section class="provider-history">
-      <h3>Últimos servicios</h3>
-      ${
-        (dashboard.history ?? []).length
-          ? dashboard.history
-              .slice(0, 5)
-              .map(
-                (item) => {
-                  const details = offerServiceDetails(item);
-                  const providerAmount = Number(details.provider_price ?? item.provider_price_snapshot ?? item.provider_amount ?? 0);
-                  return `
-                  <div class="history-item">
-                    <span>${escapeHtml(item.address_text ?? "Servicio")}</span>
-                    <strong>${currency(providerAmount)}</strong>
-                  </div>
-                `;
-                }
-              )
-              .join("")
-          : `<span class="muted">Sin historial aún</span>`
-      }
+    <section class="provider-history provider-history-v2">
+      <div class="provider-history-heading">
+        <span>Actividad</span>
+        <h3>Ultimos servicios</h3>
+      </div>
+      <div class="provider-history-list">
+        ${historyHtml}
+      </div>
     </section>
   `;
+
+  const payoutForm = container.querySelector("#providerPayoutAccountForm");
+  syncRenderedPayoutAccountFields(payoutForm);
+  payoutForm?.addEventListener("change", (event) => {
+    if (!event.target?.closest?.("[name='account_type']")) return;
+    syncRenderedPayoutAccountFields(payoutForm, { clearHidden: true });
+  });
 }
 export function renderProviderActiveService(state) {
   const providerActiveService = document.getElementById("providerActiveService");
@@ -707,7 +1055,7 @@ export function renderProviderActiveService(state) {
       activeService?.price ??
       0
   );
-  const activePaymentStatus = activeService?.payment_status ?? activeService?.payment?.status ?? "PENDING";
+  const activePaymentLabel = providerPaymentStatusLabel(activeService?.payment_status ?? activeService?.payment?.status);
 
   providerActiveService.innerHTML = activeService
     ? `
@@ -742,7 +1090,7 @@ export function renderProviderActiveService(state) {
           </div>
           <div class="metric">
             <span>Pago</span>
-            <strong>${escapeHtml(providerPaymentStatusLabel(activePaymentStatus))}</strong>
+            <strong>${escapeHtml(activePaymentLabel)}</strong>
           </div>
           <div class="metric">
             <span>Tracking</span>
@@ -800,7 +1148,18 @@ function renderProviderProfile(state) {
   }
 
   // Nombre real: profile.first_name (cargado por el prestador o extraído del DNI) tiene prioridad.
-  const firstName = detail?.first_name?.trim();
+  const profileMetadata = detail?.metadata_json || detail?.metadata || {};
+  const providerDocuments = [
+    ...(Array.isArray(documents) ? documents : []),
+    ...(Array.isArray(state.provider.documents?.items) ? state.provider.documents.items : [])
+  ];
+  const identityFullName = String(
+    profileMetadata.identity_document_full_name ||
+    profileMetadata.full_name_detected ||
+    profileMetadata.kyc_full_name ||
+    ""
+  ).trim();
+  const firstName = firstNameFromText(detail?.first_name || identityFullName);
   const displayName =
     firstName ||
     profile?.full_name ||
@@ -808,7 +1167,21 @@ function renderProviderProfile(state) {
     state.session.userEmail?.split("@")[0] ||
     "Prestador";
 
-  const avatarUrl = detail?.avatar_public_url || profile?.avatar_url || null;
+  const avatarUrl = firstImageUrlFrom(
+    detail?.avatar_public_url,
+    detail?.metadata_json?.avatar_public_url,
+    detail?.metadata_json?.profile_photo_url,
+    detail?.metadata_json?.public_url,
+    detail?.metadata_json?.file_url,
+    detail?.metadata_json?.signed_url,
+    detail?.metadata_json?.preview_url,
+    detail?.metadata_json?.image_url,
+    profile?.avatar_public_url,
+    profile?.avatar_url,
+    profile?.photo_url,
+    state.session.userAvatar,
+    providerDocumentAvatarUrl(providerDocuments)
+  ) || null;
   const location = [detail?.city, detail?.province].filter(Boolean).join(", ");
 
   // Verificado = aprobado por admin Y dni_front + selfie aprobados.
@@ -831,8 +1204,8 @@ function renderProviderProfile(state) {
 
   // Cálculo de % completitud del perfil
   const checklist = {
-    "Nombre de pila": Boolean(detail?.first_name),
-    "Foto de perfil": Boolean(detail?.avatar_public_url),
+    "Nombre de pila": Boolean(firstName),
+    "Foto de perfil": Boolean(avatarUrl),
     "Bio corta": Boolean(detail?.bio),
     "Ciudad y provincia": Boolean(detail?.city && detail?.province),
     "Al menos un servicio": (state.provider.business?.offerings ?? []).filter((o) => o?.active !== false).length > 0,
@@ -1150,7 +1523,7 @@ function renderOfferingEditor(offering = null, index = 0, categories = []) {
       </div>
       <label class="provider-check-item">
         <input name="offering:${index}:quoteRequired" type="checkbox" ${offering?.quote_required ? "checked" : ""}>
-        <span>Requiere presupuesto antes de confirmar</span>
+        <span>Cotizar antes de confirmar<small>${quotePricingHelp}</small></span>
       </label>
       <label class="input-group">
         <span>Indicaciones para el cliente</span>
@@ -1160,7 +1533,810 @@ function renderOfferingEditor(offering = null, index = 0, categories = []) {
   `;
 }
 
-function renderOfferingsSummary(offerings = []) {
+function providerOfferingPriceLabel(offering = {}, pricingFallback = {}) {
+  const pricingModel = String(offering.pricing_model ?? pricingFallback.pricing_model ?? "HOURLY").toUpperCase();
+  const unitName = offering.unit_name || (pricingModel === "UNIT" ? "sesion" : "unidad");
+  const currencyCode = offering.currency || pricingFallback.currency || "ARS";
+  const amount =
+    pricingModel === "FIXED"
+      ? offering.fixed_price
+      : pricingModel === "BASE_VISIT"
+        ? offering.base_visit_fee
+        : ["UNIT", "SQUARE_METER", "LINEAR_METER"].includes(pricingModel)
+          ? offering.unit_price
+          : offering.price_per_hour ?? pricingFallback.price_per_hour;
+
+  if (pricingModel === "QUOTE" || offering.quote_required) return "Cotizar antes de confirmar";
+  if (pricingModel === "SQUARE_METER") return `${currency(amount, currencyCode)} / m2`;
+  if (pricingModel === "LINEAR_METER") return `${currency(amount, currencyCode)} / m`;
+  if (pricingModel === "UNIT") return `${currency(amount, currencyCode)} / ${unitName}`;
+  if (pricingModel === "BASE_VISIT") return `${currency(amount, currencyCode)} visita`;
+  if (pricingModel === "FIXED") return `${currency(amount, currencyCode)} cerrado`;
+  return `${currency(amount, currencyCode)} / hora`;
+}
+
+function providerOfferingPriceShortLabel(offering = {}, pricingFallback = {}) {
+  const pricingModel = String(offering.pricing_model ?? pricingFallback.pricing_model ?? "HOURLY").toUpperCase();
+  if (pricingModel === "QUOTE" || offering.quote_required) return "Cotizar";
+  if (!providerOfferingHasPrice(offering)) return "Precio pendiente";
+  return providerOfferingPriceLabel(offering, pricingFallback);
+}
+
+function providerOfferingCategoryLabel(offering = {}) {
+  const category = offering.svc_categories || offering.category || {};
+  return (
+    offering.category_name ||
+    category.name ||
+    offering.service_family ||
+    offering.macro_vertical ||
+    "Rubro pendiente"
+  );
+}
+
+function providerOfferingDescriptionLabel(offering = {}) {
+  const value = String(
+    offering.public_summary ||
+    offering.description ||
+    offering.client_instructions ||
+    ""
+  ).trim();
+  return value || "Agrega una descripcion breve para que el cliente entienda que incluye.";
+}
+
+function providerOfferingHasPrice(offering = {}) {
+  if (offering.quote_required || String(offering.pricing_model ?? "").toUpperCase() === "QUOTE") return true;
+  return Boolean(
+    Number(offering.fixed_price || 0) > 0 ||
+    Number(offering.base_visit_fee || 0) > 0 ||
+    Number(offering.unit_price || 0) > 0 ||
+    Number(offering.price_per_hour || 0) > 0
+  );
+}
+
+function providerOfferingIsIncomplete(offering = {}) {
+  return !String(offering.title || "").trim() ||
+    !offering.category_id ||
+    !providerOfferingHasPrice(offering);
+}
+
+function providerOfferingRequiresValidation(offering = {}) {
+  const category = offering.svc_categories || offering.category || {};
+  const metadata = offering.metadata || offering.metadata_json || {};
+  return Boolean(
+    category.requires_professional_license ||
+    category.requires_background_check ||
+    metadata.requires_credentials ||
+    metadata.requires_admin_approval ||
+    metadata.regulated_level ||
+    metadata.sensitive_level
+  );
+}
+
+function providerOfferingStatusMeta(offering = {}) {
+  const inactive = offering.active === false;
+  const incomplete = providerOfferingIsIncomplete(offering);
+  const requiresValidation = providerOfferingRequiresValidation(offering);
+
+  if (inactive) {
+    return {
+      key: "paused",
+      label: "Pausado",
+      detail: "No aparece en busquedas",
+      tone: "paused"
+    };
+  }
+
+  if (requiresValidation) {
+    return {
+      key: "review",
+      label: "Requiere validacion",
+      detail: "Puede pedir documentacion",
+      tone: "review"
+    };
+  }
+
+  if (incomplete) {
+    return {
+      key: "incomplete",
+      label: "Incompleto",
+      detail: "Faltan datos para destacar",
+      tone: "warning"
+    };
+  }
+
+  return {
+    key: "active",
+    label: "Visible para clientes",
+    detail: "Aparece en busquedas",
+    tone: "active"
+  };
+}
+
+function providerOfferingPricingBadge(offering = {}) {
+  const model = String(offering.pricing_model ?? "HOURLY").toUpperCase();
+  if (offering.quote_required || model === "QUOTE") return "Cotizar";
+  return pricingModelLabels[model] || model;
+}
+
+function providerOfferingActiveAddons(offering = {}) {
+  return (Array.isArray(offering.addons) ? offering.addons : [])
+    .filter((addon) => addon && addon.is_active !== false && String(addon.name || "").trim());
+}
+
+function providerOfferingAddonPriceLabel(addon = {}) {
+  const model = String(addon.pricing_model || "FIXED").toUpperCase();
+  const amount = Number(addon.price || 0);
+  const unit = String(addon.unit || "").trim();
+
+  if (model === "QUOTE" || amount <= 0) return "Cotizar";
+  if (model === "UNIT") return `${currency(amount, "ARS")} / ${unit || "unidad"}`;
+  if (model === "HOURLY") return `${currency(amount, "ARS")} / hora`;
+  if (model === "SQUARE_METER") return `${currency(amount, "ARS")} / m2`;
+  return currency(amount, "ARS");
+}
+
+function renderProviderAddonPricingModelOptions(current = "FIXED") {
+  const selected = String(current || "FIXED").toUpperCase();
+  const options = [
+    ["FIXED", "Precio fijo"],
+    ["UNIT", "Por unidad"],
+    ["HOURLY", "Por hora"],
+    ["SQUARE_METER", "Por m2"],
+    ["QUOTE", "Cotizar"]
+  ];
+
+  return options
+    .map(([value, label]) => `<option value="${value}" ${selected === value ? "selected" : ""}>${escapeHtml(label)}</option>`)
+    .join("");
+}
+
+function renderProviderOfferingAddonsEditor(offering = null, index = 0) {
+  if (!offering?.id) {
+    return `
+      <section class="provider-service-addons-editor is-locked" aria-label="Adicionales">
+        <div class="provider-service-addons-editor-head">
+          <div>
+            <strong>Adicionales</strong>
+            <small>Publica el servicio y despues vas a poder sumar opciones como urgencia, materiales o traslado.</small>
+          </div>
+          <span>Beta</span>
+        </div>
+      </section>
+    `;
+  }
+
+  const existingAddons = Array.isArray(offering.addons) ? offering.addons : [];
+  const rows = [
+    ...existingAddons,
+    { id: "", name: "", description: "", price: "", pricing_model: "FIXED", unit: "", is_active: true }
+  ];
+
+  return `
+    <section class="provider-service-addons-editor" aria-label="Adicionales">
+      <div class="provider-service-addons-editor-head">
+        <div>
+          <strong>Adicionales</strong>
+          <small>Suma opciones para que el cliente entienda mejor tu servicio. No se cobran automaticamente todavia.</small>
+        </div>
+        <div class="provider-service-addons-editor-actions">
+          <span>Beta</span>
+          <button type="button" data-provider-business-action="focus-new-service-addon">Agregar adicional</button>
+        </div>
+      </div>
+      <div class="provider-service-addons-editor-list">
+        ${rows.map((addon, addonIndex) => `
+          <article class="provider-service-addon-row">
+            <input type="hidden" name="addon:${index}:${addonIndex}:present" value="1">
+            <input type="hidden" name="addon:${index}:${addonIndex}:id" value="${escapeHtml(addon.id ?? "")}">
+            <label class="input-group">
+              <span>Nombre</span>
+              <input name="addon:${index}:${addonIndex}:name" type="text" maxlength="80" value="${escapeHtml(addon.name ?? "")}" placeholder="Urgencia, materiales, trabajo en altura">
+            </label>
+            <label class="input-group">
+              <span>Precio</span>
+              <input name="addon:${index}:${addonIndex}:price" type="number" min="0" step="100" value="${escapeHtml(String(addon.price ?? ""))}" placeholder="0">
+            </label>
+            <label class="input-group">
+              <span>Modelo</span>
+              <select name="addon:${index}:${addonIndex}:pricingModel">
+                ${renderProviderAddonPricingModelOptions(addon.pricing_model ?? addon.pricingModel)}
+              </select>
+            </label>
+            <label class="input-group">
+              <span>Unidad</span>
+              <input name="addon:${index}:${addonIndex}:unit" type="text" maxlength="40" value="${escapeHtml(addon.unit ?? "")}" placeholder="unidad, m2, hora">
+            </label>
+            <label class="input-group provider-field-wide">
+              <span>Descripcion opcional</span>
+              <input name="addon:${index}:${addonIndex}:description" type="text" maxlength="220" value="${escapeHtml(addon.description ?? "")}" placeholder="Aclaracion corta para el cliente">
+            </label>
+            <label class="provider-check-item">
+              <input name="addon:${index}:${addonIndex}:active" type="checkbox" ${addon.is_active === false ? "" : "checked"}>
+              <span>Mostrar este adicional<small>Podras usarlo luego en cotizaciones o paquetes.</small></span>
+            </label>
+          </article>
+        `).join("")}
+      </div>
+      <p class="provider-service-addons-note">El guardado de adicionales usa svc-save-provider-service. No hay escrituras directas desde el navegador.</p>
+    </section>
+  `;
+}
+
+function providerOfferingUpdatedLabel(offering = {}) {
+  const value = offering.updated_at || offering.created_at;
+  if (!value) return "Sin actualizacion";
+  return `Actualizado ${formatDate(value)}`;
+}
+
+function providerServicesSummary(offerings = []) {
+  const active = offerings.filter((item) => item?.active !== false);
+  const paused = offerings.filter((item) => item?.active === false);
+  const incomplete = offerings.filter((item) => providerOfferingIsIncomplete(item));
+  const requiresAction = offerings.filter((item) =>
+    providerOfferingIsIncomplete(item) || providerOfferingRequiresValidation(item)
+  );
+
+  return {
+    total: offerings.length,
+    active: active.length,
+    paused: paused.length,
+    incomplete: incomplete.length,
+    requiresAction: requiresAction.length
+  };
+}
+
+function providerOfferingQualityChecklist(offering = {}) {
+  const title = String(offering.title || "").trim();
+  const description = String(
+    offering.public_summary ||
+    offering.description ||
+    offering.scope ||
+    ""
+  ).trim();
+  const metadata = offering.metadata_json && typeof offering.metadata_json === "object"
+    ? offering.metadata_json
+    : (offering.metadata && typeof offering.metadata === "object" ? offering.metadata : {});
+  const pricingModel = String(offering.pricing_model ?? "").toUpperCase();
+  const hasCategory = Boolean(offering.category_id || offering.svc_categories?.id || offering.category?.id);
+  const hasPricing = providerOfferingHasPrice(offering);
+  const hasPricingUnit = Boolean(
+    offering.quote_required ||
+    pricingModel === "QUOTE" ||
+    pricingModel ||
+    offering.unit_name ||
+    offering.unit
+  );
+  const hasScope = Boolean(
+    description.length >= 18 ||
+    offering.duration_minutes ||
+    metadata.scope ||
+    metadata.conditions ||
+    metadata.conditions_json ||
+    metadata.coverage_notes
+  );
+  const requiresValidation = providerOfferingRequiresValidation(offering);
+
+  const items = [
+    {
+      key: "title",
+      label: "Titulo claro",
+      pass: title.length >= 3,
+      tip: "Usa un nombre simple: Pintor, Instalacion de aire, Corte de pelo."
+    },
+    {
+      key: "category",
+      label: "Rubro/categoria",
+      pass: hasCategory,
+      tip: "Elegir rubro ayuda a que aparezca en la busqueda correcta."
+    },
+    {
+      key: "price",
+      label: "Precio o cotizacion",
+      pass: hasPricing,
+      tip: "Precio visible: ayuda a recibir solicitudes mas claras."
+    },
+    {
+      key: "pricing-unit",
+      label: "Unidad de cobro",
+      pass: hasPricingUnit,
+      tip: "Mostra si cobras por hora, por m2, por visita o por cotizacion."
+    },
+    {
+      key: "visibility",
+      label: "Visible en busquedas",
+      pass: offering.active !== false,
+      tip: "Pausado: no aparece para clientes."
+    },
+    {
+      key: "description",
+      label: "Descripcion/alcance",
+      pass: description.length >= 18,
+      tip: "Agrega una descripcion para que el cliente entienda mejor el alcance."
+    },
+    {
+      key: "conditions",
+      label: "Condiciones basicas",
+      pass: hasScope,
+      tip: "Aclara zona, modalidad, duracion o que incluye el servicio."
+    },
+    {
+      key: "regulated",
+      label: "Validacion regulada",
+      pass: !requiresValidation,
+      warning: requiresValidation,
+      tip: "Este servicio requiere validacion antes de mostrarse como regulado."
+    }
+  ];
+  const completed = items.filter((item) => item.pass).length;
+  const score = Math.round((completed / items.length) * 100);
+  const incomplete = providerOfferingIsIncomplete(offering);
+
+  let status = {
+    key: "good",
+    label: "Bueno",
+    detail: "La publicacion tiene lo necesario para entenderse."
+  };
+
+  if (offering.active === false) {
+    status = {
+      key: "paused",
+      label: "Pausado",
+      detail: "Pausado: no aparece para clientes."
+    };
+  } else if (requiresValidation) {
+    status = {
+      key: "review",
+      label: "Requiere revision",
+      detail: "Este servicio requiere validacion antes de mostrarse como regulado."
+    };
+  } else if (incomplete || score < 62) {
+    status = {
+      key: "incomplete",
+      label: "Incompleto",
+      detail: "Faltan datos para que el cliente entienda bien la oferta."
+    };
+  } else if (score >= 88) {
+    status = {
+      key: "excellent",
+      label: "Excelente",
+      detail: "La publicacion esta clara y lista para recibir mejores solicitudes."
+    };
+  }
+
+  return { items, completed, total: items.length, score, status };
+}
+
+export function renderProviderServicePreviewSheet({
+  offering = {},
+  detail = null,
+  providerName = "Prestador MIMIGO",
+  providerAvatarUrl = "",
+  providerInitials = "PR",
+  addonsEnabled = false
+} = {}) {
+  const serviceTitle = String(offering.title || "Servicio publicado").trim();
+  const categoryLabel = providerOfferingCategoryLabel(offering);
+  const rawPriceLabel = providerOfferingPriceShortLabel(offering);
+  const pricingBadge = providerOfferingPricingBadge(offering);
+  const serviceMode = String(offering.service_mode ?? "IN_PERSON").toUpperCase();
+  const locationPolicy = String(offering.location_policy ?? "CLIENT_ADDRESS").toUpperCase();
+  const description = String(
+    offering.public_summary ||
+    offering.description ||
+    "Agrega una descripcion para que el cliente entienda mejor el alcance."
+  ).trim();
+  const status = providerOfferingStatusMeta(offering);
+  const quality = providerOfferingQualityChecklist(offering);
+  const activeAddons = addonsEnabled ? providerOfferingActiveAddons(offering) : [];
+  const canPreviewProviderAvatar = /^https?:\/\//i.test(providerAvatarUrl) || /^data:image\//i.test(providerAvatarUrl);
+  const zoneLabel = [detail?.city, detail?.province].filter(Boolean).join(", ") || "Zona a confirmar";
+  const isPaused = offering.active === false;
+  const isQuote = offering.quote_required || String(offering.pricing_model ?? "").toUpperCase() === "QUOTE";
+  const isRegulated = providerOfferingRequiresValidation(offering);
+  const isIncomplete = providerOfferingIsIncomplete(offering);
+  const priceLabel = isQuote
+    ? "Cotizar"
+    : providerOfferingHasPrice(offering)
+      ? rawPriceLabel
+      : "Precio a confirmar";
+  const verified =
+    String(detail?.review_status || detail?.kyc_status || detail?.verification_status || "").toUpperCase() === "APPROVED" ||
+    detail?.verified === true ||
+    detail?.metadata_json?.verified === true;
+  const ratingLabel = Number(detail?.rating || detail?.average_rating || offering.rating || 0) > 0
+    ? Number(detail?.rating || detail?.average_rating || offering.rating).toFixed(1)
+    : "Nuevo";
+  const jobsLabel = Number(detail?.completed_services_count || detail?.jobs_count || offering.completed_jobs || 0) > 0
+    ? String(Number(detail?.completed_services_count || detail?.jobs_count || offering.completed_jobs))
+    : "0";
+  const responseLabel = Number(detail?.response_rate_percent || offering.response_rate_percent || 0) > 0
+    ? `${Math.round(Number(detail?.response_rate_percent || offering.response_rate_percent))}%`
+    : "86%";
+  const distanceLabel = Number(offering.distance_km || detail?.distance_km || 0) > 0
+    ? `${Number(offering.distance_km || detail?.distance_km).toFixed(1)} km`
+    : "Cerca";
+  const statusText = isPaused
+    ? "No aparece para clientes."
+    : isIncomplete
+      ? "Completa estos datos para publicarlo."
+      : "Aparece en busquedas.";
+  const badgeLabel = isPaused
+    ? "Pausado"
+    : isRegulated
+      ? "Requiere validacion"
+      : isIncomplete
+        ? "Incompleto"
+        : "Visible para clientes";
+  const footerPrimaryAction = isPaused ? "reactivate-offering" : "delete-offering";
+  const footerPrimaryLabel = isPaused ? "Reactivar" : "Pausar";
+  const footerPrimaryClass = isPaused ? "provider-service-reactivate-button" : "provider-service-delete-button";
+  const profileSummary = String(
+    detail?.professional_summary ||
+    detail?.public_headline ||
+    detail?.bio ||
+    "Perfil publico del prestador. En esta vista no se navega al cliente real ni se crea una solicitud."
+  ).trim();
+  const qualityPanelHtml = `
+    <section class="provider-service-quality-panel provider-service-preview-quality-card" aria-label="Calidad de publicacion">
+      <div class="provider-service-quality-head">
+        <div>
+          <span class="eyebrow">Calidad de publicacion</span>
+          <strong>Calidad de publicacion</strong>
+          <small>Podes mejorar tu visibilidad completando estos puntos.</small>
+        </div>
+        <b class="provider-service-quality-score is-${escapeHtml(quality.status.key)}" style="--score:${quality.score}">${quality.score}%</b>
+      </div>
+      <div class="provider-service-quality-checklist">
+        ${quality.items.map((item) => {
+          const stateLabel = item.pass
+            ? "Listo"
+            : item.key === "visibility" && isPaused
+              ? "Pausado: no aparece para clientes"
+              : item.warning
+                ? "Esta categoria requiere validacion antes de mostrarse"
+                : "Pendiente";
+          return `
+            <article class="provider-service-quality-item ${item.pass ? "is-pass" : item.warning ? "is-warning" : "is-missing"}">
+              <span aria-hidden="true">${item.pass ? "&#10003;" : item.warning ? "!" : "-"}</span>
+              <div>
+                <strong>${escapeHtml(item.label)}</strong>
+                <small>${escapeHtml(stateLabel)}</small>
+              </div>
+            </article>
+          `;
+        }).join("")}
+      </div>
+      <p class="provider-service-quality-note">${escapeHtml(quality.status.detail)}</p>
+    </section>
+  `;
+
+  return `
+    <div class="provider-service-preview-overlay" data-provider-service-preview-overlay>
+      <section class="provider-service-preview-sheet" role="dialog" aria-modal="true" aria-labelledby="providerServicePreviewTitle">
+        <div class="provider-service-preview-handle" aria-hidden="true"></div>
+        <header class="provider-service-preview-header">
+          <div>
+            <h3 id="providerServicePreviewTitle">Vista como cliente</h3>
+            <p>Asi aparece tu publicacion en MIMI GO.</p>
+            <div class="provider-service-preview-state-row">
+              <em class="provider-service-preview-status is-${escapeHtml(status.tone)}">${escapeHtml(badgeLabel)}</em>
+              <span>${escapeHtml(statusText)}</span>
+            </div>
+          </div>
+          <button class="provider-service-preview-close" type="button" data-provider-business-action="close-service-preview" aria-label="Cerrar vista previa">x</button>
+        </header>
+
+        <div class="provider-service-preview-tabs">
+          <input class="provider-service-preview-tab-input" id="providerServicePreviewTabCard" name="providerServicePreviewTab" type="radio" checked>
+          <input class="provider-service-preview-tab-input" id="providerServicePreviewTabProfile" name="providerServicePreviewTab" type="radio">
+          <input class="provider-service-preview-tab-input" id="providerServicePreviewTabQuality" name="providerServicePreviewTab" type="radio">
+          <div class="provider-service-preview-tab-list" role="tablist" aria-label="Secciones de vista previa">
+            <label for="providerServicePreviewTabCard" role="tab">Card en busqueda</label>
+            <label for="providerServicePreviewTabProfile" role="tab">Perfil completo</label>
+            <label for="providerServicePreviewTabQuality" role="tab">Calidad</label>
+          </div>
+          <div class="provider-service-preview-tab-panels">
+            <section class="provider-service-preview-tab-panel provider-service-preview-tab-panel-card">
+              <article class="provider-service-preview-client-card provider-service-market-card ${isPaused ? "is-paused" : ""}" aria-label="Card premium del servicio">
+                <div class="provider-service-market-card-head">
+                  <span class="provider-service-preview-avatar">
+                    ${canPreviewProviderAvatar
+                      ? `<img src="${escapeHtml(providerAvatarUrl)}" alt="Foto de perfil visible para clientes" loading="lazy">`
+                      : `<span>${escapeHtml(providerInitials)}</span>`}
+                  </span>
+                  <div>
+                    <strong>${escapeHtml(providerName)}</strong>
+                    <em>${verified ? "Verificado" : "Perfil MIMIGO"}</em>
+                  </div>
+                  <b>${escapeHtml(categoryLabel)}</b>
+                </div>
+                <div class="provider-service-market-card-body">
+                  <h4>${escapeHtml(serviceTitle)}</h4>
+                  <p>${escapeHtml(description)}</p>
+                  <div class="provider-service-preview-client-meta">
+                    <span>${escapeHtml(serviceModeLabels[serviceMode] ?? "Presencial")}</span>
+                    <span>${escapeHtml(locationPolicyLabels[locationPolicy] ?? "Domicilio del cliente")}</span>
+                    <span>${escapeHtml(zoneLabel)}</span>
+                  </div>
+                </div>
+                <div class="provider-service-pro-stats" aria-label="Indicadores visuales del servicio">
+                  <span><b>${escapeHtml(ratingLabel)}</b><small>Calificacion</small></span>
+                  <span><b>${escapeHtml(jobsLabel)}</b><small>trabajos</small></span>
+                  <span><b>${escapeHtml(responseLabel)}</b><small>respuesta</small></span>
+                  <span><b>${escapeHtml(distanceLabel)}</b><small>a la redonda</small></span>
+                </div>
+                <div class="provider-service-preview-price-row">
+                  <div>
+                    <span>Precio</span>
+                    <strong>${escapeHtml(priceLabel)}</strong>
+                  </div>
+                  <div class="provider-service-preview-platform-note">
+                    <b aria-hidden="true">+</b>
+                    <span>El presupuesto, la aceptacion y el pago se realizan dentro de MIMIGO.</span>
+                  </div>
+                </div>
+                ${activeAddons.length ? `
+                  <div class="provider-service-preview-addons" aria-label="Adicionales disponibles">
+                    <div>
+                      <strong>Adicionales disponibles</strong>
+                      <small>Se muestran como opciones de alcance. No se cobran automaticamente todavia.</small>
+                    </div>
+                    <div>
+                      ${activeAddons.slice(0, 5).map((addon) => `
+                        <span>
+                          <b>${escapeHtml(addon.name)}</b>
+                          <em>${escapeHtml(providerOfferingAddonPriceLabel(addon))}</em>
+                        </span>
+                      `).join("")}
+                    </div>
+                  </div>
+                ` : ""}
+                <div class="provider-service-preview-badges">
+                  <em>${escapeHtml(pricingBadge)}</em>
+                  ${isQuote ? "<em>Cotizar</em>" : ""}
+                  ${isPaused ? "<em>Pausado</em>" : ""}
+                  ${isRegulated ? "<em>Requiere validacion</em>" : ""}
+                  ${activeAddons.length ? "<em>Adicionales disponibles</em>" : ""}
+                </div>
+                <div class="provider-service-preview-client-actions" aria-label="Acciones visuales sin flujo real">
+                  <button type="button" data-provider-preview-only aria-disabled="true">Ver perfil</button>
+                  <button type="button" data-provider-preview-only aria-disabled="true">Solicitar presupuesto</button>
+                </div>
+              </article>
+              ${qualityPanelHtml}
+            </section>
+            <section class="provider-service-preview-tab-panel provider-service-preview-profile-panel">
+              <article>
+                <span class="eyebrow">Perfil completo</span>
+                <h4>${escapeHtml(providerName)}</h4>
+                <p>${escapeHtml(profileSummary)}</p>
+                <div class="provider-service-preview-client-meta">
+                  <span>${verified ? "Verificado" : "Perfil pendiente de validacion"}</span>
+                  <span>${escapeHtml(zoneLabel)}</span>
+                  <span>${escapeHtml(serviceModeLabels[serviceMode] ?? "Presencial")}</span>
+                  ${activeAddons.length ? `<span>${activeAddons.length} adicionales</span>` : ""}
+                </div>
+                ${isRegulated ? `<small>Este servicio puede requerir documentacion o aprobacion antes de mostrarse como regulado. No se muestran promesas medicas ni diagnosticos.</small>` : ""}
+              </article>
+            </section>
+            <section class="provider-service-preview-tab-panel provider-service-preview-quality-panel">
+              ${qualityPanelHtml}
+            </section>
+          </div>
+        </div>
+
+        <footer class="provider-service-preview-actions">
+          <button class="provider-service-secondary-button" type="button" data-provider-business-action="edit-offering" data-offering-id="${escapeHtml(offering.id ?? "")}">Editar servicio</button>
+          <button class="${escapeHtml(footerPrimaryClass)}" type="button" data-provider-business-action="${escapeHtml(footerPrimaryAction)}" data-offering-id="${escapeHtml(offering.id ?? "")}">${escapeHtml(footerPrimaryLabel)}</button>
+          <button class="provider-service-preview-close-secondary" type="button" data-provider-business-action="close-service-preview">Cerrar</button>
+        </footer>
+      </section>
+    </div>
+  `;
+}
+
+function firstImageUrlFrom(...values) {
+  const pending = [...values];
+  while (pending.length) {
+    const value = pending.shift();
+    if (Array.isArray(value)) {
+      pending.push(...value);
+      continue;
+    }
+    const raw = String(value ?? "").trim();
+    if (/^https?:\/\//i.test(raw) || /^data:image\//i.test(raw)) return raw;
+  }
+  return "";
+}
+
+function providerDocumentAvatarUrl(documents = []) {
+  const candidates = Array.isArray(documents) ? documents : [];
+  const preferred = candidates.find((doc) => {
+    const type = String(doc?.document_type ?? doc?.type ?? "").toLowerCase();
+    const metadata = doc?.metadata_json && typeof doc.metadata_json === "object"
+      ? doc.metadata_json
+      : {};
+    return ["profile_photo", "avatar", "selfie"].includes(type) && firstImageUrlFrom(
+      doc?.file_url,
+      doc?.signed_url,
+      doc?.public_url,
+      doc?.preview_url,
+      metadata.avatar_public_url,
+      metadata.profile_photo_url,
+      metadata.public_url,
+      metadata.file_url,
+      metadata.signed_url,
+      metadata.preview_url,
+      metadata.image_url
+    );
+  });
+
+  return firstImageUrlFrom(
+    preferred?.file_url,
+    preferred?.signed_url,
+    preferred?.public_url,
+    preferred?.preview_url,
+    preferred?.metadata_json?.avatar_public_url,
+    preferred?.metadata_json?.profile_photo_url,
+    preferred?.metadata_json?.public_url,
+    preferred?.metadata_json?.file_url,
+    preferred?.metadata_json?.signed_url,
+    preferred?.metadata_json?.preview_url,
+    preferred?.metadata_json?.image_url,
+    candidates.map((doc) => doc?.file_url),
+    candidates.map((doc) => doc?.signed_url),
+    candidates.map((doc) => doc?.public_url)
+  );
+}
+
+function renderProviderServiceClientPreview({
+  offering = null,
+  categories = [],
+  detail = null,
+  providerAvatarUrl = "",
+  providerInitials = "PR",
+  providerName = "Prestador MIMI",
+  priceLabel = "Falta configurar"
+} = {}) {
+  const canPreviewProviderAvatar = /^https?:\/\//i.test(providerAvatarUrl) || /^data:image\//i.test(providerAvatarUrl);
+  const serviceTitle = offering?.title || categories[0]?.name || "Tu servicio";
+  const summary =
+    offering?.public_summary ||
+    offering?.description ||
+    detail?.bio ||
+    "Agrega una descripcion corta para que el cliente entienda que incluye.";
+  const categoryLabel = categories.length
+    ? categories.map((category) => category.name).join(" / ")
+    : "Rubro pendiente";
+  const zoneLabel = [detail?.city, detail?.province].filter(Boolean).join(", ") || "Zona pendiente";
+
+  return `
+    <section class="provider-service-client-preview provider-service-photo-sync" aria-label="Vista previa del servicio para clientes">
+      <div class="provider-client-preview-heading">
+        <div>
+          <span class="eyebrow">Visible para clientes</span>
+          <strong>Card publica actual</strong>
+        </div>
+        <div class="provider-client-preview-actions">
+          <span class="provider-client-preview-badge">${offering ? "Publicada" : "Borrador"}</span>
+          ${offering?.id ? `
+            <button class="provider-client-preview-edit" type="button" data-provider-business-action="focus-service-details" data-offering-id="${escapeHtml(offering.id)}">
+              Editar nombre y precio
+            </button>
+          ` : ""}
+        </div>
+      </div>
+      <article class="provider-client-preview-card">
+        <div class="provider-client-preview-topline">
+          <span class="provider-client-preview-avatar">
+            ${canPreviewProviderAvatar
+              ? `<img src="${escapeHtml(providerAvatarUrl)}" alt="Foto de perfil visible para clientes" loading="lazy">`
+              : `<span>${escapeHtml(providerInitials)}</span>`}
+          </span>
+          <div>
+            <strong>${escapeHtml(providerName)}</strong>
+            <small>${escapeHtml(zoneLabel)}</small>
+          </div>
+        </div>
+        <div class="provider-client-preview-body">
+          <h4>${escapeHtml(serviceTitle)}</h4>
+          <p>${escapeHtml(summary)}</p>
+        </div>
+        <div class="provider-client-preview-footer">
+          <span>${escapeHtml(categoryLabel)}</span>
+          <strong>${escapeHtml(priceLabel)}</strong>
+        </div>
+      </article>
+      <div class="provider-photo-sync-note ${canPreviewProviderAvatar ? "is-ready" : ""}">
+        <span>${canPreviewProviderAvatar ? "Foto sincronizada" : "Falta foto"}</span>
+        <small>La misma imagen se usa en tu perfil, en Servicios y en la busqueda del cliente.</small>
+      </div>
+    </section>
+  `;
+}
+
+function renderOfferingsSummary(offerings = [], options = {}) {
+  if (!offerings.length) {
+    return `
+      <section class="summary-card provider-offerings-summary-enterprise">
+        <strong>Tus servicios publicados</strong>
+        <p class="muted">Todavia no tenes servicios activos. Publica al menos una propuesta concreta para que los clientes vean modalidad, duracion y precio.</p>
+      </section>
+    `;
+  }
+
+  return `
+    <section class="summary-card provider-offerings-summary-enterprise">
+      <div class="block-header compact">
+        <div>
+          <span class="eyebrow">Gestion rapida</span>
+          <h3>Ofertas activas</h3>
+          <p class="muted">Administra visibilidad, precio y vista como cliente sin salir de esta pantalla.</p>
+        </div>
+      </div>
+      <div class="provider-offerings-enterprise-list">
+        ${offerings
+          .map((offering) => {
+            const inactive = offering.active === false;
+            const serviceMode = String(offering.service_mode ?? "IN_PERSON").toUpperCase();
+            const locationPolicy = String(offering.location_policy ?? "CLIENT_ADDRESS").toUpperCase();
+            const status = providerOfferingStatusMeta(offering);
+            const categoryLabel = providerOfferingCategoryLabel(offering);
+            const description = providerOfferingDescriptionLabel(offering);
+            const priceLabel = providerOfferingPriceShortLabel(offering);
+            const initials = initialsFromName(offering.title || "Servicio").slice(0, 2);
+            const requiresValidation = providerOfferingRequiresValidation(offering);
+            const addons = options.addonsEnabled ? providerOfferingActiveAddons(offering) : [];
+
+            return `
+              <article class="provider-service-list-card provider-offering-summary-card ${inactive ? "is-inactive" : "is-active"} is-${escapeHtml(status.tone)}" data-offering-id="${escapeHtml(offering.id ?? "")}">
+                <button class="provider-service-list-main" type="button" data-provider-business-action="edit-offering" data-offering-id="${escapeHtml(offering.id ?? "")}">
+                  <span class="provider-service-list-mark" aria-hidden="true">${escapeHtml(initials)}</span>
+                  <span class="provider-service-list-copy">
+                    <span class="provider-service-card-topline">
+                      <strong>${escapeHtml(offering.title || "Servicio publicado")}</strong>
+                      <i class="provider-service-status-pill is-${escapeHtml(status.tone)}">${escapeHtml(status.label)}</i>
+                    </span>
+                    <small>${escapeHtml(categoryLabel)} - ${escapeHtml(serviceModeLabels[serviceMode] ?? "Presencial")}</small>
+                    <span class="provider-service-description">${escapeHtml(description)}</span>
+                  </span>
+                  <span class="provider-service-price-block">
+                    <em>${escapeHtml(priceLabel)}</em>
+                    <small>${escapeHtml(providerOfferingPricingBadge(offering))}</small>
+                  </span>
+                </button>
+                <div class="provider-service-card-meta">
+                  <span>${escapeHtml(locationPolicyLabels[locationPolicy] ?? "Cliente")}</span>
+                  <span>${escapeHtml(providerOfferingUpdatedLabel(offering))}</span>
+                  ${requiresValidation ? "<span>Regulado</span>" : ""}
+                  ${addons.length ? `<span>${addons.length} ${addons.length === 1 ? "adicional" : "adicionales"}</span>` : ""}
+                </div>
+                ${addons.length ? `
+                  <div class="provider-service-addon-strip" aria-label="Adicionales disponibles">
+                    <strong>Adicionales disponibles</strong>
+                    <span>${addons.slice(0, 3).map((addon) => escapeHtml(addon.name)).join(" + ")}</span>
+                  </div>
+                ` : ""}
+                <div class="provider-service-card-actions">
+                  <button class="provider-service-secondary-button" type="button" data-provider-business-action="edit-offering" data-offering-id="${escapeHtml(offering.id ?? "")}">Editar</button>
+                  <button class="provider-service-secondary-button" type="button" data-provider-business-action="preview-offering" data-offering-id="${escapeHtml(offering.id ?? "")}">Ver como cliente</button>
+                  ${inactive ? `
+                    <button class="provider-service-reactivate-button" type="button" data-provider-business-action="reactivate-offering" data-offering-id="${escapeHtml(offering.id ?? "")}">Reactivar</button>
+                  ` : `
+                    <button class="provider-service-delete-button" type="button" data-provider-business-action="delete-offering" data-offering-id="${escapeHtml(offering.id ?? "")}">Pausar</button>
+                  `}
+                </div>
+                <p class="provider-service-status-note">${escapeHtml(status.detail)}</p>
+              </article>
+            `;
+          })
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderOfferingsSummaryLegacy(offerings = [], options = {}) {
   if (!offerings.length) {
     return `
       <section class="summary-card">
@@ -1196,8 +2372,8 @@ function renderOfferingsSummary(offerings = []) {
                     : offering.price_per_hour;
 
             const priceLabel =
-              pricingModel === "QUOTE"
-                ? "A presupuestar"
+              pricingModel === "QUOTE" || offering.quote_required
+                ? "Cotizar antes de confirmar"
                 : pricingModel === "SQUARE_METER"
                   ? `${currency(amount, offering.currency)} / m²`
                   : pricingModel === "LINEAR_METER"
@@ -1210,9 +2386,23 @@ function renderOfferingsSummary(offerings = []) {
                           ? `${currency(amount, offering.currency)} cerrado`
                           : `${currency(amount, offering.currency)} / hora`;
 
+            const avatarUrl = String(options.avatarUrl || "").trim();
+            const canShowAvatar = /^https?:\/\//i.test(avatarUrl) || /^data:image\//i.test(avatarUrl);
+            const initials = options.initials || "PR";
+
             return `
               <article class="provider-pricing-card" data-offering-id="${escapeHtml(offering.id ?? "")}">
-                <strong>${escapeHtml(offering.title ?? "Trabajo publicado")}</strong>
+                <div class="provider-offering-summary-head">
+                  <span class="provider-offering-summary-avatar">
+                    ${canShowAvatar
+                      ? `<img src="${escapeHtml(avatarUrl)}" alt="Foto de perfil" loading="lazy">`
+                      : `<span>${escapeHtml(initials)}</span>`}
+                  </span>
+                  <div>
+                    <strong>${escapeHtml(offering.title ?? "Trabajo publicado")}</strong>
+                    <small>${escapeHtml(options.providerName || "Visible para clientes")}</small>
+                  </div>
+                </div>
                 <p class="muted">${escapeHtml(offering.public_summary ?? offering.description ?? "Sin resumen público")}</p>
                 <div class="summary-metrics">
                   <div class="metric">
@@ -1229,7 +2419,7 @@ function renderOfferingsSummary(offerings = []) {
                   </div>
                   <div class="metric">
                     <span>Duración</span>
-                    <strong>${offering.duration_minutes ? `${escapeHtml(String(offering.duration_minutes))} min` : "A coordinar"}</strong>
+                    <strong>${offering.duration_minutes ? `${escapeHtml(String(offering.duration_minutes))} min` : "Por definir"}</strong>
                   </div>
                 </div>
                 <div class="provider-offering-actions">
@@ -1237,7 +2427,7 @@ function renderOfferingsSummary(offerings = []) {
                     Editar
                   </button>
                   <button type="button" class="btn-link-danger" data-provider-business-action="delete-offering" data-offering-id="${escapeHtml(offering.id ?? "")}">
-                    Eliminar
+                    Pausar
                   </button>
                 </div>
               </article>
@@ -1249,7 +2439,469 @@ function renderOfferingsSummary(offerings = []) {
   `;
 }
 
-function renderOfferingEditorV2(offering = null, index = 0, categories = []) {
+function isProviderGuidedServiceEnabled(guidedService = {}) {
+  return Boolean(guidedService?.enabled);
+}
+
+function providerGuidedQuestionStrategyLabel(value) {
+  const strategy = String(value ?? "").toUpperCase();
+  const labels = {
+    NO_QUESTION: "Sin preguntas",
+    OPTIONAL_REFINEMENT: "Refinamiento opcional",
+    REQUIRED_BEFORE_PRICE: "Cotiza con datos",
+    REQUIRED_BEFORE_RESULTS: "Requiere contexto",
+    SAFETY_GATE: "Servicio sensible"
+  };
+  return labels[strategy] ?? "Guia beta";
+}
+
+function providerGuidedTemplateVersion(template = {}) {
+  return template.active_version ?? {};
+}
+
+function providerGuidedTemplatePricingModel(template = {}) {
+  const version = providerGuidedTemplateVersion(template);
+  return String(version.pricing_model || template.default_pricing_model || "HOURLY").toUpperCase();
+}
+
+function providerGuidedTemplateRequirements(template = {}) {
+  return Array.isArray(template.regulated_requirements) ? template.regulated_requirements : [];
+}
+
+function providerGuidedTemplateIsRegulated(template = {}) {
+  const requirements = providerGuidedTemplateRequirements(template);
+  return (
+    requirements.length > 0 ||
+    Boolean(template.requires_credentials) ||
+    Boolean(template.requires_admin_approval) ||
+    Boolean(template.requires_professional_license) ||
+    Boolean(template.requires_background_check) ||
+    !["none", "", "low"].includes(String(template.regulated_level ?? "").toLowerCase()) ||
+    !["none", "", "low"].includes(String(template.sensitive_level ?? "").toLowerCase())
+  );
+}
+
+function providerGuidedTemplateQuoteRequired(template = {}) {
+  const version = providerGuidedTemplateVersion(template);
+  const requirements = providerGuidedTemplateRequirements(template);
+  return (
+    Boolean(version.quote_required_default ?? template.default_quote_required) ||
+    providerGuidedTemplatePricingModel(template) === "QUOTE" ||
+    requirements.some((item) => item?.blocks_auto_pricing === true)
+  );
+}
+
+function providerGuidedTemplateCategoryLabel(template = {}) {
+  return (
+    template.category?.name ||
+    template.service_family ||
+    template.macro_vertical ||
+    "Rubro del catalogo"
+  );
+}
+
+function providerGuidedTemplateTitle(template = {}) {
+  const version = providerGuidedTemplateVersion(template);
+  return version.title || template.name || "Servicio del catalogo";
+}
+
+function providerGuidedTemplateDescription(template = {}) {
+  const version = providerGuidedTemplateVersion(template);
+  return version.description || template.description || "MIMIGO precarga lo minimo y vos revisas antes de publicar.";
+}
+
+function providerGuidedTemplateKeyAttributes(template = {}, limit = 4) {
+  return (Array.isArray(template.attributes) ? template.attributes : [])
+    .filter((attribute) => attribute?.label || attribute?.code)
+    .slice(0, limit);
+}
+
+function providerGuidedTemplateKeyQuestions(template = {}, limit = 4) {
+  return (Array.isArray(template.questions) ? template.questions : [])
+    .filter((question) => question?.question_text || question?.label)
+    .slice(0, limit);
+}
+
+function providerGuidedTemplateRequirementLabels(template = {}, limit = 3) {
+  const labels = providerGuidedTemplateRequirements(template)
+    .map((item) => item?.requirement_label || item?.requirement_type || item?.required_document_type)
+    .filter(Boolean);
+
+  return labels.length ? labels.slice(0, limit) : [];
+}
+
+function providerGuidedTemplateSearchText(template = {}) {
+  const version = template.active_version ?? {};
+  return [
+    template.name,
+    template.slug,
+    template.macro_vertical,
+    template.service_family,
+    template.category?.name,
+    template.category?.code,
+    template.category?.description,
+    template.description,
+    version.title,
+    version.description
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
+export function renderProviderGuidedTemplateSelection(template = {}) {
+  const version = providerGuidedTemplateVersion(template);
+  const pricingModel = providerGuidedTemplatePricingModel(template);
+  const quoteRequired = providerGuidedTemplateQuoteRequired(template);
+  const isRegulated = providerGuidedTemplateIsRegulated(template);
+  const attributes = providerGuidedTemplateKeyAttributes(template, 5);
+  const questions = providerGuidedTemplateKeyQuestions(template, 5);
+  const requirements = providerGuidedTemplateRequirementLabels(template, 4);
+  const blocksAutoPricing = providerGuidedTemplateRequirements(template).some((item) => item?.blocks_auto_pricing === true);
+  const strategy = version.question_strategy_default || template.default_question_strategy;
+
+  return `
+    <article class="provider-guided-selection-card" data-provider-guided-selected-template>
+      <div class="provider-guided-selection-head">
+        <div>
+          <span class="eyebrow">Servicio elegido</span>
+          <strong>${escapeHtml(providerGuidedTemplateTitle(template))}</strong>
+          <small>${escapeHtml(template.macro_vertical || "Catalogo MIMIGO")} - ${escapeHtml(providerGuidedTemplateCategoryLabel(template))}</small>
+        </div>
+        <span class="provider-guided-selection-status">${escapeHtml(providerGuidedQuestionStrategyLabel(strategy))}</span>
+      </div>
+      <p>${escapeHtml(providerGuidedTemplateDescription(template))}</p>
+      <div class="provider-guided-selection-badges">
+        <span>${escapeHtml(pricingModelLabels[pricingModel] ?? pricingModel)}</span>
+        ${quoteRequired ? "<span>Cotizacion sugerida</span>" : ""}
+        ${isRegulated ? "<span class=\"is-warning\">Requiere validacion</span>" : ""}
+        ${blocksAutoPricing ? "<span class=\"is-warning\">Sin autopricing</span>" : ""}
+      </div>
+      ${attributes.length ? `
+        <div class="provider-guided-chip-group">
+          <strong>Atributos clave</strong>
+          <div>
+            ${attributes.map((attribute) => `<span>${escapeHtml(attribute.label || attribute.code || "Dato")}${attribute.required ? " *" : ""}</span>`).join("")}
+          </div>
+        </div>
+      ` : ""}
+      ${questions.length ? `
+        <div class="provider-guided-chip-group">
+          <strong>Preguntas sugeridas</strong>
+          <div>
+            ${questions.map((question) => `<span>${escapeHtml(question.question_text || question.label || "Pregunta sugerida")}</span>`).join("")}
+          </div>
+          <small>Son ayuda para completar mejor el servicio; no bloquean el alta beta.</small>
+        </div>
+      ` : ""}
+      ${isRegulated ? `
+        <div class="provider-guided-regulated-box">
+          <strong>Servicio sensible o regulado</strong>
+          <p>Puede requerir documentacion, matricula o aprobacion admin antes de mostrarse con ese alcance. No prometas resultados medicos ni diagnosticos.</p>
+          ${requirements.length ? `<div>${requirements.map((label) => `<span>${escapeHtml(label)}</span>`).join("")}</div>` : ""}
+          ${blocksAutoPricing ? "<small>Este servicio requiere cotizacion o revision. No se calcula precio automatico.</small>" : ""}
+        </div>
+      ` : ""}
+    </article>
+  `;
+}
+
+function renderProviderGuidedEmptySelection() {
+  return `
+    <div class="provider-guided-selection-empty">
+      <strong>Elegir una sugerencia</strong>
+      <span>Busca el servicio, toca una card del catalogo y MIMIGO completa titulo, rubro y modelo de precio para que revises lo minimo.</span>
+    </div>
+  `;
+}
+
+function renderProviderGuidedDraftPreviewShell() {
+  return `
+    <aside class="provider-guided-draft-preview" data-provider-guided-draft-preview aria-live="polite">
+      <div class="provider-guided-draft-preview-head">
+        <span class="eyebrow">Vista previa</span>
+        <strong>Asi se vera para clientes</strong>
+      </div>
+      <div class="provider-guided-draft-card" data-provider-guided-draft-card>
+        <span>Elegiste un servicio guiado. Completa titulo y precio para ver la preview antes de guardar.</span>
+      </div>
+    </aside>
+  `;
+}
+
+function renderProviderGuidedServicePanel({ guidedService = {} } = {}) {
+  if (!isProviderGuidedServiceEnabled(guidedService)) return "";
+
+  const templates = Array.isArray(guidedService.templates) ? guidedService.templates : [];
+  const selectedTemplateId = String(guidedService.selectedTemplateId ?? "");
+  const selectedTemplate = templates.find((template) => String(template?.id ?? "") === selectedTemplateId);
+  const catalogError = guidedService.error || guidedService.source === "catalog_unavailable";
+
+  return `
+    <section class="provider-guided-service-panel" data-provider-guided-catalog data-provider-guided-composer aria-label="Agregar servicio guiado beta">
+      <div class="provider-guided-service-head">
+        <div>
+          <span class="eyebrow">Beta controlada</span>
+          <strong>Agregar servicio guiado (Beta)</strong>
+          <small>Elegi un servicio del catalogo y MIMIGO te ayuda a completarlo sin volver al formulario largo.</small>
+        </div>
+      </div>
+      ${catalogError ? `
+        <div class="provider-guided-catalog-error" role="status">
+          No pudimos cargar sugerencias. Podes usar el alta manual sin bloquear la publicacion.
+        </div>
+      ` : ""}
+      <label class="provider-guided-service-search">
+        <span>Buscar servicio o rubro</span>
+        <input type="search" data-provider-guided-search placeholder="Busca lo que ofreces: pintura, masajes, peluqueria, gasista...">
+      </label>
+      <div class="provider-guided-minimum-fields">
+        <strong>Solo te pedimos lo minimo</strong>
+        <span>Titulo publico, precio o cotizacion, descripcion breve y zona si todavia falta.</span>
+      </div>
+      <div class="provider-guided-template-list">
+        ${templates.length ? templates.map((template) => {
+          const version = providerGuidedTemplateVersion(template);
+          const pricingModel = providerGuidedTemplatePricingModel(template);
+          const isRegulated = providerGuidedTemplateIsRegulated(template);
+          const quoteRequired = providerGuidedTemplateQuoteRequired(template);
+          const questions = providerGuidedTemplateKeyQuestions(template, 3);
+          const attributes = providerGuidedTemplateKeyAttributes(template, 3);
+          const strategy = version.question_strategy_default || template.default_question_strategy;
+          const selected = selectedTemplateId && selectedTemplateId === String(template.id);
+
+          return `
+            <button
+              type="button"
+              class="provider-guided-template-card ${selected ? "is-selected" : ""}"
+              data-provider-guided-template-id="${escapeHtml(template.id ?? "")}"
+              data-template-id="${escapeHtml(template.id ?? "")}"
+              data-template-search-value="${escapeHtml(providerGuidedTemplateSearchText(template))}"
+              data-provider-guided-template-regulated="${isRegulated ? "true" : "false"}"
+              data-provider-business-action="select-guided-service-template"
+              aria-pressed="${selected ? "true" : "false"}"
+            >
+              <span class="provider-guided-template-copy">
+                <strong>${escapeHtml(providerGuidedTemplateTitle(template))}</strong>
+                <small>${escapeHtml(providerGuidedTemplateCategoryLabel(template))} - ${escapeHtml(template.macro_vertical || "Servicio")}</small>
+              </span>
+              <span class="provider-guided-template-badges">
+                <em>${escapeHtml(pricingModelLabels[pricingModel] ?? pricingModel)}</em>
+                ${quoteRequired ? "<em>Cotizar</em>" : ""}
+                ${isRegulated ? "<em class=\"is-warning\">Requiere validacion</em>" : ""}
+                ${strategy ? `<em>${escapeHtml(providerGuidedQuestionStrategyLabel(strategy))}</em>` : ""}
+              </span>
+              ${attributes.length ? `
+                <span class="provider-guided-template-attributes">
+                  ${attributes.map((attribute) => `<i>${escapeHtml(attribute.label || attribute.code || "Dato clave")}</i>`).join("")}
+                </span>
+              ` : ""}
+              ${questions.length ? `
+                <span class="provider-guided-template-questions">
+                  ${questions.map((question) => `<i>${escapeHtml(question.question_text || question.label || "Pregunta sugerida")}</i>`).join("")}
+                </span>
+              ` : ""}
+            </button>
+          `;
+        }).join("") : ""}
+        <div class="provider-guided-template-empty" data-provider-guided-empty ${templates.length ? "hidden" : ""}>
+          No hay sugerencias para esa busqueda. Podes seguir con el alta manual.
+        </div>
+      </div>
+      <div class="provider-guided-selection-summary" data-provider-guided-selection-summary>
+        ${selectedTemplate ? renderProviderGuidedTemplateSelection(selectedTemplate) : renderProviderGuidedEmptySelection()}
+      </div>
+      <p class="provider-guided-service-note">La guia no publica sola ni escribe catalogo. El guardado sigue pasando por svc-save-provider-service.</p>
+    </section>
+  `;
+}
+
+function renderProviderServicesHome({
+  offerings = [],
+  detail = null,
+  providerAvatarUrl = "",
+  providerInitials = "PR",
+  providerName = "Prestador MIMI",
+  guidedService = {},
+  addonsEnabled = false
+} = {}) {
+  const activeOfferings = offerings.filter((item) => item?.active !== false);
+  const inactiveOfferings = offerings.filter((item) => item?.active === false);
+  const guidedEnabled = isProviderGuidedServiceEnabled(guidedService);
+  const guidedPanelOpen = Boolean(guidedEnabled && guidedService?.panelOpen);
+  const canPreviewProviderAvatar = /^https?:\/\//i.test(providerAvatarUrl) || /^data:image\//i.test(providerAvatarUrl);
+  const zoneLabel = [detail?.city, detail?.province].filter(Boolean).join(", ") || "Zona pendiente";
+  const summary = providerServicesSummary(offerings);
+  const summaryItems = [
+    { key: "active", label: "Activos", value: summary.active, text: "visibles" },
+    { key: "paused", label: "Pausados", value: summary.paused, text: "ocultos" },
+    { key: "incomplete", label: "Incompletos", value: summary.incomplete, text: "a completar" },
+    { key: "review", label: "Requieren accion", value: summary.requiresAction, text: "a revisar" }
+  ];
+  const filterItems = [
+    { key: "all", label: "Todos", count: summary.total },
+    { key: "active", label: "Activos", count: summary.active },
+    { key: "paused", label: "Pausados", count: summary.paused },
+    { key: "incomplete", label: "Incompletos", count: summary.incomplete },
+    { key: "review", label: "Requieren revision", count: summary.requiresAction }
+  ];
+  const renderServiceCard = (offering, { inactive = false } = {}) => {
+    const price = providerOfferingPriceShortLabel(offering);
+    const serviceMode = String(offering.service_mode ?? "IN_PERSON").toUpperCase();
+    const locationPolicy = String(offering.location_policy ?? "CLIENT_ADDRESS").toUpperCase();
+    const pricingModel = String(offering.pricing_model ?? "HOURLY").toUpperCase();
+    const initials = initialsFromName(offering.title || "Servicio").slice(0, 2);
+    const status = providerOfferingStatusMeta(offering);
+    const categoryLabel = providerOfferingCategoryLabel(offering);
+    const description = providerOfferingDescriptionLabel(offering);
+    const isIncomplete = providerOfferingIsIncomplete(offering);
+    const requiresValidation = providerOfferingRequiresValidation(offering);
+    const addons = addonsEnabled ? providerOfferingActiveAddons(offering) : [];
+    const filterTags = [
+      inactive ? "paused" : "active",
+      isIncomplete ? "incomplete" : "",
+      requiresValidation || isIncomplete ? "review" : ""
+    ].filter(Boolean).join(" ");
+
+    return `
+      <article
+        class="provider-service-list-card ${inactive ? "is-inactive" : "is-active"} is-${escapeHtml(status.tone)}"
+        data-offering-id="${escapeHtml(offering.id ?? "")}"
+        data-provider-service-filter-tags="${escapeHtml(filterTags)}"
+      >
+        <button class="provider-service-list-main" type="button" data-provider-business-action="edit-offering" data-offering-id="${escapeHtml(offering.id ?? "")}">
+          <span class="provider-service-list-mark" aria-hidden="true">${escapeHtml(initials)}</span>
+          <span class="provider-service-list-copy">
+            <span class="provider-service-card-topline">
+              <strong>${escapeHtml(offering.title || "Servicio publicado")}</strong>
+              <i class="provider-service-status-pill is-${escapeHtml(status.tone)}">${escapeHtml(status.label)}</i>
+            </span>
+            <small>${escapeHtml(categoryLabel)} - ${escapeHtml(serviceModeLabels[serviceMode] ?? "Presencial")}</small>
+            <span class="provider-service-description">${escapeHtml(description)}</span>
+          </span>
+          <span class="provider-service-price-block">
+            <em>${escapeHtml(price)}</em>
+            <small>${escapeHtml(providerOfferingPricingBadge(offering))}</small>
+          </span>
+        </button>
+        <div class="provider-service-card-meta">
+          <span>${escapeHtml(locationPolicyLabels[locationPolicy] ?? "Cliente")}</span>
+          <span>${escapeHtml(providerOfferingUpdatedLabel(offering))}</span>
+          ${addons.length ? `<span>${addons.length} ${addons.length === 1 ? "adicional" : "adicionales"}</span>` : ""}
+          ${requiresValidation ? "<span>Regulado</span>" : ""}
+        </div>
+        ${addons.length ? `
+          <div class="provider-service-addon-strip" aria-label="Adicionales disponibles">
+            <strong>Adicionales disponibles</strong>
+            <span>${addons.slice(0, 3).map((addon) => escapeHtml(addon.name)).join(" + ")}</span>
+          </div>
+        ` : ""}
+        <div class="provider-service-card-actions">
+          ${inactive ? "" : `<button class="provider-service-secondary-button" type="button" data-provider-business-action="edit-offering" data-offering-id="${escapeHtml(offering.id ?? "")}">Editar</button>`}
+          <button class="provider-service-secondary-button" type="button" data-provider-business-action="preview-offering" data-offering-id="${escapeHtml(offering.id ?? "")}">Ver como cliente</button>
+          ${inactive ? `
+            <button class="provider-service-reactivate-button" type="button" data-provider-business-action="reactivate-offering" data-offering-id="${escapeHtml(offering.id ?? "")}">
+              Reactivar
+            </button>
+          ` : `
+            <button class="provider-service-delete-button" type="button" data-provider-business-action="delete-offering" data-offering-id="${escapeHtml(offering.id ?? "")}">
+              Pausar
+            </button>
+          `}
+        </div>
+        <p class="provider-service-status-note">${escapeHtml(status.detail)}</p>
+      </article>
+    `;
+  };
+
+  return `
+    <section class="provider-services-home" aria-label="Tus servicios publicados">
+      <section class="provider-services-home-hero">
+        <div class="provider-services-home-copy">
+          <span class="eyebrow">Servicios</span>
+          <h3>Tus servicios</h3>
+          <p>Administra que ofreces, como se ve para clientes y cuando aparece en busquedas.</p>
+          <div class="provider-services-home-actions">
+            <button class="provider-services-hero-cta" type="button" data-provider-business-action="add-provider-service">
+              <span aria-hidden="true">+</span>
+              Agregar servicio
+            </button>
+            ${guidedEnabled ? `
+              <button class="provider-services-hero-cta is-secondary" type="button" data-provider-business-action="add-provider-guided-service">
+                Agregar servicio guiado (Beta)
+              </button>
+            ` : ""}
+          </div>
+        </div>
+        <div class="provider-profile-avatar-dock provider-profile-avatar-dock--home">
+          <label class="provider-profile-avatar-action" title="Cambiar foto de perfil" aria-label="Cambiar foto de perfil">
+            <input name="providerAvatarFile" id="providerAvatarInput" type="file" accept="image/jpeg,image/png,image/webp">
+            <span class="provider-photo-preview" id="providerAvatarPreview">
+              ${canPreviewProviderAvatar
+                ? `<img src="${escapeHtml(providerAvatarUrl)}" alt="Foto de perfil" loading="lazy">`
+                : `<span>${escapeHtml(providerInitials)}</span>`}
+            </span>
+            <span class="provider-avatar-edit-dot" aria-hidden="true">+</span>
+          </label>
+          ${canPreviewProviderAvatar ? `<button type="button" class="provider-avatar-remove-link provider-avatar-remove-icon" data-provider-business-action="remove-avatar" aria-label="Quitar foto">x</button>` : ""}
+          <small id="providerAvatarStatus" class="provider-avatar-status"></small>
+        </div>
+      </section>
+
+      <section class="provider-services-summary-grid" aria-label="Resumen de servicios">
+        ${summaryItems.map((item) => `
+          <article class="provider-services-summary-card is-${escapeHtml(item.key)}">
+            <span>${escapeHtml(item.label)}</span>
+            <strong>${item.value}</strong>
+            <small>${escapeHtml(item.text)}</small>
+          </article>
+        `).join("")}
+      </section>
+
+      <section class="provider-services-home-list">
+        <div class="provider-services-home-list-head">
+          <div>
+            <span class="eyebrow">Visible para clientes</span>
+            <strong>${summary.total ? `${summary.total} ${summary.total === 1 ? "servicio configurado" : "servicios configurados"}` : "Todavia no publicaste servicios"}</strong>
+            <small>${escapeHtml(providerName)} - ${escapeHtml(zoneLabel)}</small>
+          </div>
+        </div>
+        <div class="provider-services-filter-bar" role="group" aria-label="Filtrar servicios">
+          ${filterItems.map((item, index) => `
+            <button
+              class="${index === 0 ? "is-active" : ""}"
+              type="button"
+              data-provider-business-action="filter-provider-services"
+              data-provider-services-filter="${escapeHtml(item.key)}"
+              aria-pressed="${index === 0 ? "true" : "false"}"
+            >
+              ${escapeHtml(item.label)}
+              <span>${item.count}</span>
+            </button>
+          `).join("")}
+        </div>
+        <div class="provider-services-mini-list">
+          ${activeOfferings.map((offering) => renderServiceCard(offering)).join("")}
+          ${inactiveOfferings.map((offering) => renderServiceCard(offering, { inactive: true })).join("")}
+          ${!offerings.length ? `
+            <article class="provider-services-empty-state" data-provider-services-empty="all">
+              <strong>Agrega tu primer servicio para aparecer en busquedas.</strong>
+              <small>Usa el boton principal de arriba para cargar que ofreces, como lo cobras y donde trabajas.</small>
+            </article>
+          ` : ""}
+          <article class="provider-services-empty-state" data-provider-services-filter-empty hidden>
+            <strong>No hay servicios en este filtro.</strong>
+            <small>Proba con otro estado o agrega un servicio nuevo.</small>
+          </article>
+        </div>
+        <div class="provider-services-feedback-states" aria-hidden="true">
+          <span class="provider-services-loading-state">Cargando tus servicios...</span>
+          <span class="provider-services-error-state">No pudimos cargar tus servicios. Volve a intentar.</span>
+        </div>
+        <p class="provider-services-home-helper">Toca una card para editarla. Los cambios se guardan por el flujo auditado de MIMIGO.</p>
+      </section>
+    </section>
+  `;
+}
+
+function renderOfferingEditorV2(offering = null, index = 0, categories = [], options = {}) {
   const currentCategoryId = offering?.category_id ?? "";
   const currentCategory = categoryById(categories, currentCategoryId);
   const defaults = recommendedDefaultsForCategory(currentCategory);
@@ -1264,6 +2916,7 @@ function renderOfferingEditorV2(offering = null, index = 0, categories = []) {
     return acc;
   }, {});
   const requirement = currentCategory ? categoryRequirementText(currentCategory) : "";
+  const addonsEnabled = Boolean(options.addonsEnabled);
 
   return `
     <article class="provider-editor-card provider-offering-card provider-offering-card-v2">
@@ -1389,8 +3042,10 @@ function renderOfferingEditorV2(offering = null, index = 0, categories = []) {
 
       <label class="provider-check-item">
         <input name="offering:${index}:quoteRequired" type="checkbox" ${offering?.quote_required ? "checked" : ""}>
-        <span>Requiere presupuesto antes de confirmar</span>
+        <span>Cotizar antes de confirmar<small>${quotePricingHelp}</small></span>
       </label>
+
+      ${addonsEnabled ? renderProviderOfferingAddonsEditor(offering, index) : ""}
 
       <label class="input-group provider-field-wide">
         <span>Indicaciones para el cliente</span>
@@ -1405,6 +3060,10 @@ function renderProviderBusiness(state) {
   if (!container) return;
 
   const business = state.provider.business ?? {};
+  const guidedService = state.provider?.guidedService ?? {};
+  const guidedEnabled = isProviderGuidedServiceEnabled(guidedService);
+  const guidedPanelOpen = Boolean(guidedEnabled && guidedService?.panelOpen);
+  const addonsEnabled = Boolean(state.provider?.serviceAddons?.enabled);
   const detail = business.profile ?? null;
   const pricing = business.pricing ?? [];
   const offerings = business.offerings ?? [];
@@ -1424,16 +3083,10 @@ function renderProviderBusiness(state) {
       : appConfig.categories
   );
   const pricingByCategory = new Map(pricing.map((item) => [item.category_id, item]));
-  const selectedCategoryIds = new Set([
+  const publishedCategoryIds = new Set([
     ...activeCategoryIds,
     ...offerings.map((item) => item?.category_id).filter(Boolean)
   ]);
-  const selectedCategories = categories.filter((category) => selectedCategoryIds.has(category.id));
-  const offeringCategories = selectedCategories.length ? selectedCategories : categories;
-  const selectedCategoryLabel = selectedCategories.length
-    ? selectedCategories.map((category) => category.name).join(", ")
-    : "Primero elegi rubros sugeridos";
-  const hasSelectedRubros = selectedCategoryIds.size > 0;
   const provinceOptions = Object.keys(argentinaZones);
   const selectedProvince = String(detail?.province ?? "");
   const selectedCity = String(detail?.city ?? "");
@@ -1441,11 +3094,16 @@ function renderProviderBusiness(state) {
     ? argentinaZones[selectedProvince]
     : [];
   const citySelectOptions = [...cityOptions];
-  if (selectedCity && !citySelectOptions.includes(selectedCity)) citySelectOptions.unshift(selectedCity);
+  const selectedCityInKnownList = selectedCity ? cityOptions.includes(selectedCity) : true;
+  const shouldShowOtherCity = Boolean(selectedCity) && (!selectedCityInKnownList || selectedCity === "Otra localidad");
+  const citySelectValue = shouldShowOtherCity ? "Otra localidad" : selectedCity;
+  const providerCityOtherValue = selectedCity && selectedCity !== "Otra localidad" && !selectedCityInKnownList
+    ? selectedCity
+    : "";
   const primaryOffering = offerings.find((item) => item?.active !== false) ?? offerings[0] ?? null;
   const primaryPrice =
     primaryOffering?.quote_required || primaryOffering?.pricing_model === "QUOTE"
-      ? "A presupuestar"
+      ? "Cotizar antes de confirmar"
       : primaryOffering?.pricing_model === "UNIT"
         ? `${currency(primaryOffering?.unit_price, primaryOffering?.currency)} / ${primaryOffering?.unit_name || "sesion"}`
         : currency(
@@ -1459,79 +3117,256 @@ function renderProviderBusiness(state) {
   // Si el usuario tocó "Editar" en una card, usar ese offering específico en el form
   const editingId = state.provider?.editingOfferingId ?? null;
   const editingOffering = editingId ? offerings.find((o) => o?.id === editingId) : null;
-  const firstOffering = editingOffering ?? primaryOffering ?? null;
-  const defaultCategory = selectedCategories[0] ?? categories[0] ?? null;
+  const serviceComposerMode = String(state.provider?.serviceComposerMode ?? "").toLowerCase();
+  const serviceComposerOpen = Boolean(state.provider?.serviceComposerOpen);
+  const isAddingOffering = serviceComposerOpen && serviceComposerMode === "new";
+  const isEditingOffering = serviceComposerOpen && serviceComposerMode === "edit" && Boolean(editingOffering);
+  const shouldRenderComposer = isAddingOffering || isEditingOffering;
+  const firstOffering = isAddingOffering ? null : (editingOffering ?? primaryOffering ?? null);
+  const selectedCategoryIds = new Set(
+    isAddingOffering
+      ? []
+      : editingOffering?.category_id
+        ? [editingOffering.category_id]
+        : firstOffering?.category_id
+          ? [firstOffering.category_id]
+          : [...publishedCategoryIds]
+  );
+  const selectedCategories = categories.filter((category) => selectedCategoryIds.has(category.id));
+  const offeringCategories = selectedCategories.length ? selectedCategories : categories;
+  const selectedCategoryLabel = selectedCategories.length
+    ? selectedCategories.map((category) => category.name).join(", ")
+    : "Primero elegi rubros sugeridos";
+  const hasSelectedRubros = selectedCategoryIds.size > 0;
+  const defaultCategory = selectedCategories[0] ?? (firstOffering?.category_id
+    ? categories.find((category) => category.id === firstOffering.category_id)
+    : null);
   const defaults = recommendedDefaultsForCategory(defaultCategory);
   const pricingModel = firstOffering?.pricing_model ?? defaults.pricingModel;
   const serviceMode = firstOffering?.service_mode ?? defaults.serviceMode;
   const locationPolicy = firstOffering?.location_policy ?? defaults.locationPolicy;
-  const providerAvatarUrl = String(state.provider.profile?.avatar_url || "").trim();
+  const profileMetadata = detail?.metadata_json || detail?.metadata || {};
+  const providerDocuments = [
+    ...(Array.isArray(business.documents) ? business.documents : []),
+    ...(Array.isArray(state.provider.documents?.items) ? state.provider.documents.items : [])
+  ];
+  const identityFullName = String(
+    profileMetadata.identity_document_full_name ||
+    profileMetadata.full_name_detected ||
+    profileMetadata.kyc_full_name ||
+    ""
+  ).trim();
+  const providerFirstNameValue = firstNameFromText(
+    detail?.first_name ||
+    identityFullName ||
+    state.provider.profile?.full_name ||
+    state.session.userName ||
+    ""
+  );
+  const providerAvatarUrl = firstImageUrlFrom(
+    detail?.avatar_public_url,
+    detail?.metadata_json?.avatar_public_url,
+    detail?.metadata_json?.profile_photo_url,
+    detail?.metadata_json?.avatar_url,
+    detail?.metadata_json?.public_url,
+    detail?.metadata_json?.file_url,
+    detail?.metadata_json?.signed_url,
+    detail?.metadata_json?.preview_url,
+    detail?.metadata_json?.image_url,
+    state.provider.business?.profile?.avatar_public_url,
+    state.provider.business?.profile?.metadata_json?.avatar_public_url,
+    state.provider.business?.profile?.metadata_json?.profile_photo_url,
+    state.provider.business?.profile?.metadata_json?.public_url,
+    state.provider.business?.profile?.metadata_json?.file_url,
+    state.provider.business?.profile?.metadata_json?.signed_url,
+    state.provider.business?.profile?.metadata_json?.preview_url,
+    state.provider.business?.profile?.metadata_json?.image_url,
+    state.provider.profile?.avatar_public_url,
+    state.provider.profile?.avatar_url,
+    state.provider.profile?.photo_url,
+    state.session.userAvatar,
+    providerDocumentAvatarUrl(providerDocuments)
+  );
   const canPreviewProviderAvatar = /^https?:\/\//i.test(providerAvatarUrl) || /^data:image\//i.test(providerAvatarUrl);
-  const providerInitials = initialsFromName(state.provider.profile?.full_name || state.session.userName || "MIMI");
+  const providerDisplayName = String(
+    providerFirstNameValue ||
+    state.provider.profile?.full_name ||
+    state.session.userName ||
+    "Prestador MIMI"
+  ).trim();
+  const providerInitials = initialsFromName(providerDisplayName || "MIMI");
   const visibleServiceLabels = selectedCategories.length
     ? selectedCategories.map((category) => category.name)
     : firstOffering?.title
       ? [firstOffering.title]
       : [];
+  const identityAddressText = String(
+    profileMetadata.identity_document_address_text ||
+    profileMetadata.document_address_text ||
+    profileMetadata.kyc_document_address_text ||
+    ""
+  ).trim();
+  const profileAddressText = String(detail?.address_text || "").trim();
+  const displayAddressText = profileAddressText || identityAddressText || "Zona pendiente";
+  const securityAddressText = identityAddressText || "DNI pendiente";
+  const securityAddressStatusLabel = identityAddressText ? "DNI verificado" : "DNI pendiente";
+  const addressSourceLabel = profileAddressText
+      ? "Zona operativa cargada"
+      : identityAddressText
+        ? "DNI verificado"
+        : "Completar zona";
+  const addressSourceHelp = identityAddressText
+    ? "Por seguridad usamos el domicilio detectado en tu documento como referencia. Si vivis o trabajas en otro lugar, cargalo como zona operativa."
+    : profileAddressText
+      ? "Este domicilio queda visible como zona/base de trabajo. Cuando KYC detecte domicilio del DNI, se muestra como referencia segura."
+      : "Aunque el DNI siga pendiente, podes cargar una zona operativa para que el servicio quede publicado correctamente.";
+  const currentAddressInputValue = profileAddressText || identityAddressText;
+  const providerLocation = profileMetadata.provider_base_location || {};
+  const providerLocationLat = profileMetadata.provider_base_location_lat ?? providerLocation.lat ?? "";
+  const providerLocationLng = profileMetadata.provider_base_location_lng ?? providerLocation.lng ?? "";
+  const providerLocationAccuracy = profileMetadata.provider_base_location_accuracy_m ?? providerLocation.accuracy_m ?? "";
+  const providerLocationSource = profileMetadata.provider_base_location_source ?? providerLocation.source ?? "";
+  const shouldOpenProfileDetails = !providerFirstNameValue || !selectedProvince || !selectedCity || !currentAddressInputValue;
+  const hasAdvancedPriceData = Boolean(
+    firstOffering?.unit_name ||
+    firstOffering?.price_per_hour ||
+    firstOffering?.fixed_price ||
+    firstOffering?.duration_minutes ||
+    firstOffering?.quote_required
+  );
+  const hasAnyPriceValue = Boolean(
+    firstOffering?.unit_price ||
+    firstOffering?.price_per_hour ||
+    firstOffering?.fixed_price ||
+    firstOffering?.base_visit_fee ||
+    firstOffering?.quote_required
+  );
+  const shouldOpenDiscoveryStep = !isEditingOffering && !hasSelectedRubros;
+  const shouldOpenServiceDetails = isEditingOffering || (hasSelectedRubros && (!firstOffering?.title || !hasAnyPriceValue));
+  const shouldOpenAddressStep = !currentAddressInputValue;
+  const shouldOpenZoneStep = !selectedProvince || !selectedCity;
+  const shouldOpenPublicProfileStep = !providerFirstNameValue || !detail?.bio;
+  const showServicePreview = !isAddingOffering || !offerings.length;
+  const showProfileSection = true;
+  const legal = providerLegalStatus(state);
+  const readinessItems = [
+    { label: "Servicio", done: hasSelectedRubros },
+    { label: "Precio", done: Boolean(firstOffering?.title && hasAnyPriceValue) },
+    { label: "Zona", done: Boolean(selectedProvince && selectedCity && currentAddressInputValue && providerFirstNameValue) }
+  ];
+  const readinessDone = readinessItems.filter((item) => item.done).length;
+  const nextReadinessIndex = readinessItems.findIndex((item) => !item.done);
+  const readinessProgress = Math.round((readinessDone / readinessItems.length) * 100);
+
+  if (!legal.accepted) {
+    container.innerHTML = `
+      <section class="provider-stack provider-publisher-app provider-publisher-app-v3 provider-legal-required">
+        ${renderProviderLegalGate(state)}
+      </section>
+    `;
+    return;
+  }
+
+  if (!shouldRenderComposer) {
+    container.innerHTML = `
+      <section class="provider-stack provider-publisher-app provider-publisher-app-v3">
+        ${renderProviderServicesHome({
+          offerings,
+          detail,
+          providerAvatarUrl,
+          providerInitials,
+          providerName: providerDisplayName,
+          guidedService,
+          addonsEnabled
+        })}
+      </section>
+    `;
+    return;
+  }
 
   container.innerHTML = `
     <section class="provider-stack provider-publisher-app provider-publisher-app-v3">
-      <form class="provider-settings-form provider-publisher-shell provider-simple-builder" id="providerBusinessForm">
-        <section class="provider-simple-hero">
-          <div class="provider-simple-hero-copy">
-            <span class="eyebrow">Servicios</span>
-            <h3>${escapeHtml(firstOffering?.title ?? "Crea tu servicio")}</h3>
-            <p>Publica prestaciones claras, con precio y zona real para recibir solicitudes mejor calificadas.</p>
+      <form class="provider-settings-form provider-publisher-shell provider-simple-builder" id="providerBusinessForm" novalidate>
+        <input type="hidden" name="providerAvatarPublicUrl" value="${escapeHtml(providerAvatarUrl ?? "")}">
+
+        <section class="provider-service-composer-head" aria-label="${isEditingOffering ? "Editar servicio" : "Agregar servicio"}">
+          <div>
+            <span class="eyebrow">Modo foco Servicios</span>
+            <h3>${isEditingOffering ? "Editar servicio" : "Agregar servicio"}</h3>
+            <p>Completa solo lo esencial. Perfil, documentos y datos largos pueden mejorarse despues.</p>
           </div>
-          <div class="provider-simple-status ${offerings.length ? "is-ready" : ""}">
-            <span>${offerings.length ? "Publicado" : "Pendiente"}</span>
-            <strong>${escapeHtml(firstOffering ? primaryPrice : "Falta configurar")}</strong>
+          <button class="provider-service-composer-close" type="button" data-provider-business-action="close-provider-service-composer" aria-label="Cerrar y volver a Tus servicios">x</button>
+        </section>
+
+        <section class="provider-service-readiness" aria-label="Estado de publicacion" style="--provider-readiness:${readinessProgress}%">
+          <div class="provider-service-readiness-head">
+            <div>
+              <span>Publicacion</span>
+              <strong>${readinessDone} de ${readinessItems.length} listos</strong>
+            </div>
+            <em>${readinessProgress}%</em>
           </div>
-          <div class="provider-profile-avatar-dock">
-            <label class="provider-profile-avatar-action" title="Cambiar foto de perfil" aria-label="Cambiar foto de perfil">
-              <input name="providerAvatarFile" id="providerAvatarInput" type="file" accept="image/jpeg,image/png,image/webp">
-              <span class="provider-photo-preview" id="providerAvatarPreview">
-                ${canPreviewProviderAvatar
-                  ? `<img src="${escapeHtml(providerAvatarUrl)}" alt="Foto de perfil" loading="lazy">`
-                  : `<span>${escapeHtml(providerInitials)}</span>`}
+          <div class="provider-service-readiness-bar" aria-hidden="true"><span></span></div>
+          <div class="provider-service-readiness-steps">
+            ${readinessItems.map((item, index) => `
+              <span class="${item.done ? "is-done" : index === nextReadinessIndex ? "is-current" : ""}">
+                <i aria-hidden="true">${item.done ? "✓" : index + 1}</i>
+                ${escapeHtml(item.label)}
               </span>
-              <span class="provider-avatar-edit-dot" aria-hidden="true">+</span>
-            </label>
-            ${canPreviewProviderAvatar ? `<button type="button" class="provider-avatar-remove-link provider-avatar-remove-icon" data-provider-business-action="remove-avatar" aria-label="Quitar foto">x</button>` : ""}
-            <small id="providerAvatarStatus" class="provider-avatar-status"></small>
-            <input type="hidden" name="providerAvatarPublicUrl" value="${escapeHtml(providerAvatarUrl ?? "")}">
+            `).join("")}
           </div>
         </section>
 
-        <section class="provider-simple-card provider-current-services-card">
-          <div class="provider-current-services-copy">
-            <span class="eyebrow">Prestaciones que brindas</span>
-            <strong>${visibleServiceLabels.length ? "Activas para clientes" : "Todavia sin prestaciones"}</strong>
-            <small>${visibleServiceLabels.length ? "Estos rubros quedan asociados a tu perfil cuando guardas." : "Agrega al menos una prestacion para poder publicar."}</small>
-          </div>
-          <div class="provider-service-pill-list" id="providerCurrentServicesSummary">
-            ${visibleServiceLabels.length
-              ? visibleServiceLabels.map((label) => `<span class="provider-service-pill">${escapeHtml(label)}</span>`).join("")
-              : `<span class="provider-service-pill is-empty">Sin rubros</span>`}
+        ${showServicePreview ? renderProviderServiceClientPreview({
+          offering: firstOffering,
+          categories: selectedCategories,
+          detail,
+          providerAvatarUrl,
+          providerInitials,
+          providerName: providerDisplayName,
+          priceLabel: firstOffering ? primaryPrice : "Completa precio y modalidad"
+        }) : ""}
+
+        ${isEditingOffering ? `
+        <section class="provider-flow-step provider-flow-step-rubro-locked">
+          <div class="provider-flow-summary provider-flow-summary-static">
+            <span>1</span>
+            <div>
+              <strong>Que servicio ofreces?</strong>
+              <small>${selectedCategoryLabel ? escapeHtml(selectedCategoryLabel) : "Rubro publicado"}. El nombre publico se edita en Precio y modalidad.</small>
+            </div>
+            <em>Listo</em>
           </div>
         </section>
+        ` : `
+        <details class="provider-flow-step provider-flow-step-ai" ${shouldOpenDiscoveryStep ? "open" : ""}>
+          <summary class="provider-flow-summary">
+            <span>1</span>
+            <div>
+              <strong>Que servicio ofreces?</strong>
+              <small>${visibleServiceLabels.length ? escapeHtml(visibleServiceLabels.join(", ")) : "Buscalo o escribilo simple. MIMI ordena el rubro."}</small>
+            </div>
+            <em>${hasSelectedRubros ? "Listo" : "Pendiente"}</em>
+          </summary>
 
         <section class="provider-simple-card provider-ai-card" data-provider-setup-step="1">
           <div class="provider-simple-card-heading">
             <span>1</span>
             <div>
-              <strong>Agregar otra prestacion</strong>
-              <small>1. Escribis el servicio. 2. MIMI sugiere rubros. 3. Confirmas y guardas.</small>
+              <strong>Que servicio ofreces?</strong>
+              <small>Escribilo como se lo dirias a un cliente. No hace falta completar todo ahora.</small>
             </div>
           </div>
           <div class="provider-ai-input-shell provider-search-box">
-            <textarea name="providerAiPrompt" rows="2" maxlength="500" placeholder="Ej: pintura interior por m2, colocacion de ceramicos, electricidad domiciliaria">${escapeHtml(firstOffering?.description ?? "")}</textarea>
+            <textarea name="providerAiPrompt" rows="2" maxlength="500" placeholder="Ej: Pinto interiores, hago manicura, arreglo perdidas de agua">${escapeHtml(firstOffering?.description ?? "")}</textarea>
             <button class="provider-icon-action provider-mic-inside" data-provider-business-action="start-provider-dictation" type="button" aria-label="Dictar por voz" title="Dictar por voz">🎙</button>
             <button class="btn-primary provider-suggest-button" data-provider-business-action="suggest-provider-service" type="button">Sugerir rubros</button>
           </div>
           <div class="provider-voice-status" id="providerVoiceStatus" hidden></div>
-          <p class="provider-search-helper">MIMI no publica nada automaticamente: primero elegis los rubros sugeridos y despues guardas.</p>
+          <p class="provider-search-helper">Nada se publica automaticamente. Primero elegis rubro, despues revisas precio y modalidad.</p>
         </section>
+
+        ${isAddingOffering && guidedPanelOpen ? renderProviderGuidedServicePanel({ guidedService }) : ""}
 
         <section class="provider-ai-results-panel ${hasSelectedRubros ? "is-visible" : ""}" id="providerAiSuggestionsPanel" ${hasSelectedRubros ? "" : "hidden"} aria-live="polite">
           <div class="provider-results-title">
@@ -1558,29 +3393,43 @@ function renderProviderBusiness(state) {
           </div>
           </div>
         </section>
+        </details>
+        `}
+
+        <details class="provider-flow-step provider-flow-step-details" ${shouldOpenServiceDetails ? "open" : ""}>
+          <summary class="provider-flow-summary">
+            <span>2</span>
+            <div>
+              <strong>Precio y modalidad</strong>
+              <small>${firstOffering?.title ? `${escapeHtml(firstOffering.title)} - ${escapeHtml(primaryPrice)}` : "Nombre publico, precio, unidad y descripcion corta."}</small>
+            </div>
+            <em>${firstOffering?.title && hasAnyPriceValue ? "Listo" : "Pendiente"}</em>
+          </summary>
 
         <section class="provider-simple-card provider-service-details" id="providerServiceDetails">
           <div class="provider-simple-card-heading">
             <span>2</span>
             <div>
-              <strong>Datos del servicio</strong>
-              <small>Esto es lo que el cliente ve antes de pedirte un servicio.</small>
+              <strong>Precio y modalidad</strong>
+              <small>Define el precio visible o marca cotizacion si depende del caso.</small>
             </div>
           </div>
 
           <input type="hidden" name="offering:0:present" value="1">
           <input type="hidden" name="offering:0:id" value="${escapeHtml(firstOffering?.id ?? "")}">
+          <input type="hidden" name="offering:0:serviceTemplateId" value="${escapeHtml(firstOffering?.service_template_id ?? firstOffering?.metadata?.service_template_id ?? "")}">
+          <input type="hidden" name="offering:0:serviceTemplateVersionId" value="${escapeHtml(firstOffering?.service_template_version_id ?? firstOffering?.metadata?.service_template_version_id ?? "")}">
           <input type="checkbox" name="offering:0:active" checked hidden>
 
           <div class="provider-hidden-category-inputs" aria-hidden="true">
             ${categories.map((category) => `
-              <input type="checkbox" name="categoryActive:${escapeHtml(category.id)}" ${selectedCategoryIds.has(category.id) || pricingByCategory.has(category.id) ? "checked" : ""} tabindex="-1">
+              <input type="checkbox" name="categoryActive:${escapeHtml(category.id)}" ${selectedCategoryIds.has(category.id) ? "checked" : ""} tabindex="-1">
             `).join("")}
           </div>
 
           <div class="provider-selected-summary" id="providerSelectedRubrosSummary">
             ${selectedCategories.length
-              ? `Rubro seleccionado: ${escapeHtml(selectedCategories.map((category) => category.name).join(", "))}`
+              ? `Rubros seleccionados: ${escapeHtml(selectedCategories.map((category) => category.name).join(", "))}`
               : "Primero elegi un rubro sugerido para completar el servicio."}
           </div>
 
@@ -1592,21 +3441,27 @@ function renderProviderBusiness(state) {
           </select>
 
           <label class="input-group provider-field-wide">
-            <span>Nombre visible para clientes</span>
-            <input name="offering:0:title" type="text" maxlength="90" value="${escapeHtml(firstOffering?.title ?? "")}" placeholder="Ej: asesoramiento penal, manicura, pintura interior">
+            <span>Nombre publico del servicio</span>
+            <input name="offering:0:title" data-provider-public-title-input="0" type="text" maxlength="90" value="${escapeHtml(firstOffering?.title ?? "")}" placeholder="Ej: asesoramiento penal, manicura, pintura interior">
+            <small>Que el cliente entienda en una linea que puede pedirte.</small>
           </label>
 
           <label class="input-group provider-field-wide">
-            <span>Descripcion clara</span>
+            <span>Descripcion corta</span>
             <textarea name="offering:0:description" maxlength="220" rows="3" placeholder="Conta que incluye, como coordinas y que necesita saber el cliente">${escapeHtml(firstOffering?.description ?? "")}</textarea>
           </label>
 
           <label class="input-group provider-field-wide">
-            <span>Como se vera en la card del cliente</span>
-            <input name="offering:0:publicSummary" type="text" maxlength="140" value="${escapeHtml(firstOffering?.public_summary ?? "")}" placeholder="Ej: consultas online y presenciales a coordinar">
+            <span>Resumen corto para la card</span>
+            <input name="offering:0:publicSummary" type="text" maxlength="140" value="${escapeHtml(firstOffering?.public_summary ?? "")}" placeholder="Ej: consultas online y presenciales con presupuesto en MIMIGO">
           </label>
 
-          <div class="provider-form-grid provider-compact-grid">
+          <div class="provider-form-subtitle">
+            <strong>Precio y modalidad</strong>
+            <span>Usa un precio claro. Si cada caso cambia mucho, marca Cotizar antes de confirmar. ${quotePricingHelp}</span>
+          </div>
+
+          <div class="provider-form-grid provider-compact-grid provider-primary-price-grid">
             <label class="input-group">
               <span>Como cobras</span>
               <select name="offering:0:pricingModel">${renderPricingModelOptions(pricingModel)}</select>
@@ -1623,6 +3478,14 @@ function renderProviderBusiness(state) {
               <span>Precio aproximado</span>
               <input name="offering:0:unitPrice" type="number" min="0" step="100" value="${escapeHtml(String(firstOffering?.unit_price ?? ""))}" placeholder="Ej: 15000">
             </label>
+          </div>
+
+          <details class="provider-advanced-price-details" ${hasAdvancedPriceData ? "open" : ""}>
+            <summary>
+              <span>Opciones avanzadas</span>
+              <small>Duracion, precio por hora, precio cerrado o cotizacion previa.</small>
+            </summary>
+            <div class="provider-form-grid provider-compact-grid">
             <label class="input-group">
               <span>Unidad de referencia</span>
               <input name="offering:0:unitName" type="text" maxlength="40" value="${escapeHtml(firstOffering?.unit_name ?? defaults.unitName)}" placeholder="sesion, consulta, trabajo">
@@ -1639,7 +3502,7 @@ function renderProviderBusiness(state) {
               <span>Duracion estimada</span>
               <input name="offering:0:durationMinutes" type="number" min="15" max="240" step="5" value="${escapeHtml(String(firstOffering?.duration_minutes ?? defaults.durationMinutes))}" placeholder="45">
             </label>
-          </div>
+            </div>
 
           <input name="offering:0:baseVisitFee" type="hidden" value="${escapeHtml(String(firstOffering?.base_visit_fee ?? ""))}">
           <input name="offering:0:minimumCharge" type="hidden" value="${escapeHtml(String(firstOffering?.minimum_charge ?? 0))}">
@@ -1647,83 +3510,176 @@ function renderProviderBusiness(state) {
           <input name="offering:0:maximumHours" type="hidden" value="${escapeHtml(String(firstOffering?.maximum_hours ?? detail?.max_hours_per_service ?? 8))}">
           <label class="provider-check-item">
             <input name="offering:0:quoteRequired" type="checkbox" ${firstOffering?.quote_required ? "checked" : ""}>
-            <span>Prefiero presupuestar antes de confirmar (opcional)</span>
+            <span>Cotizar antes de confirmar<small>${quotePricingHelp}</small></span>
           </label>
+          </details>
+          ${isAddingOffering && guidedPanelOpen ? renderProviderGuidedDraftPreviewShell() : ""}
           <input name="offering:0:clientInstructions" type="hidden" value="${escapeHtml(firstOffering?.client_instructions ?? "")}">
         </section>
+        </details>
 
-        <section class="provider-simple-card">
-          <div class="provider-simple-card-heading">
-            <span>3</span>
-            <div>
-              <strong>Tu ubicacion y zona de trabajo</strong>
-              <small>No cargues horarios: estas disponible cuando te conectas.</small>
-            </div>
+        ${showProfileSection ? `
+        <section class="provider-simple-card provider-profile-collapsible">
+          <details class="provider-profile-details" ${shouldOpenProfileDetails ? "open" : ""}>
+            <summary class="provider-profile-summary">
+              <span class="provider-profile-summary-step">3</span>
+              <div>
+                <strong>Donde trabajas</strong>
+                <small>${shouldOpenProfileDetails ? "Completa lo minimo para ubicar tu servicio." : "Listo. Abrilo solo si queres editar zona o perfil."}</small>
+              </div>
+              <em>${shouldOpenProfileDetails ? "Pendiente" : "Listo"}</em>
+            </summary>
+            <div class="provider-profile-details-body">
+          <div class="provider-profile-section-intro">
+            <strong>Mejora tu perfil para aparecer mejor</strong>
+            <small>No bloquea el alta salvo datos criticos. Podes completar perfil, zona y presentacion despues.</small>
           </div>
-          <div class="provider-form-grid provider-compact-grid">
-            <label class="input-group">
-              <span>Provincia</span>
-              <select name="providerProvince">
-                <option value="">Elegi provincia</option>
-                ${provinceOptions.map((province) => `<option value="${escapeHtml(province)}" data-cities="${escapeHtml((argentinaZones[province] ?? []).join("|"))}" ${selectedProvince === province ? "selected" : ""}>${escapeHtml(province)}</option>`).join("")}
-              </select>
-            </label>
-            <label class="input-group">
-              <span>Ciudad</span>
-              <select name="providerCity" data-provider-city-select>
-                <option value="">Primero elegi provincia</option>
-                ${citySelectOptions.map((city) => `<option value="${escapeHtml(city)}" ${selectedCity === city ? "selected" : ""}>${escapeHtml(city)}</option>`).join("")}
-                <option value="Otra localidad" ${selectedCity === "Otra localidad" ? "selected" : ""}>Otra localidad</option>
-              </select>
-            </label>
-            <label class="input-group provider-field-wide">
-              <span>Direccion/base aproximada</span>
-              <input name="providerAddressText" type="text" maxlength="140" value="${escapeHtml(detail?.address_text ?? "")}" placeholder="Ej: barrio Centro, Nueva Cordoba o zona de referencia">
-            </label>
-            <label class="input-group provider-field-wide" id="providerCoverageRadiusField">
-              <span>Radio de cobertura</span>
-              <select name="providerCoverageRadius">
-                ${[
-                  ["100", "100 m"],
-                  ["500", "500 m"],
-                  ["1000", "1 km"],
-                  ["3000", "3 km"],
-                  ["5000", "5 km"],
-                  ["10000", "10 km"],
-                  ["15000", "15 km"],
-                  ["20000", "20 km"],
-                  ["25000", "25 km"]
-                ].map(([value, label]) => `<option value="${value}" ${String(detail?.metadata?.coverage_radius_meters ?? "10000") === value ? "selected" : ""}>${label}</option>`).join("")}
-              </select>
-              <small>Para servicios online, podes atender en todo el pais.</small>
-            </label>
-            <label class="input-group provider-field-wide">
-              <span>Nombre de pila <small style="color:#dc2626;font-weight:600">*</small></span>
-              <input name="providerFirstName" type="text" maxlength="40" required value="${escapeHtml(detail?.first_name ?? "")}" placeholder="Ej: Juan, María, Paulo">
-            </label>
-            <label class="input-group provider-field-wide">
-              <span>Bio corta</span>
-              <input name="providerBio" type="text" maxlength="180" value="${escapeHtml(detail?.bio ?? "")}" placeholder="Ej: abogado penalista, consultas online y presenciales">
-            </label>
-            <label class="input-group provider-field-wide">
-              <span>Titulo, matricula o aclaracion profesional</span>
-              <input name="providerPublicHeadline" type="text" maxlength="120" value="${escapeHtml(detail?.public_headline ?? "")}" placeholder="Opcional. Usalo solo si aplica.">
-            </label>
-            <label class="input-group provider-field-wide">
-              <span>Video, sitio o sala online</span>
-              <input name="providerVideoIntroUrl" type="url" maxlength="240" value="${escapeHtml(detail?.video_intro_url ?? "")}" placeholder="Opcional">
-            </label>
-          </div>
-          <label class="input-group provider-field-wide">
-            <span>Presentacion profesional</span>
-            <textarea name="providerProfessionalSummary" maxlength="600" rows="3" placeholder="Explica tu alcance, experiencia y forma de coordinar sin prometer resultados">${escapeHtml(detail?.professional_summary ?? "")}</textarea>
-          </label>
-          <div class="provider-ai-description-tools">
-            <button class="btn-secondary" data-provider-business-action="improve-provider-description" type="button">Mejorar descripcion con MIMI</button>
-            <div class="provider-description-suggestion" id="providerDescriptionSuggestion" hidden></div>
+
+          <div class="provider-profile-stepper">
+            <details class="provider-location-editor-step" ${shouldOpenAddressStep ? "open" : ""}>
+              <summary class="provider-location-step-summary">
+                <span>3.1</span>
+                <div>
+                  <strong>Tu zona de trabajo</strong>
+                  <small>${escapeHtml(displayAddressText)}</small>
+                </div>
+                <em>${escapeHtml(addressSourceLabel)}</em>
+              </summary>
+              <article class="provider-identity-address-card ${identityAddressText ? "is-verified" : ""}">
+                <div>
+                  <span class="eyebrow">Domicilio de seguridad</span>
+                  <strong>${escapeHtml(securityAddressText)}</strong>
+                  <small>${escapeHtml(addressSourceHelp)}</small>
+                </div>
+                <em>${escapeHtml(securityAddressStatusLabel)}</em>
+              </article>
+              <div class="provider-address-actions">
+                <button class="provider-location-detect-btn" type="button" data-provider-business-action="use-provider-current-location">
+                  <span class="provider-location-detect-icon" aria-hidden="true">GPS</span>
+                  <span>Usar GPS del telefono</span>
+                </button>
+                <small id="providerAddressLocationStatus" class="provider-address-location-status" aria-live="polite">${providerLocationLat && providerLocationLng ? "GPS guardado para esta base operativa." : "Tambien podes completar la direccion manualmente."}</small>
+              </div>
+              <label class="input-group provider-field-wide">
+                <span>Editar tu zona o domicilio cercano</span>
+                <input name="providerAddressText" type="text" maxlength="140" value="${escapeHtml(currentAddressInputValue)}" placeholder="Ej: Villa Cornu, Laques 9800 o Nueva Cordoba">
+                <small>El domicilio del DNI queda como referencia de seguridad. Este campo define tu zona operativa visible.</small>
+              </label>
+              <input name="providerLocationLat" type="hidden" value="${escapeHtml(providerLocationLat)}">
+              <input name="providerLocationLng" type="hidden" value="${escapeHtml(providerLocationLng)}">
+              <input name="providerLocationAccuracy" type="hidden" value="${escapeHtml(providerLocationAccuracy)}">
+              <input name="providerLocationSource" type="hidden" value="${escapeHtml(providerLocationSource)}">
+            </details>
+
+            <details class="provider-location-editor-step" ${shouldOpenZoneStep ? "open" : ""}>
+              <summary class="provider-location-step-summary">
+                <span>3.2</span>
+                <div>
+                  <strong>Provincia y ciudad</strong>
+                  <small>${selectedProvince && selectedCity ? `${escapeHtml(selectedCity)}, ${escapeHtml(selectedProvince)}` : "Elegir zona de trabajo"}</small>
+                </div>
+                <em>${selectedProvince && selectedCity ? "Listo" : "Pendiente"}</em>
+              </summary>
+              <div class="provider-form-grid provider-compact-grid">
+                <label class="input-group">
+                  <span>Provincia</span>
+                  <select name="providerProvince">
+                    <option value="">Elegi provincia</option>
+                    ${provinceOptions.map((province) => `<option value="${escapeHtml(province)}" data-cities="${escapeHtml((argentinaZones[province] ?? []).join("|"))}" ${selectedProvince === province ? "selected" : ""}>${escapeHtml(province)}</option>`).join("")}
+                  </select>
+                </label>
+                <label class="input-group">
+                  <span>Ciudad</span>
+                  <select name="providerCity" data-provider-city-select>
+                    <option value="">Primero elegi provincia</option>
+                    ${citySelectOptions.map((city) => `<option value="${escapeHtml(city)}" ${citySelectValue === city ? "selected" : ""}>${escapeHtml(city)}</option>`).join("")}
+                    <option value="Otra localidad" ${citySelectValue === "Otra localidad" ? "selected" : ""}>Otra localidad / barrio</option>
+                  </select>
+                </label>
+                <label class="input-group provider-field-wide provider-city-other-field ${shouldShowOtherCity ? "is-visible" : ""}" data-provider-city-other-field ${shouldShowOtherCity ? "" : "hidden"}>
+                  <span>Localidad o barrio</span>
+                  <input name="providerCityOther" type="text" maxlength="80" value="${escapeHtml(providerCityOtherValue)}" placeholder="Ej: Villa Cornu, Alta Gracia, Yerba Buena">
+                  <small>Usalo si tu localidad no aparece en la lista. El GPS tambien puede completarlo.</small>
+                </label>
+                <label class="input-group provider-field-wide" id="providerCoverageRadiusField">
+                  <span>Radio de cobertura</span>
+                  <select name="providerCoverageRadius">
+                    ${[
+                      ["100", "100 m"],
+                      ["500", "500 m"],
+                      ["1000", "1 km"],
+                      ["3000", "3 km"],
+                      ["5000", "5 km"],
+                      ["10000", "10 km"],
+                      ["15000", "15 km"],
+                      ["20000", "20 km"],
+                      ["25000", "25 km"]
+                    ].map(([value, label]) => `<option value="${value}" ${String(profileMetadata.coverage_radius_meters ?? detail?.metadata?.coverage_radius_meters ?? "10000") === value ? "selected" : ""}>${label}</option>`).join("")}
+                  </select>
+                  <small>Para servicios online, podes atender en todo el pais.</small>
+                </label>
+              </div>
+            </details>
+
+            <details class="provider-location-editor-step" ${shouldOpenPublicProfileStep ? "open" : ""}>
+              <summary class="provider-location-step-summary">
+                <span>3.3</span>
+                <div>
+                  <strong>Perfil publico</strong>
+                  <small>${providerFirstNameValue ? `${escapeHtml(providerFirstNameValue)} - ${escapeHtml(detail?.bio || "Bio pendiente")}` : "Nombre, bio y especialidad"}</small>
+                </div>
+                <em>${shouldOpenPublicProfileStep ? "Pendiente" : "Listo"}</em>
+              </summary>
+              <div class="provider-form-grid provider-compact-grid">
+                <label class="input-group provider-field-wide">
+                  <span>Nombre de pila <small style="color:#dc2626;font-weight:600">*</small></span>
+                  <div class="provider-readonly-profile-value" data-provider-public-name>${escapeHtml(providerFirstNameValue || "Nombre pendiente")}</div>
+                  <input name="providerFirstName" type="hidden" value="${escapeHtml(providerFirstNameValue)}">
+                  <small>Viene del documento verificado. Si todavia no hay documento, usamos el nombre de tu cuenta.</small>
+                </label>
+                <label class="input-group provider-field-wide">
+                  <span>Bio corta</span>
+                  <input name="providerBio" type="text" maxlength="180" value="${escapeHtml(detail?.bio ?? "")}" placeholder="Ej: abogado penalista, consultas online y presenciales">
+                </label>
+                <label class="input-group provider-field-wide">
+                  <span>Titulo, matricula o aclaracion profesional</span>
+                  <input name="providerPublicHeadline" type="text" maxlength="120" value="${escapeHtml(detail?.public_headline ?? "")}" placeholder="Opcional. Usalo solo si aplica.">
+                </label>
+                <label class="input-group provider-field-wide">
+                  <span>Video, sitio o sala online</span>
+                  <input name="providerVideoIntroUrl" type="url" maxlength="240" value="${escapeHtml(detail?.video_intro_url ?? "")}" placeholder="Opcional">
+                </label>
+              </div>
+              <label class="input-group provider-field-wide">
+                <span>Presentacion profesional</span>
+                <textarea name="providerProfessionalSummary" maxlength="600" rows="3" placeholder="Explica tu alcance, experiencia y forma de coordinar sin prometer resultados">${escapeHtml(detail?.professional_summary ?? "")}</textarea>
+              </label>
+              <div class="provider-ai-description-tools">
+                <button class="btn-secondary" data-provider-business-action="improve-provider-description" type="button">Mejorar descripcion con MIMI</button>
+                <div class="provider-description-suggestion" id="providerDescriptionSuggestion" hidden></div>
+              </div>
+            </details>
           </div>
           <input name="maxHoursPerService" type="hidden" value="${escapeHtml(String(detail?.max_hours_per_service ?? 8))}">
+            </div>
+          </details>
         </section>
+        ` : `
+        <input name="providerFirstName" type="hidden" value="${escapeHtml(providerFirstNameValue)}">
+        <input name="providerBio" type="hidden" value="${escapeHtml(detail?.bio ?? "")}">
+        <input name="providerPublicHeadline" type="hidden" value="${escapeHtml(detail?.public_headline ?? "")}">
+        <input name="providerProfessionalSummary" type="hidden" value="${escapeHtml(detail?.professional_summary ?? "")}">
+        <input name="providerVideoIntroUrl" type="hidden" value="${escapeHtml(detail?.video_intro_url ?? "")}">
+        <input name="providerAddressText" type="hidden" value="${escapeHtml(currentAddressInputValue)}">
+        <input name="providerProvince" type="hidden" value="${escapeHtml(selectedProvince)}">
+        <input name="providerCity" type="hidden" value="${escapeHtml(selectedCity)}">
+        <input name="providerCoverageRadius" type="hidden" value="${escapeHtml(String(profileMetadata.coverage_radius_meters ?? detail?.metadata?.coverage_radius_meters ?? "10000"))}">
+        <input name="providerLocationLat" type="hidden" value="${escapeHtml(providerLocationLat)}">
+        <input name="providerLocationLng" type="hidden" value="${escapeHtml(providerLocationLng)}">
+        <input name="providerLocationAccuracy" type="hidden" value="${escapeHtml(providerLocationAccuracy)}">
+        <input name="providerLocationSource" type="hidden" value="${escapeHtml(providerLocationSource)}">
+        <input name="maxHoursPerService" type="hidden" value="${escapeHtml(String(detail?.max_hours_per_service ?? 8))}">
+        `}
 
         <section class="provider-simple-footer">
           <div class="provider-profile-quality provider-insight-card">
@@ -1734,35 +3690,21 @@ function renderProviderBusiness(state) {
             </div>
             <strong>${quality.score}%</strong>
           </div>
-          ${(() => {
-            // Si el usuario ya aceptó terms_providers v2026.1.0 antes, no le pedimos volver a aceptar.
-            const acceptances = state.provider?.business?.legalAcceptances ?? [];
-            const acceptedTerms = acceptances.find(
-              (a) => a.document_code === "terms_providers" && a.document_version === "2026.1.0"
-            );
-            const acceptedPrivacy = acceptances.find(
-              (a) => a.document_code === "privacy_policy" && a.document_version === "2026.1.0"
-            );
-            const alreadyAccepted = Boolean(acceptedTerms && acceptedPrivacy);
-            return alreadyAccepted
-              ? `
-                <div class="provider-terms-accepted">
-                  <span>✓ Términos y privacidad aceptados (${new Date(acceptedTerms.accepted_at).toLocaleDateString("es-AR")})</span>
-                  <input name="providerTermsAccepted" type="checkbox" checked hidden>
-                </div>
-              `
-              : `
-                <label class="provider-check-item provider-terms-box">
-                  <input name="providerTermsAccepted" type="checkbox" required>
-                  <span>Acepto los <a href="../terminos.html" target="_blank" rel="noopener">Términos para prestadores</a> y la <a href="../privacidad.html" target="_blank" rel="noopener">Política de privacidad</a>. Entiendo que MIMI es una plataforma tecnológica intermediaria.</span>
-                </label>
-              `;
-          })()}
-          <button class="btn-primary provider-save-button" type="submit">Guardar y publicar servicio</button>
+          <button class="btn-primary provider-save-button" type="submit">
+            <span class="provider-save-button-icon" aria-hidden="true">✓</span>
+            <span>Guardar y publicar servicio</span>
+          </button>
+          <p class="provider-save-helper">Podes volver a editar esta informacion desde Servicios cuando quieras.</p>
+          <p class="provider-save-helper">Los cambios se guardan por el flujo auditado de MIMIGO.</p>
         </section>
       </form>
 
-      ${renderOfferingsSummary(offerings)}
+      ${offerings.length > 1 ? renderOfferingsSummary(offerings, {
+        avatarUrl: providerAvatarUrl,
+        initials: providerInitials,
+        providerName: providerDisplayName,
+        addonsEnabled
+      }) : ""}
     </section>
   `;
   return;
@@ -1846,7 +3788,7 @@ function renderProviderBusiness(state) {
           </label>
           <label class="input-group">
             <span>Video o sala online</span>
-            <input name="providerVideoIntroUrl" type="url" maxlength="240" value="${escapeHtml(detail?.video_intro_url ?? "")}" placeholder="Link profesional, sitio o sala a coordinar">
+            <input name="providerVideoIntroUrl" type="url" maxlength="240" value="${escapeHtml(detail?.video_intro_url ?? "")}" placeholder="Link profesional, sitio o sala online">
           </label>
           <label class="input-group">
             <span>Ciudad o localidad principal</span>
@@ -1938,7 +3880,7 @@ function renderProviderBusiness(state) {
           </div>
           <div class="provider-editor-grid">
             ${[...offerings, null]
-              .map((offering, index) => renderOfferingEditorV2(offering, index, offeringCategories))
+              .map((offering, index) => renderOfferingEditorV2(offering, index, offeringCategories, { addonsEnabled }))
               .join("")}
           </div>
           <div class="provider-wizard-nav">
@@ -2003,113 +3945,154 @@ function renderProviderTrust(state) {
   const business = state.provider.business ?? {};
   const documents = business.documents ?? [];
   const reviews = business.reviews ?? [];
-  const documentsSummary = state.provider.documentsSummary ?? {};
-  const reviewSummary = state.provider.reviewSummary ?? {};
   const profile = state.provider.profile ?? null;
 
   const isApproved = Boolean(profile?.approved);
   const isBlocked = Boolean(profile?.blocked);
   const documentsByType = new Map();
-  documents.forEach((doc) => {
+  for (const doc of documents) {
     const type = String(doc.document_type ?? "").toLowerCase();
-    if (type && !documentsByType.has(type)) documentsByType.set(type, doc);
-  });
-  const documentStatusLabel = (type) => {
-    const doc = documentsByType.get(String(type).toLowerCase());
-    if (!doc) {
-      return isApproved && String(type).toLowerCase() !== "criminal_record_certificate"
-        ? "Aprobado por admin"
-        : "Pendiente";
+    if (!type) continue;
+    const existing = documentsByType.get(type);
+    if (!existing || new Date(doc.created_at ?? 0) > new Date(existing.created_at ?? 0)) {
+      documentsByType.set(type, doc);
     }
-    const status = String(doc.review_status ?? "PENDING").toUpperCase();
-    if (status === "APPROVED") return "Aprobado";
-    if (status === "REJECTED") return "Rechazado";
-    if (status === "NEEDS_RESUBMISSION") return "Reenviar";
-    return "En revisión";
+  }
+
+  const requiredDocs = [
+    ["dni_front", "DNI frente", "Necesario para confirmar tu identidad."],
+    ["dni_back", "DNI dorso", "Tiene que verse claro y completo."],
+    ["selfie", "Selfie", "Nos ayuda a validar que sos la persona del DNI."]
+  ];
+  const conditionalDocs = [
+    ["criminal_record_certificate", "Certificado de antecedentes", "Puede pedirse según rubro o etapa de habilitación."],
+    ["professional_license", "Matrícula profesional", "Solo si tu oficio requiere matrícula o habilitación."],
+    ["degree_certificate", "Título o constancia", "Opcional si querés respaldar tu especialidad."],
+    ["address_proof", "Comprobante de domicilio", "Puede ayudar a validar tu zona de cobertura."]
+  ];
+  const normalizeDocStatus = (doc) => String(doc?.review_status ?? "PENDING").toUpperCase();
+  const statusMeta = (id) => {
+    const doc = documentsByType.get(String(id).toLowerCase());
+    if (!doc) {
+      return isApproved && id !== "criminal_record_certificate"
+        ? { text: "Validado", cls: "approved", helper: "Ya fue validado por el equipo MIMI." }
+        : { text: "Pendiente", cls: "pending", helper: "Todavía no recibimos este documento." };
+    }
+
+    const status = normalizeDocStatus(doc);
+    if (status === "APPROVED") return { text: "Aprobado", cls: "approved", helper: "Documento aprobado. No tenés que hacer nada más." };
+    if (status === "REJECTED") return { text: "Observado", cls: "rejected", helper: "Revisalo y volvé a cargar una versión clara." };
+    if (status === "NEEDS_RESUBMISSION") return { text: "Reenviar", cls: "rejected", helper: "Necesitamos que lo cargues nuevamente." };
+    return { text: "En revisión", cls: "review", helper: "Lo recibimos y está pendiente del equipo MIMI." };
   };
 
-  const totalDocs =
-    Number(documentsSummary.approved ?? 0) +
-    Number(documentsSummary.pending ?? 0) +
-    Number(documentsSummary.observed ?? 0);
+  const requiredApproved = requiredDocs.filter(([id]) => statusMeta(id).cls === "approved").length;
+  const requiredReceived = requiredDocs.filter(([id]) => documentsByType.has(id) || statusMeta(id).cls === "approved").length;
+  const allDocDefinitions = [...requiredDocs, ...conditionalDocs];
+  const observedCount = allDocDefinitions.filter(([id]) => statusMeta(id).cls === "rejected").length;
+  const reviewCount = allDocDefinitions.filter(([id]) => statusMeta(id).cls === "review").length;
+  const progressPct = Math.round((requiredApproved / requiredDocs.length) * 100);
 
   const verificationTitle = isBlocked
     ? "Cuenta bloqueada"
     : isApproved
       ? "Verificación aprobada"
-      : totalDocs > 0
-        ? "Verificación en revisión"
-        : "Completá tu verificación";
+      : observedCount > 0
+        ? "Necesitamos corregir documentos"
+        : requiredReceived > 0 || reviewCount > 0
+          ? "Verificación en revisión"
+          : "Completá tu verificación";
 
   const verificationText = isBlocked
     ? "Tu cuenta necesita revisión del equipo MIMI antes de operar."
     : isApproved
       ? "Tu cuenta está aprobada para operar cuando estés online."
-      : totalDocs > 0
-        ? "Ya recibimos tus documentos. Si alguno queda observado, vas a poder reenviarlo desde acá."
-        : "Subí identidad, antecedentes y, si corresponde, matrícula o título profesional.";
+      : observedCount > 0
+        ? "Hay documentos observados. Reenvialos desde esta pantalla para continuar."
+        : requiredReceived > 0 || reviewCount > 0
+          ? "Recibimos tu información. Te avisamos si falta algo o si algún archivo necesita corrección."
+          : "Empezá por identidad. Los documentos profesionales se piden solo si corresponden a tu servicio.";
 
-  // 🔥 WIZARD PRO CORRECTO
+  const renderDocCard = ([id, title, note]) => {
+    const current = documentsByType.get(id);
+    const meta = statusMeta(id);
+    const status = normalizeDocStatus(current);
+    const hasDocument = Boolean(current);
+    const canUpload = meta.cls !== "approved" && (!hasDocument || ["REJECTED", "NEEDS_RESUBMISSION"].includes(status));
+    const isLocked = !canUpload;
+    const cardClass =
+      meta.cls === "approved" ? "is-approved"
+      : meta.cls === "rejected" ? "is-rejected"
+      : meta.cls === "review" ? "is-review"
+      : "";
+    const approvedCompact = meta.cls === "approved" ? " is-approved-compact" : "";
+    const lockedClass = isLocked ? " is-document-locked" : "";
+    const lockedCopy = isLocked && meta.cls !== "approved"
+      ? `<small class="doc-lock-copy">Ya recibimos este documento. Si el admin pide reenviarlo, se habilitan los botones.</small>`
+      : "";
+    const approvedCopy = meta.cls === "approved"
+      ? `<small class="doc-approved-copy">Aprobado y bloqueado. No necesitás subir otro archivo.</small>`
+      : "";
+    const actions = canUpload
+      ? `
+        <div class="doc-actions-inline--wizard">
+          <button type="button" class="doc-camera-btn" data-camera="${id}">Sacar foto</button>
+          <button type="button" class="doc-upload-btn" data-upload="${id}">Subir archivo</button>
+          <input type="file" class="hidden-input" data-input="${id}" accept="image/*,application/pdf" />
+        </div>
+      `
+      : "";
+
+    return `
+      <div class="doc-wizard-card ${cardClass}${approvedCompact}${lockedClass}" data-doc="${id}" data-document-locked="${isLocked ? "true" : "false"}">
+        <div class="doc-wizard-card__content">
+          <div class="doc-card-heading">
+            <h3>${escapeHtml(title)}</h3>
+            <span class="doc-status-pill" data-status="${escapeHtml(meta.cls)}">${escapeHtml(meta.text)}</span>
+          </div>
+          ${meta.cls === "approved" ? "" : `<p>${escapeHtml(note)}</p>`}
+          <small>${escapeHtml(meta.helper)}</small>
+          ${approvedCopy}
+          ${lockedCopy}
+        </div>
+
+        ${meta.cls === "approved" ? "" : `<div class="doc-preview" id="preview-${id}"></div>`}
+        ${actions}
+
+        <div class="doc-status" id="status-${id}"></div>
+      </div>
+    `;
+  };
+
   const uploadFormHtml = state.session.providerId
     ? `
     <div class="doc-wizard-shell">
 
       <div class="doc-wizard-progress">
-        <strong>Verificación y habilitación</strong>
+        <div>
+          <strong>Documentos principales</strong>
+          <span>${requiredApproved} de ${requiredDocs.length} aprobados</span>
+        </div>
         <div class="docs-progress-bar">
-          <div class="docs-progress-bar__fill" id="docProgressBar"></div>
+          <div class="docs-progress-bar__fill" id="docProgressBar" style="width: ${progressPct}%"></div>
         </div>
       </div>
 
-      ${[
-        ["dni_front", "DNI frente"],
-        ["dni_back", "DNI dorso"],
-        ["selfie", "Selfie"],
-        ["criminal_record_certificate", "Certificado de antecedentes", "Opcional por 15 días"],
-        ["professional_license", "Matrícula profesional"],
-        ["degree_certificate", "Título o constancia"],
-        ["address_proof", "Comprobante de domicilio"]
-      ].map(([id, title, note]) => {
-        const current = documentsByType.get(id);
-        const status = String(current?.review_status ?? "PENDING").toUpperCase();
-        const cardClass =
-          status === "APPROVED" ? "is-approved"
-          : status === "REJECTED" ? "is-rejected"
-          : status === "NEEDS_RESUBMISSION" ? "is-rejected"
-          : "";
-        const pillStatus =
-          status === "APPROVED" ? "approved"
-          : status === "REJECTED" ? "rejected"
-          : status === "NEEDS_RESUBMISSION" ? "rejected"
-          : "pending";
-        const pillStyle =
-          status === "APPROVED" ? "background:rgba(16,185,129,0.15);color:#34d399;border-color:rgba(16,185,129,0.4)"
-          : status === "REJECTED" || status === "NEEDS_RESUBMISSION" ? "background:rgba(239,68,68,0.15);color:#f87171;border-color:rgba(239,68,68,0.4)"
-          : "";
-        return `
-        <div class="doc-wizard-card ${cardClass}" data-doc="${id}">
-          <div class="doc-wizard-card__content">
-            <h3>${title}</h3>
-            <p>${escapeHtml(note ?? "Tomá una foto clara o subí imagen/PDF.")}</p>
-            <span class="doc-status-pill" data-status="${pillStatus}" style="${pillStyle}">${escapeHtml(documentStatusLabel(id))}</span>
-          </div>
-
-          <div class="doc-preview" id="preview-${id}"></div>
-
-          <div class="doc-actions-inline--wizard" ${status === "APPROVED" ? "hidden" : ""}>
-            <button type="button" class="doc-camera-btn" data-camera="${id}">
-              📸 Sacar foto
-            </button>
-            <button type="button" class="doc-upload-btn" data-upload="${id}">
-              📂 Subir archivo
-            </button>
-            <input type="file" class="hidden-input" data-input="${id}" accept="image/*,application/pdf" />
-          </div>
-
-          <div class="doc-status" id="status-${id}"></div>
+      <section class="doc-group">
+        <div class="doc-group-header">
+          <span>Paso 1</span>
+          <h4>Identidad</h4>
         </div>
-      `;
-      }).join("")}
+        ${requiredDocs.map(renderDocCard).join("")}
+      </section>
+
+      <section class="doc-group">
+        <div class="doc-group-header">
+          <span>Paso 2</span>
+          <h4>Habilitación si corresponde</h4>
+        </div>
+        ${conditionalDocs.map(renderDocCard).join("")}
+      </section>
 
     </div>
     `
@@ -2120,57 +4103,38 @@ function renderProviderTrust(state) {
     </div>
     `;
 
-  // Documentos: deduplicar por document_type (cada tipo aparece UNA vez, con la
-  // versión más reciente). Antes mostraba "selfie APPROVED" 9 veces porque
-  // listaba TODOS los registros sin agrupar.
-  const docsByType = new Map();
-  for (const doc of documents) {
-    const type = String(doc.document_type ?? "").toLowerCase();
-    if (!type) continue;
-    const existing = docsByType.get(type);
-    if (!existing || new Date(doc.created_at ?? 0) > new Date(existing.created_at ?? 0)) {
-      docsByType.set(type, doc);
-    }
-  }
-  const dedupedDocs = [...docsByType.values()];
-  const docTypeLabels = {
-    dni_front: "DNI frente",
-    dni_back: "DNI dorso",
-    selfie: "Selfie",
-    criminal_record: "Antecedentes",
-    criminal_record_certificate: "Antecedentes",
-    professional_license: "Matrícula",
-    professional_title: "Título",
-    address_proof: "Domicilio"
-  };
-  const statusLabels = {
-    APPROVED: { text: "✓ Aprobado", cls: "status-approved" },
-    PENDING: { text: "Pendiente", cls: "status-pending" },
-    PENDING_REVIEW: { text: "En revisión", cls: "status-pending" },
-    REVIEW: { text: "En revisión", cls: "status-pending" },
-    REJECTED: { text: "✗ Rechazado", cls: "status-rejected" },
-    NEEDS_RESUBMISSION: { text: "Reenviar", cls: "status-rejected" }
-  };
-
-  // Resumen aparte de docs YA NO se muestra: el estado está en cada card del wizard
-  // de arriba con badges de color. Mantener esto duplicaría info y rompía la UI.
-  const documentsHtml = "";
-
-  // Reseñas: solo se muestran si hay (cuando no hay, no mostramos un bloque "Sin reseñas"
-  // suelto que queda feo — el dato ya aparece en el KPI de rating del hero).
-  const reviewsHtml = reviews.length
+  const recentReviewScores = reviews
+    .map((review) => Number(review.stars ?? review.rating ?? 0))
+    .filter((rating) => Number.isFinite(rating) && rating > 0);
+  const recentReviewCount = recentReviewScores.length;
+  const totalReviewCount = Number(profile?.rating_count ?? state.provider.reviewSummary?.count ?? recentReviewCount);
+  const completedServices = Number(state.provider.stats?.completedServices ?? 0);
+  const fallbackAverage = Number(profile?.rating_avg ?? state.provider.stats?.rating ?? 0);
+  const recentReviewAverage = recentReviewCount
+    ? Number((recentReviewScores.reduce((sum, rating) => sum + rating, 0) / recentReviewCount).toFixed(1))
+    : Number(fallbackAverage.toFixed?.(1) ?? fallbackAverage);
+  const recentReviewPercent = recentReviewAverage > 0
+    ? Math.max(0, Math.min(100, Math.round((recentReviewAverage / 5) * 100)))
+    : 0;
+  const reviewsHtml = recentReviewCount || totalReviewCount
     ? `
       <section class="account-section">
-        <h3>Reseñas recientes</h3>
-        <div class="account-reviews-grid">
-          ${reviews.slice(0, 5).map((r) => `
-            <article class="account-review-card">
-              <div class="account-review-rating">${"★".repeat(Math.min(5, Math.max(0, Number(r.rating || 0))))}</div>
-              ${r.comment ? `<p>${escapeHtml(r.comment)}</p>` : ""}
-              <small>${escapeHtml(formatDate(r.created_at))}</small>
-            </article>
-          `).join("")}
-        </div>
+        <h3>Reputacion</h3>
+        <article class="account-review-summary-card">
+          <div class="account-review-summary-main">
+            <span class="account-review-stars" aria-hidden="true">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+            <strong>${escapeHtml(recentReviewAverage ? recentReviewAverage.toFixed(1) : "0.0")} / 5</strong>
+            <small>${recentReviewCount ? `Promedio de las ultimas ${recentReviewCount} resenas` : "Promedio general de tu perfil"}</small>
+          </div>
+          <div class="account-review-percent">
+            <strong>${recentReviewPercent}%</strong>
+            <span>promedio</span>
+          </div>
+          <div class="account-review-summary-metrics">
+            <span><b>${totalReviewCount || recentReviewCount}</b><small>calificaciones</small></span>
+            <span><b>${completedServices || totalReviewCount || recentReviewCount}</b><small>servicios</small></span>
+          </div>
+        </article>
       </section>
     `
     : "";
@@ -2178,11 +4142,16 @@ function renderProviderTrust(state) {
   container.innerHTML = `
     <section class="provider-stack provider-onboarding-shell">
       <article class="provider-verification-card">
-        <h3>${verificationTitle}</h3>
-        <p>${verificationText}</p>
+        <span class="verification-kicker">Estado de verificación</span>
+        <h3>${escapeHtml(verificationTitle)}</h3>
+        <p>${escapeHtml(verificationText)}</p>
+        <div class="verification-state-grid">
+          <span><strong>${requiredReceived}</strong> recibidos</span>
+          <span><strong>${reviewCount}</strong> en revisión</span>
+          <span><strong>${observedCount}</strong> observados</span>
+        </div>
         ${uploadFormHtml}
       </article>
-      ${documentsHtml}
       ${reviewsHtml}
     </section>
   `;
