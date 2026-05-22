@@ -2,17 +2,27 @@ import { appConfig } from "../config.js";
 import {
   callRpc,
   clearAuthRedirectIntent,
+  clearProviderRegistrationIntent,
   forceCleanSession,
   getSupabaseClient,
+  hasFreshProviderRegistrationIntent,
   recoverSessionSafely,
   signOut as signOutFromSupabase
-} from "./supabase.js?v=2026.05.14.9";
+} from "./supabase.js?v=2026.05.17.2";
 import { buildMockProviders } from "./mock-data.js";
-import { MIMI_NEARBY_REFRESH_INTERVAL_MS } from "./runtime-config.js";
+import {
+  MIMI_NEARBY_REFRESH_INTERVAL_MS,
+  MIMI_REMOTE_BOOTSTRAP_ENABLED
+} from "./runtime-config.js";
 
 const SERVICE_PROVIDER_DOCUMENTS_BUCKET = "service-provider-documents";
 const PROVIDER_DOCUMENT_SELECT = "id,provider_id,document_type,storage_bucket,storage_path,mime_type,file_size_bytes,review_status,review_notes,reviewed_at,metadata_json,created_at,updated_at";
+const NOTIFICATION_SAFE_SELECT = "id,user_id,type,notification_type,title,body,message,icon,data_json,read_at,received_at,delivered_at,delivery_status,created_at,updated_at";
+const CONVERSATION_SAFE_SELECT = "id,request_id,client_user_id,provider_user_id,status,metadata_json,last_message_at,created_at,updated_at";
+const MESSAGE_SAFE_SELECT = "id,conversation_id,sender_user_id,sender_role,message_type,body,read_at,metadata_json,delivery_status,attachments_json,created_at";
 const PROVIDER_WALLET_SAFE_SELECT = "id,provider_id,currency,available_balance,pending_balance,negative_balance,cash_debt_balance,risk_hold_balance,payout_hold_balance,lifetime_earnings,wallet_status,risk_level,cash_enabled,recovery_enabled,last_activity_at,last_recomputed_at,metadata,updated_at";
+const PROVIDER_PROFILE_SAFE_SELECT = "id,provider_id,first_name,bio,address_text,city,province,country_code,pricing_mode,accepts_immediate,accepts_scheduled,max_hours_per_service,onboarding_completed,years_experience,kyc_status,review_status,ai_score,ai_score_label,review_required,risk_flags,reviewed_at,service_modes,public_headline,professional_summary,video_intro_url,phone_number,phone_country_code,phone_verified,phone_verified_at,trusted_device,trusted_until,metadata_json,avatar_public_url,created_at,updated_at";
+const REQUEST_OFFER_SAFE_SELECT = "id,request_id,provider_id,status,sent_at,expires_at,responded_at,created_at,updated_at";
 const SERVICE_REQUEST_SAFE_SELECT = `
   id,
   client_user_id,
@@ -44,6 +54,164 @@ const SERVICE_REQUEST_SAFE_SELECT = `
   updated_at,
   svc_categories(id,name,code,description)
 `;
+const PROVIDER_ACTIVE_REQUEST_STATUSES = [
+  "ACCEPTED",
+  "SCHEDULED",
+  "PROVIDER_EN_ROUTE",
+  "PROVIDER_ARRIVED",
+  "IN_PROGRESS"
+];
+const PROVIDER_GUIDED_SERVICE_FLAG = "MIMI_PROVIDER_GUIDED_SERVICE_ENABLED";
+const PROVIDER_SERVICE_ADDONS_FLAG = "MIMI_PROVIDER_SERVICE_ADDONS_ENABLED";
+
+function isLocalDevelopmentHost() {
+  if (typeof window === "undefined") return false;
+
+  const host = String(window.location?.hostname || "").toLowerCase();
+  return host === "localhost" || host === "127.0.0.1" || host === "::1";
+}
+
+function readRuntimeBooleanFlag(key) {
+  if (typeof window === "undefined") return null;
+
+  const candidates = [
+    window.MIMI_SERVICES_ENV?.[key],
+    window.MIMI_SERVICES_CONFIG?.[key],
+    window[key]
+  ];
+
+  for (const value of candidates) {
+    if (value === true || value === "true" || value === "1" || value === 1) return true;
+    if (value === false || value === "false" || value === "0" || value === 0) return false;
+  }
+
+  return null;
+}
+
+function readLocalGuidedServiceOverride() {
+  if (!isLocalDevelopmentHost()) return null;
+
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const flag = params.get("provider_guided_service_beta");
+
+    if (flag === "1") {
+      localStorage.setItem("mimi_provider_guided_service_beta", "1");
+      return true;
+    }
+
+    if (flag === "0") {
+      localStorage.removeItem("mimi_provider_guided_service_beta");
+      return false;
+    }
+
+    const stored = localStorage.getItem("mimi_provider_guided_service_beta");
+    if (stored === "1") return true;
+    if (stored === "0") return false;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function readLocalProviderServiceAddonsOverride() {
+  if (!isLocalDevelopmentHost()) return null;
+
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const flag = params.get("provider_service_addons_beta");
+
+    if (flag === "1") {
+      localStorage.setItem("mimi_provider_service_addons_beta", "1");
+      return true;
+    }
+
+    if (flag === "0") {
+      localStorage.removeItem("mimi_provider_service_addons_beta");
+      return false;
+    }
+
+    const stored = localStorage.getItem("mimi_provider_service_addons_beta");
+    if (stored === "1") return true;
+    if (stored === "0") return false;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function normalizeFeatureFlagProviderId(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function featureFlagMetadata(flag = {}) {
+  const metadata = flag?.metadata_json ?? flag?.metadata ?? {};
+
+  if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
+    return metadata;
+  }
+
+  if (typeof metadata === "string" && metadata.trim()) {
+    try {
+      const parsed = JSON.parse(metadata);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  return {};
+}
+
+function providerIdsFromFlagMetadata(metadata = {}) {
+  const official = metadata.enabled_provider_ids;
+  const compatibility = metadata.allowed_provider_ids ?? metadata.providers;
+  const values = Array.isArray(official) ? official : Array.isArray(compatibility) ? compatibility : [];
+
+  return values
+    .map((item) => normalizeFeatureFlagProviderId(item?.id ?? item?.provider_id ?? item))
+    .filter(Boolean);
+}
+
+export function providerServiceAddonsFlagAllowsProvider(flag = null, providerId = null) {
+  if (!flag || flag.enabled !== true) return false;
+
+  const scope = String(flag.scope ?? "").trim().toLowerCase();
+  if (scope !== "provider") return false;
+
+  const normalizedProviderId = normalizeFeatureFlagProviderId(providerId);
+  if (!normalizedProviderId) return false;
+
+  const allowedProviderIds = providerIdsFromFlagMetadata(featureFlagMetadata(flag));
+  return allowedProviderIds.includes(normalizedProviderId);
+}
+
+function emptyProviderGuidedServiceCatalog(extra = {}) {
+  return {
+    enabled: false,
+    flagKey: PROVIDER_GUIDED_SERVICE_FLAG,
+    templates: [],
+    loadedAt: new Date().toISOString(),
+    ...extra
+  };
+}
+
+function emptyProviderServiceAddonsConfig(extra = {}) {
+  return {
+    enabled: false,
+    flagKey: PROVIDER_SERVICE_ADDONS_FLAG,
+    source: "default_false",
+    flag: null,
+    ...extra
+  };
+}
+
+function isExpiredProviderResponseRequest(request = {}) {
+  const status = String(request?.status || "").toUpperCase();
+  if (!["SEARCHING", "PENDING_PROVIDER_RESPONSE"].includes(status)) return false;
+  const deadlineMs = Date.parse(request?.provider_response_deadline_at || "");
+  return Number.isFinite(deadlineMs) && deadlineMs <= Date.now();
+}
 const providerSnapshotCache = new Map();
 const PROVIDER_LEGAL_REQUIREMENT_FALLBACKS = [
   {
@@ -74,6 +242,16 @@ const PROVIDER_LEGAL_REQUIREMENT_FALLBACKS = [
 
 function hasBackend() {
   return Boolean(getSupabaseClient());
+}
+
+function withTimeout(promise, ms, label = "operation_timeout") {
+  let timer = null;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(label)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
 }
 
 async function requireSession() {
@@ -193,6 +371,53 @@ function normalizePricingMode(value) {
   }
 
   return "HOURLY";
+}
+
+function categoryLookupKey(value) {
+  return String(value ?? "")
+    .trim()
+    .toUpperCase();
+}
+
+function mergeLocalCategoriesWithRemoteIds(localCategories = [], remoteCategories = []) {
+  const remoteByCode = new Map();
+  const remoteByName = new Map();
+
+  for (const category of remoteCategories ?? []) {
+    if (!category?.id) continue;
+
+    const codeKey = categoryLookupKey(category.code);
+    const nameKey = categoryLookupKey(category.name);
+
+    if (codeKey && !remoteByCode.has(codeKey)) {
+      remoteByCode.set(codeKey, category);
+    }
+
+    if (nameKey && !remoteByName.has(nameKey)) {
+      remoteByName.set(nameKey, category);
+    }
+  }
+
+  return (localCategories ?? []).map((category) => {
+    const remote =
+      remoteByCode.get(categoryLookupKey(category.code)) ||
+      remoteByName.get(categoryLookupKey(category.name));
+
+    if (!remote?.id) return category;
+
+    return {
+      ...category,
+      id: remote.id,
+      local_id: category.id,
+      code: remote.code ?? category.code,
+      default_pricing_model: remote.default_pricing_model ?? category.default_pricing_model,
+      requires_provider_quote: remote.requires_provider_quote ?? category.requires_provider_quote,
+      allowed_service_modes: remote.allowed_service_modes ?? category.allowed_service_modes,
+      requires_professional_license: remote.requires_professional_license ?? category.requires_professional_license,
+      requires_background_check: remote.requires_background_check ?? category.requires_background_check,
+      source: remote.source ?? category.source ?? "supabase"
+    };
+  });
 }
 
 export async function invokeFunction(functionName, body = {}) {
@@ -457,12 +682,60 @@ async function loadProviderLegalRequirements() {
   }
 }
 
-function normalizeProviderDocuments(rows = []) {
-  const supabase = getSupabaseClient();
+function firstImageUrlCandidate(...values) {
+  const pending = [...values];
+  while (pending.length) {
+    const value = pending.shift();
+    if (Array.isArray(value)) {
+      pending.push(...value);
+      continue;
+    }
 
-  return (rows ?? []).map((item) => {
+    const raw = String(value ?? "").trim();
+    if (/^https?:\/\//i.test(raw) || /^data:image\//i.test(raw)) return raw;
+  }
+
+  return null;
+}
+
+async function resolveStorageObjectUrl(bucket, path) {
+  const supabase = getSupabaseClient();
+  if (!supabase?.storage || !bucket || !path) return null;
+
+  try {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(path, 60 * 60);
+    if (!error && data?.signedUrl) return data.signedUrl;
+  } catch (error) {
+    console.warn("[service-api] provider document signed url unavailable", error?.message || error);
+  }
+
+  try {
+    return supabase.storage.from(bucket).getPublicUrl(path).data?.publicUrl || null;
+  } catch {
+    return null;
+  }
+}
+
+async function normalizeProviderDocuments(rows = []) {
+  const supabase = getSupabaseClient();
+  const normalized = await Promise.all((rows ?? []).map(async (item) => {
+    const metadata = item?.metadata_json && typeof item.metadata_json === "object"
+      ? item.metadata_json
+      : {};
     const bucket = item.storage_bucket ?? "service-provider-documents";
     const path = item.storage_path ?? null;
+    const metadataUrl = firstImageUrlCandidate(
+      metadata.avatar_public_url,
+      metadata.profile_photo_url,
+      metadata.public_url,
+      metadata.file_url,
+      metadata.signed_url,
+      metadata.preview_url,
+      metadata.image_url
+    );
+    const signedOrPublicUrl = metadataUrl || await resolveStorageObjectUrl(bucket, path);
     const publicUrl =
       supabase && bucket && path
         ? supabase.storage.from(bucket).getPublicUrl(path).data?.publicUrl ?? null
@@ -470,9 +743,48 @@ function normalizeProviderDocuments(rows = []) {
 
     return {
       ...item,
-      file_url: item.file_url ?? publicUrl
+      public_url: item.public_url ?? metadataUrl ?? publicUrl,
+      signed_url: item.signed_url ?? signedOrPublicUrl,
+      file_url: item.file_url ?? signedOrPublicUrl ?? metadataUrl ?? publicUrl
     };
-  });
+  }));
+
+  return normalized;
+}
+
+function parseStorageReference(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw || /^https?:\/\//i.test(raw) || /^data:image\//i.test(raw)) return null;
+  const match = raw.match(/^storage:\/\/([^/]+)\/(.+)$/i);
+  if (!match) return null;
+  return {
+    bucket: match[1],
+    path: match[2]
+  };
+}
+
+async function resolveProviderAvatarUrl(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw || /^https?:\/\//i.test(raw) || /^data:image\//i.test(raw)) return raw || null;
+
+  const parsed = parseStorageReference(raw);
+  const supabase = getSupabaseClient();
+  if (!parsed || !supabase?.storage) return raw;
+
+  try {
+    const { data, error } = await supabase.storage
+      .from(parsed.bucket)
+      .createSignedUrl(parsed.path, 60 * 60);
+    if (!error && data?.signedUrl) return data.signedUrl;
+  } catch (error) {
+    console.warn("[service-api] provider avatar signed url unavailable", error?.message || error);
+  }
+
+  try {
+    return supabase.storage.from(parsed.bucket).getPublicUrl(parsed.path).data?.publicUrl || raw;
+  } catch {
+    return raw;
+  }
 }
 
 function isProviderPage() {
@@ -537,7 +849,28 @@ export async function bootstrapSession() {
     };
   }
 
-  const { data, error } = await supabase.auth.getSession();
+  let sessionResult = null;
+
+  try {
+    sessionResult = await withTimeout(
+      supabase.auth.getSession(),
+      4500,
+      "AUTH_SESSION_TIMEOUT"
+    );
+  } catch (error) {
+    console.warn("[service-api] auth session unavailable; showing login gate", error?.message || error);
+    forceCleanSession();
+    return {
+      isAuthenticated: false,
+      userId: null,
+      providerId: null,
+      role: null,
+      userEmail: null,
+      userName: null
+    };
+  }
+
+  const { data, error } = sessionResult;
 
   if (error) throw error;
 
@@ -561,18 +894,22 @@ export async function bootstrapSession() {
   const providerSelect =
     "id,user_id,full_name,email,phone,avatar_url,status,approved,blocked,rating_avg,rating_count,last_lat,last_lng,last_location,last_seen_at";
 
-  const { data: providerRows, error: providerLookupError } = await supabase
-    .from("svc_providers")
-    .select(providerSelect)
-    .eq("user_id", user.id)
-    .limit(1);
+  const { data: providerRows, error: providerLookupError } = await withTimeout(
+    supabase
+      .from("svc_providers")
+      .select(providerSelect)
+      .eq("user_id", user.id)
+      .limit(1),
+    8000,
+    "PROVIDER_LOOKUP_TIMEOUT"
+  );
 
   if (providerLookupError) throw providerLookupError;
 
   if (providerRows?.[0]?.id) {
     providerId = providerRows[0].id;
     role = "provider";
-  } else if (isProviderPage()) {
+  } else if (isProviderPage() && hasFreshProviderRegistrationIntent()) {
     const { data: createdProvider, error: createProviderError } = await supabase
       .from("svc_providers")
       .insert({
@@ -595,6 +932,7 @@ export async function bootstrapSession() {
 
     providerId = createdProvider?.id ?? null;
     role = providerId ? "provider" : "client";
+    if (providerId) clearProviderRegistrationIntent();
   }
 
   let clientProfile = null;
@@ -639,12 +977,270 @@ export async function loadCategories() {
     return appConfig.categories ?? [];
   }
 
-  return fetchTable("svc_categories", (query) =>
-    query
-      .select("id,code,name,description,active,aliases,search_keywords,default_pricing_model,requires_provider_quote,allowed_service_modes,requires_professional_license,requires_background_check,parent_category_id,source,discovery_status,auto_created,created_from_query,usage_count,last_matched_at")
-      .eq("active", true)
-      .order("name", { ascending: true })
-  );
+  try {
+    const remoteCategories = await withTimeout(
+      fetchTable("svc_categories", (query) =>
+        query
+          .select("id,code,name,description,active,aliases,search_keywords,default_pricing_model,requires_provider_quote,allowed_service_modes,requires_professional_license,requires_background_check,parent_category_id,source,discovery_status,auto_created,created_from_query,usage_count,last_matched_at")
+          .eq("active", true)
+          .order("name", { ascending: true })
+      ),
+      3500,
+      "CATEGORIES_TIMEOUT"
+    );
+
+    if (!MIMI_REMOTE_BOOTSTRAP_ENABLED) {
+      return mergeLocalCategoriesWithRemoteIds(appConfig.categories ?? [], remoteCategories);
+    }
+
+    return remoteCategories;
+  } catch (error) {
+    console.warn("[service-api] categories fallback", error?.message || error);
+    return appConfig.categories ?? [];
+  }
+}
+
+export async function loadProviderGuidedServiceCatalog({ limit = 80 } = {}) {
+  const runtimeFlag = readRuntimeBooleanFlag(PROVIDER_GUIDED_SERVICE_FLAG);
+  const localOverride = readLocalGuidedServiceOverride();
+  let flagRows = [];
+
+  if (!hasBackend()) {
+    const enabled = localOverride ?? runtimeFlag ?? false;
+    return emptyProviderGuidedServiceCatalog({
+      enabled,
+      source: enabled ? "local_runtime_without_backend" : "disabled_without_backend"
+    });
+  }
+
+  try {
+    flagRows = await withTimeout(
+      fetchTable("svc_feature_flags", (query) =>
+        query
+          .select("key,enabled,scope,description,metadata_json,updated_at")
+          .eq("key", PROVIDER_GUIDED_SERVICE_FLAG)
+          .limit(1)
+      ),
+      2500,
+      "GUIDED_SERVICE_FLAG_TIMEOUT"
+    );
+  } catch (error) {
+    console.warn("[service-api] provider guided service flag fallback", error?.message || error);
+  }
+
+  const remoteFlag = flagRows.find((row) => row?.key === PROVIDER_GUIDED_SERVICE_FLAG);
+  const enabled = localOverride ?? runtimeFlag ?? remoteFlag?.enabled === true;
+
+  if (!enabled) {
+    return emptyProviderGuidedServiceCatalog({
+      enabled: false,
+      source: remoteFlag ? "svc_feature_flags" : "default_false",
+      flag: remoteFlag ?? null
+    });
+  }
+
+  try {
+    const templateLimit = Math.max(1, Math.min(Number(limit) || 80, 120));
+    const templates = await withTimeout(
+      fetchTable("svc_service_templates", (query) =>
+        query
+          .select("id,category_id,slug,name,description,macro_vertical,service_family,default_pricing_model,default_quote_required,regulated_level,sensitive_level,requires_admin_approval,requires_credentials,default_question_strategy,is_active,created_at,updated_at")
+          .eq("is_active", true)
+          .order("macro_vertical", { ascending: true })
+          .order("service_family", { ascending: true })
+          .order("name", { ascending: true })
+          .limit(templateLimit)
+      ),
+      4500,
+      "GUIDED_SERVICE_TEMPLATES_TIMEOUT"
+    );
+
+    const templateIds = templates.map((item) => item.id).filter(Boolean);
+    const categoryIds = [...new Set(templates.map((item) => item?.category_id).filter(Boolean))];
+    let categoryById = new Map();
+
+    if (categoryIds.length) {
+      try {
+        const categoryRows = await fetchTable("svc_categories", (query) =>
+          query
+            .select("id,code,name,description,default_pricing_model,requires_provider_quote,requires_professional_license,requires_background_check")
+            .in("id", categoryIds)
+        );
+        categoryById = new Map((categoryRows ?? []).map((category) => [category.id, category]));
+      } catch (error) {
+        console.warn("[service-api] provider guided service categories fallback", error?.message || error);
+      }
+    }
+
+    if (!templateIds.length) {
+      return {
+        enabled: true,
+        flagKey: PROVIDER_GUIDED_SERVICE_FLAG,
+        source: localOverride === true ? "local_override" : runtimeFlag === true ? "runtime" : "svc_feature_flags",
+        flag: remoteFlag ?? null,
+        templates: [],
+        loadedAt: new Date().toISOString()
+      };
+    }
+
+    const versions = await fetchTable("svc_service_template_versions", (query) =>
+      query
+        .select("id,service_template_id,version_number,status,title,description,pricing_model,quote_required_default,question_strategy_default,metadata_json,published_at,created_at,updated_at")
+        .in("service_template_id", templateIds)
+        .eq("status", "active")
+        .order("version_number", { ascending: false })
+    );
+    const activeVersionByTemplate = new Map();
+
+    for (const version of versions) {
+      if (!version?.service_template_id || activeVersionByTemplate.has(version.service_template_id)) continue;
+      activeVersionByTemplate.set(version.service_template_id, version);
+    }
+
+    const versionIds = versions.map((item) => item.id).filter(Boolean);
+    const [attributes, questions, pricingRules, requirementsByTemplate, requirementsByVersion] = await Promise.all([
+      versionIds.length
+        ? fetchTable("svc_service_attributes", (query) =>
+            query
+              .select("id,template_version_id,code,label,description,data_type,unit,required,affects_price,affects_matching,can_be_extracted_from_text,ask_only_if_missing,enum_options,validation_json,sort_order,created_at")
+              .in("template_version_id", versionIds)
+              .order("sort_order", { ascending: true })
+          )
+        : Promise.resolve([]),
+      versionIds.length
+        ? fetchTable("svc_service_questions", (query) =>
+            query
+              .select("id,template_version_id,attribute_id,question_text,helper_text,answer_type,required,question_strategy,show_if_json,risk_check_json,sort_order,created_at")
+              .in("template_version_id", versionIds)
+              .order("sort_order", { ascending: true })
+          )
+        : Promise.resolve([]),
+      versionIds.length
+        ? fetchTable("svc_pricing_rules", (query) =>
+            query
+              .select("id,template_version_id,pricing_model,rule_type,condition_json,formula_json,min_price,max_price,currency,quote_if_missing_attributes,quote_if_low_confidence,allow_search_without_full_price,is_active,created_at,updated_at")
+              .in("template_version_id", versionIds)
+              .eq("is_active", true)
+          )
+        : Promise.resolve([]),
+      fetchTable("svc_regulated_service_requirements", (query) =>
+        query
+          .select("id,service_template_id,template_version_id,requirement_type,requirement_label,required_document_type,jurisdiction_required,admin_approval_required,emergency_disclaimer_required,blocks_auto_pricing,blocks_results_without_disclaimer,metadata_json,created_at")
+          .in("service_template_id", templateIds)
+      ),
+      versionIds.length
+        ? fetchTable("svc_regulated_service_requirements", (query) =>
+            query
+              .select("id,service_template_id,template_version_id,requirement_type,requirement_label,required_document_type,jurisdiction_required,admin_approval_required,emergency_disclaimer_required,blocks_auto_pricing,blocks_results_without_disclaimer,metadata_json,created_at")
+              .in("template_version_id", versionIds)
+          )
+        : Promise.resolve([])
+    ]);
+
+    const groupBy = (items, key) => {
+      const grouped = new Map();
+      for (const item of items ?? []) {
+        const value = item?.[key];
+        if (!value) continue;
+        if (!grouped.has(value)) grouped.set(value, []);
+        grouped.get(value).push(item);
+      }
+      return grouped;
+    };
+    const attributesByVersion = groupBy(attributes, "template_version_id");
+    const questionsByVersion = groupBy(questions, "template_version_id");
+    const pricingByVersion = groupBy(pricingRules, "template_version_id");
+    const requirementsByTemplateId = groupBy(requirementsByTemplate, "service_template_id");
+    const requirementsByVersionId = groupBy(requirementsByVersion, "template_version_id");
+
+    return {
+      enabled: true,
+      flagKey: PROVIDER_GUIDED_SERVICE_FLAG,
+      source: localOverride === true ? "local_override" : runtimeFlag === true ? "runtime" : "svc_feature_flags",
+      flag: remoteFlag ?? null,
+      templates: templates.map((template) => {
+        const activeVersion = activeVersionByTemplate.get(template.id) ?? null;
+        const activeVersionId = activeVersion?.id ?? null;
+        const regulatedRequirements = [
+          ...(requirementsByTemplateId.get(template.id) ?? []),
+          ...(activeVersionId ? requirementsByVersionId.get(activeVersionId) ?? [] : [])
+        ];
+
+        return {
+          ...template,
+          category: categoryById.get(template.category_id) ?? null,
+          active_version: activeVersion,
+          attributes: activeVersionId ? attributesByVersion.get(activeVersionId) ?? [] : [],
+          questions: activeVersionId ? questionsByVersion.get(activeVersionId) ?? [] : [],
+          pricing_rules: activeVersionId ? pricingByVersion.get(activeVersionId) ?? [] : [],
+          regulated_requirements: regulatedRequirements
+        };
+      }),
+      loadedAt: new Date().toISOString()
+    };
+  } catch (error) {
+    console.warn("[service-api] provider guided service catalog fallback", error?.message || error);
+    return emptyProviderGuidedServiceCatalog({
+      enabled,
+      source: "catalog_unavailable",
+      flag: remoteFlag ?? null,
+      error: error?.message || String(error)
+    });
+  }
+}
+
+export async function loadProviderServiceAddonsConfig({ providerId = null } = {}) {
+  const runtimeFlag = readRuntimeBooleanFlag(PROVIDER_SERVICE_ADDONS_FLAG);
+  const localOverride = readLocalProviderServiceAddonsOverride();
+  let flagRows = [];
+
+  if (!hasBackend()) {
+    const localRuntimeEnabled = isLocalDevelopmentHost() && runtimeFlag === true;
+    const enabled = localOverride ?? localRuntimeEnabled;
+    return emptyProviderServiceAddonsConfig({
+      enabled,
+      source: enabled ? "local_runtime_without_backend" : "disabled_without_backend"
+    });
+  }
+
+  try {
+    flagRows = await withTimeout(
+      fetchTable("svc_feature_flags", (query) =>
+        query
+          .select("key,enabled,scope,description,metadata_json,updated_at")
+          .eq("key", PROVIDER_SERVICE_ADDONS_FLAG)
+          .limit(1)
+      ),
+      2500,
+      "PROVIDER_SERVICE_ADDONS_FLAG_TIMEOUT"
+    );
+  } catch (error) {
+    console.warn("[service-api] provider service addons flag fallback", error?.message || error);
+  }
+
+  const remoteFlag = flagRows.find((row) => row?.key === PROVIDER_SERVICE_ADDONS_FLAG);
+  const localRuntimeEnabled = isLocalDevelopmentHost() && runtimeFlag === true;
+  const providerAllowed = providerServiceAddonsFlagAllowsProvider(remoteFlag, providerId);
+  const enabled = localOverride ?? (localRuntimeEnabled || providerAllowed);
+  const source = localOverride === true
+    ? "local_override"
+    : localOverride === false
+      ? "local_override_disabled"
+      : localRuntimeEnabled
+        ? "local_runtime"
+        : providerAllowed
+          ? "provider_scope_allowlist"
+          : remoteFlag
+            ? "provider_scope_denied"
+            : "default_false";
+
+  return emptyProviderServiceAddonsConfig({
+    enabled,
+    source,
+    flag: remoteFlag ?? null,
+    providerId: providerId ?? null,
+    loadedAt: new Date().toISOString()
+  });
 }
 
 export async function resolveServiceIntent(query, { limit = 5 } = {}) {
@@ -749,7 +1345,7 @@ export async function searchProviders(categoryId, draft = {}) {
     await requireSession();
   } catch (error) {
     if (error?.code === "AUTH_REQUIRED" || error?.message === "AUTH_REQUIRED") {
-      return buildMockProviders(categoryId, draft);
+      throw error;
     }
 
     throw error;
@@ -1040,14 +1636,14 @@ async function searchProvidersFromTables(categoryId, draft = {}) {
         pricing_model: offering.pricing_model ?? null,
         unit_name: offering.unit_name ?? null,
         session_duration_minutes: offering.duration_minutes ?? null,
-        // price_label = "A coordinar" SOLO si quote_required Y no hay ningún precio cargado
+        // Etiqueta visible solo si quote_required y no hay ningún precio cargado.
         price_label:
           offering.quote_required &&
           !offering.unit_price &&
           !offering.price_per_hour &&
           !offering.fixed_price &&
           !offering.base_visit_fee
-            ? "A coordinar"
+            ? "Pendiente de cotización"
             : null,
         source: "table_fallback"
       };
@@ -1105,6 +1701,12 @@ export async function createRequest(payload = {}) {
     address_text: payload.address,
     service_lat: payload.serviceLat,
     service_lng: payload.serviceLng,
+    location_accuracy_m: payload.locationAccuracyM ?? null,
+    location_source: payload.locationSource ?? null,
+    geocode_source: payload.geocodeSource ?? null,
+    location_quality: payload.locationQuality ?? null,
+    location_confirmed_at: payload.locationConfirmedAt ?? null,
+    location_needs_review: Boolean(payload.locationNeedsReview),
     request_type: payload.requestType,
     scheduled_for: payload.scheduledFor,
     requested_hours: payload.requestedHours,
@@ -1140,7 +1742,7 @@ export async function loadActiveRequest({ userId = null, providerId = null } = {
   if (providerId) {
     query = query.or(
       `selected_provider_id.eq.${providerId},accepted_provider_id.eq.${providerId}`
-    );
+    ).in("status", PROVIDER_ACTIVE_REQUEST_STATUSES);
   } else if (userId) {
     query = query.eq("client_user_id", userId);
   } else {
@@ -1151,7 +1753,10 @@ export async function loadActiveRequest({ userId = null, providerId = null } = {
 
   if (error) throw error;
 
-  return data?.[0] ?? null;
+  const request = data?.[0] ?? null;
+  if (isExpiredProviderResponseRequest(request)) return null;
+
+  return request;
 }
 
 export async function loadClientServiceHistory(userId, { limit = 20 } = {}) {
@@ -1273,7 +1878,7 @@ export async function loadConversationForRequest(requestId) {
 
   const rows = await fetchTable("svc_conversations", (query) =>
     query
-      .select("*")
+      .select(CONVERSATION_SAFE_SELECT)
       .eq("request_id", requestId)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -1289,7 +1894,7 @@ export async function loadMessages(conversationId) {
 
   return fetchTable("svc_messages", (query) =>
     query
-      .select("*")
+      .select(MESSAGE_SAFE_SELECT)
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true })
       .limit(100)
@@ -1316,18 +1921,69 @@ export async function sendMessage({ conversationId, body }) {
   return data?.message ?? data;
 }
 
-export async function loadNotifications(userId) {
+export async function loadNotifications(userId, options = {}) {
   if (!hasBackend() || !userId) return [];
 
   await requireSession();
 
+  const limit = Math.min(
+    Math.max(Number(options.limit ?? 40) || 40, 10),
+    80
+  );
+
   return fetchTable("svc_notifications", (query) =>
     query
-      .select("*")
+      .select(NOTIFICATION_SAFE_SELECT)
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
-      .limit(50)
+      .limit(limit)
   );
+}
+
+export async function markRemoteNotificationsRead({ notificationIds = [], markAll = false } = {}) {
+  const ids = Array.isArray(notificationIds)
+    ? notificationIds.map((id) => String(id || "").trim()).filter(Boolean).slice(0, 100)
+    : [];
+
+  if (!markAll && ids.length === 0) {
+    return { ok: true, updated_count: 0 };
+  }
+
+  if (!hasBackend()) {
+    return { ok: true, updated_count: ids.length };
+  }
+
+  await requireSession();
+
+  return invokeFunction(appConfig.functions.markNotificationRead || "mark-notification-read", {
+    notification_ids: ids,
+    mark_all: Boolean(markAll),
+    mark_read: true,
+    mark_delivered: true
+  });
+}
+
+export async function markRemoteNotificationsDelivered({ notificationIds = [], markAll = false } = {}) {
+  const ids = Array.isArray(notificationIds)
+    ? notificationIds.map((id) => String(id || "").trim()).filter(Boolean).slice(0, 100)
+    : [];
+
+  if (!markAll && ids.length === 0) {
+    return { ok: true, updated_count: 0 };
+  }
+
+  if (!hasBackend()) {
+    return { ok: true, updated_count: ids.length };
+  }
+
+  await requireSession();
+
+  return invokeFunction(appConfig.functions.markNotificationRead || "mark-notification-read", {
+    notification_ids: ids,
+    mark_all: Boolean(markAll),
+    mark_read: false,
+    mark_delivered: true
+  });
 }
 
 export async function loadOffers(providerId) {
@@ -1336,10 +1992,10 @@ export async function loadOffers(providerId) {
   await requireSession();
   const nowIso = new Date().toISOString();
 
-  const offers = await fetchTable("svc_request_offers", (query) =>
+  const rows = await fetchTable("svc_request_offers", (query) =>
     query
       .select(`
-        *,
+        ${REQUEST_OFFER_SAFE_SELECT},
         svc_requests(
           id,
           client_user_id,
@@ -1371,50 +2027,7 @@ export async function loadOffers(providerId) {
       .limit(20)
   );
 
-  return attachPaymentStatusToOffers(offers ?? []);
-}
-
-async function attachPaymentStatusToOffers(offers = []) {
-  if (!offers.length) return offers;
-
-  const requestIds = [
-    ...new Set(
-      offers
-        .map((offer) => offer?.request_id ?? offer?.svc_requests?.id ?? offer?.request?.id ?? offer?.id)
-        .filter(Boolean)
-    )
-  ];
-  if (!requestIds.length) return offers;
-
-  try {
-    const paymentRows = await fetchTable("payments", (query) =>
-      query
-        .select("id,context_id,service_request_id,status,provider_name,provider_payment_id,checkout_url,total_amount,provider_amount,currency,is_test,created_at")
-        .eq("context_type", "SERVICE_REQUEST")
-        .in("context_id", requestIds)
-        .order("created_at", { ascending: false })
-        .limit(100)
-    );
-
-    const byRequest = new Map();
-    (paymentRows ?? []).forEach((payment) => {
-      const requestId = payment.context_id ?? payment.service_request_id;
-      if (requestId && !byRequest.has(requestId)) byRequest.set(requestId, payment);
-    });
-
-    return offers.map((offer) => {
-      const requestId = offer?.request_id ?? offer?.svc_requests?.id ?? offer?.request?.id ?? offer?.id;
-      const payment = byRequest.get(requestId) ?? null;
-      return {
-        ...offer,
-        payment,
-        payment_status: String(payment?.status ?? "PENDING").toUpperCase()
-      };
-    });
-  } catch (error) {
-    console.warn("[service-api] provider payment status lookup skipped", error);
-    return offers;
-  }
+  return attachPaymentStatusToOffers(rows);
 }
 
 export async function loadOfferDetails(offerId) {
@@ -1425,7 +2038,7 @@ export async function loadOfferDetails(offerId) {
   const rows = await fetchTable("svc_request_offers", (query) =>
     query
       .select(`
-        *,
+        ${REQUEST_OFFER_SAFE_SELECT},
         svc_requests(
           id,
           client_user_id,
@@ -1454,8 +2067,60 @@ export async function loadOfferDetails(offerId) {
       .limit(1)
   );
 
-  const enriched = await attachPaymentStatusToOffers(rows ?? []);
-  return enriched?.[0] ?? null;
+  const withPayments = await attachPaymentStatusToOffers(rows);
+  return withPayments?.[0] ?? null;
+}
+
+async function attachPaymentStatusToOffers(rows = []) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const requestIds = [
+    ...new Set(
+      safeRows
+        .map((row) => row?.svc_requests?.id ?? row?.request?.id ?? row?.request_id)
+        .map((id) => String(id || "").trim())
+        .filter(Boolean)
+    )
+  ];
+
+  if (!requestIds.length) return safeRows;
+
+  let paymentRows = [];
+  try {
+    paymentRows = await fetchTable("payments", (query) =>
+      query
+        .select("id,service_request_id,status,provider_name,environment,is_test,checkout_url,created_at,updated_at")
+        .in("service_request_id", requestIds)
+        .order("created_at", { ascending: false })
+        .limit(Math.max(20, requestIds.length * 2))
+    );
+  } catch (error) {
+    console.warn("[service-api] provider offer payment status unavailable", error?.message || error);
+    return safeRows;
+  }
+
+  const latestByRequest = new Map();
+  for (const payment of paymentRows ?? []) {
+    const requestId = String(payment?.service_request_id || "");
+    if (requestId && !latestByRequest.has(requestId)) latestByRequest.set(requestId, payment);
+  }
+
+  return safeRows.map((row) => {
+    const request = row?.svc_requests ?? row?.request ?? {};
+    const requestId = String(request?.id ?? row?.request_id ?? "");
+    const payment = latestByRequest.get(requestId) ?? null;
+    if (!payment) return row;
+    return {
+      ...row,
+      payment,
+      payment_status: payment.status ?? null,
+      svc_requests: row.svc_requests
+        ? { ...row.svc_requests, payment, payment_status: payment.status ?? null }
+        : row.svc_requests,
+      request: row.request
+        ? { ...row.request, payment, payment_status: payment.status ?? null }
+        : row.request
+    };
+  });
 }
 
 export async function updateRequestStatus(functionName, payload = {}) {
@@ -1579,36 +2244,51 @@ export async function loadProviderWorkspace(providerId) {
 
   await requireSession();
 
-  const legalRequirementsPromise = loadProviderLegalRequirements();
+  const safeProviderWorkspaceRead = async (label, loader, fallback = []) => {
+    try {
+      const value = await loader();
+      return value ?? fallback;
+    } catch (error) {
+      console.warn(`[service-api] provider workspace ${label} fallback`, error?.message || error);
+      return typeof fallback === "function" ? fallback(error) : fallback;
+    }
+  };
+
+  const legalRequirementsPromise = safeProviderWorkspaceRead(
+    "legal requirements",
+    () => loadProviderLegalRequirements(),
+    []
+  );
 
   const [
     profileRows,
     profileDetailRows,
     pricingRows,
     offeringRows,
+    addonRows,
     availabilityRows,
     documentRows,
     reviewRows,
     categoryRows,
-    completedRows
+    completedCountResult
   ] = await Promise.all([
-    fetchTable("svc_providers", (query) =>
+    safeProviderWorkspaceRead("profile", () => fetchTable("svc_providers", (query) =>
       query
         .select(
           "id,user_id,full_name,email,phone,avatar_url,status,approved,blocked,rating_avg,rating_count,last_lat,last_lng,last_location,last_seen_at"
         )
         .eq("id", providerId)
         .limit(1)
-    ),
+    )),
 
-    fetchTable("svc_provider_profiles", (query) =>
+    safeProviderWorkspaceRead("profile detail", () => fetchTable("svc_provider_profiles", (query) =>
       query
-        .select("*")
+        .select(PROVIDER_PROFILE_SAFE_SELECT)
         .eq("provider_id", providerId)
         .limit(1)
-    ),
+    )),
 
-    fetchTable("svc_provider_pricing", (query) =>
+    safeProviderWorkspaceRead("pricing", () => fetchTable("svc_provider_pricing", (query) =>
       query
         .select(
           "id,provider_id,category_id,currency,price_per_hour,minimum_hours,maximum_hours,active,svc_categories(name,code,description,default_pricing_model,allowed_service_modes,requires_professional_license,requires_background_check)"
@@ -1616,28 +2296,35 @@ export async function loadProviderWorkspace(providerId) {
         .eq("provider_id", providerId)
         .eq("active", true)
         .limit(50)
-    ),
+    )),
 
-    fetchTable("svc_provider_service_offerings", (query) =>
+    safeProviderWorkspaceRead("offerings", () => fetchTable("svc_provider_service_offerings", (query) =>
       query
         .select(
           "id,provider_id,category_id,title,description,pricing_model,currency,price_per_hour,base_visit_fee,fixed_price,unit_name,unit_price,minimum_charge,minimum_hours,maximum_hours,quote_required,active,metadata,service_mode,duration_minutes,location_policy,public_summary,client_instructions,created_at,updated_at,svc_categories(name,code,description,default_pricing_model,allowed_service_modes,requires_professional_license,requires_background_check)"
         )
         .eq("provider_id", providerId)
-        .eq("active", true)
         .order("updated_at", { ascending: false })
         .limit(80)
-    ),
+    )),
 
-    fetchTable("svc_provider_availability", (query) =>
+    safeProviderWorkspaceRead("offering addons", () => fetchTable("svc_provider_offering_addons", (query) =>
+      query
+        .select("id,provider_id,offering_id,name,description,addon_code,price,pricing_model,unit,is_active,created_at,updated_at")
+        .eq("provider_id", providerId)
+        .order("created_at", { ascending: true })
+        .limit(160)
+    )),
+
+    safeProviderWorkspaceRead("availability", () => fetchTable("svc_provider_availability", (query) =>
       query
         .select("id,provider_id,day_of_week,start_time,end_time,active")
         .eq("provider_id", providerId)
         .eq("active", true)
         .order("day_of_week", { ascending: true })
-    ),
+    )),
 
-    fetchTable("svc_provider_documents", (query) =>
+    safeProviderWorkspaceRead("documents", () => fetchTable("svc_provider_documents", (query) =>
       query
         .select(PROVIDER_DOCUMENT_SELECT)
         .eq("provider_id", providerId)
@@ -1646,31 +2333,30 @@ export async function loadProviderWorkspace(providerId) {
         // y con limit 10 los DNI quedaban afuera del fetch, mostrándose como
         // "Pendiente" aunque estuvieran APPROVED en DB.
         .limit(200)
-    ),
+    )),
 
-    fetchTable("svc_reviews", (query) =>
+    safeProviderWorkspaceRead("reviews", () => fetchTable("svc_reviews", (query) =>
       query
         .select("id,provider_id,client_user_id,rating,stars,created_at")
         .eq("provider_id", providerId)
         .order("created_at", { ascending: false })
         .limit(4)
-    ),
+    )),
 
-    fetchTable("svc_provider_categories", (query) =>
+    safeProviderWorkspaceRead("categories", () => fetchTable("svc_provider_categories", (query) =>
       query
         .select("id,provider_id,category_id,active,svc_categories(name,code,description)")
         .eq("provider_id", providerId)
         .eq("active", true)
         .limit(20)
-    ),
+    )),
 
-    fetchTable("svc_requests", (query) =>
-      query
-        .select("id")
-        .eq("selected_provider_id", providerId)
-        .eq("status", "COMPLETED")
-        .limit(500)
-    )
+    safeProviderWorkspaceRead("completed count", () => supabase
+      .from("svc_requests")
+      .select("id", { count: "exact" })
+      .or(`selected_provider_id.eq.${providerId},accepted_provider_id.eq.${providerId}`)
+      .eq("status", "COMPLETED")
+      .limit(1), { count: 0 })
   ]);
 
   // ¿Ya aceptó los términos de la versión actual? (para no pedirlos cada vez)
@@ -1693,19 +2379,328 @@ export async function loadProviderWorkspace(providerId) {
     }
   }
 
+  const profileRow = profileRows?.[0] ?? null;
+  const profileDetailRow = profileDetailRows?.[0] ?? null;
+  const resolvedAvatarUrl = await resolveProviderAvatarUrl(
+    profileDetailRow?.avatar_public_url || profileRow?.avatar_url
+  );
+  if (resolvedAvatarUrl && profileRow) profileRow.avatar_url = resolvedAvatarUrl;
+  if (resolvedAvatarUrl && profileDetailRow && !profileDetailRow.avatar_public_url) {
+    profileDetailRow.avatar_public_url = resolvedAvatarUrl;
+  }
+
+  const addonsByOfferingId = new Map();
+  for (const addon of addonRows ?? []) {
+    const offeringId = addon?.offering_id;
+    if (!offeringId) continue;
+    if (!addonsByOfferingId.has(offeringId)) addonsByOfferingId.set(offeringId, []);
+    addonsByOfferingId.get(offeringId).push(addon);
+  }
+
+  const offeringsWithAddons = (offeringRows ?? []).map((offering) => ({
+    ...offering,
+    addons: addonsByOfferingId.get(offering.id) ?? []
+  }));
+
   return {
-    profile: profileRows?.[0] ?? null,
-    profileDetail: profileDetailRows?.[0] ?? null,
+    profile: profileRow,
+    profileDetail: profileDetailRow,
     pricing: pricingRows ?? [],
-    offerings: offeringRows ?? [],
+    offerings: offeringsWithAddons,
+    addons: addonRows ?? [],
     availability: availabilityRows ?? [],
-    documents: normalizeProviderDocuments(documentRows),
+    documents: await normalizeProviderDocuments(documentRows),
     reviews: reviewRows ?? [],
     categories: categoryRows ?? [],
-    completedCount: completedRows?.length ?? 0,
+    completedCount: completedCountResult?.count ?? 0,
     legalRequirements,
     legalAcceptances
   };
+}
+
+function normalizeUuidForSave(value) {
+  const normalized = String(value ?? "").trim();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(normalized)
+    ? normalized
+    : "";
+}
+
+function normalizeProviderIdForSave(value) {
+  const candidate = typeof value === "object" && value
+    ? value.id ?? value.provider_id ?? value.providerId
+    : value;
+  return normalizeUuidForSave(candidate);
+}
+
+async function saveProviderWorkspaceViaEdge(providerId, payload = {}) {
+  const functionName = appConfig.functions.saveProviderService;
+  if (!functionName) {
+    const error = new Error("provider_service_save_function_missing");
+    error.code = "provider_service_save_function_missing";
+    throw error;
+  }
+
+  const normalizedProviderId = normalizeProviderIdForSave(providerId);
+  if (!normalizedProviderId) {
+    const error = new Error("provider_id_invalid");
+    error.code = "provider_id_invalid";
+    throw error;
+  }
+
+  const correlationId =
+    crypto.randomUUID?.() ||
+    `provider-save-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+  if (!appConfig.supabaseUrl || !appConfig.supabaseAnonKey) {
+    const error = new Error("provider_service_save_config_missing");
+    error.code = "provider_service_save_config_missing";
+    error.correlationId = correlationId;
+    throw error;
+  }
+
+  const session = await requireSession();
+
+  // Critical save path: use explicit fetch so the audited function receives
+  // a plain JSON body and provider header while still enforcing Supabase JWT.
+  const response = await fetch(
+    `${appConfig.supabaseUrl.replace(/\/+$/, "")}/functions/v1/${functionName}?provider_id=${encodeURIComponent(normalizedProviderId)}`,
+    {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        "Authorization": `Bearer ${session.access_token}`,
+        "apikey": appConfig.supabaseAnonKey,
+        "Content-Type": "application/json",
+        "X-MIMI-Provider-Id": normalizedProviderId,
+        "X-MIMI-Correlation-Id": correlationId
+      },
+      body: JSON.stringify({
+        providerId: normalizedProviderId,
+        provider_id: normalizedProviderId,
+        payload,
+        correlationId,
+        correlation_id: correlationId
+      })
+    }
+  );
+
+  const result = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const code = result?.code || result?.error || `provider_service_save_http_${response.status}`;
+    console.warn("[MIMI Save] svc-save-provider-service rejected", {
+      status: response.status,
+      code,
+      correlationId: result?.correlation_id || correlationId,
+      providerIdLength: normalizedProviderId.length,
+      providerIdTail: normalizedProviderId.slice(-8),
+      functionBuild: result?.function_build ?? result?.debug?.function_build ?? null,
+      debug: result?.debug ?? null
+    });
+    const error = new Error(code);
+    error.code = code;
+    error.details = result;
+    error.correlationId = result?.correlation_id || correlationId;
+    throw error;
+  }
+
+  if (!result?.ok) {
+    const error = new Error(result?.error || "provider_service_save_failed");
+    error.code = result?.error || "provider_service_save_failed";
+    error.details = result;
+    error.correlationId = result?.correlation_id || correlationId;
+    throw error;
+  }
+
+  // Reload with the regular client path so documents, legal state and signed
+  // avatar URLs keep the same shape used by the provider UI.
+  return loadProviderWorkspace(normalizedProviderId);
+}
+
+async function changeProviderOfferingPublication(providerId, offeringId, mode, fallbackLabel) {
+  const functionName = appConfig.functions.saveProviderService;
+  if (!functionName) {
+    const error = new Error("provider_service_save_function_missing");
+    error.code = "provider_service_save_function_missing";
+    throw error;
+  }
+
+  const normalizedProviderId = normalizeProviderIdForSave(providerId);
+  if (!normalizedProviderId) {
+    const error = new Error("provider_id_invalid");
+    error.code = "provider_id_invalid";
+    throw error;
+  }
+
+  const normalizedOfferingId = normalizeUuidForSave(offeringId);
+  if (!normalizedOfferingId) {
+    const error = new Error("offering_id_invalid");
+    error.code = "offering_id_invalid";
+    throw error;
+  }
+
+  const correlationId =
+    crypto.randomUUID?.() ||
+    `provider-offering-${fallbackLabel}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+  if (!appConfig.supabaseUrl || !appConfig.supabaseAnonKey) {
+    const error = new Error("provider_service_save_config_missing");
+    error.code = "provider_service_save_config_missing";
+    error.correlationId = correlationId;
+    throw error;
+  }
+
+  const session = await requireSession();
+  const response = await fetch(
+    `${appConfig.supabaseUrl.replace(/\/+$/, "")}/functions/v1/${functionName}?provider_id=${encodeURIComponent(normalizedProviderId)}`,
+    {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        "Authorization": `Bearer ${session.access_token}`,
+        "apikey": appConfig.supabaseAnonKey,
+        "Content-Type": "application/json",
+        "X-MIMI-Provider-Id": normalizedProviderId,
+        "X-MIMI-Correlation-Id": correlationId
+      },
+      body: JSON.stringify({
+        mode,
+        providerId: normalizedProviderId,
+        provider_id: normalizedProviderId,
+        offeringId: normalizedOfferingId,
+        offering_id: normalizedOfferingId,
+        payload: { offeringId: normalizedOfferingId, offering_id: normalizedOfferingId },
+        correlationId,
+        correlation_id: correlationId
+      })
+    }
+  );
+
+  const result = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const code = result?.code || result?.error || `provider_service_save_http_${response.status}`;
+    console.warn("[MIMI Save] svc-save-provider-service publication change rejected", {
+      status: response.status,
+      code,
+      mode,
+      correlationId: result?.correlation_id || correlationId,
+      providerIdLength: normalizedProviderId.length,
+      providerIdTail: normalizedProviderId.slice(-8),
+      offeringIdTail: normalizedOfferingId.slice(-8),
+      functionBuild: result?.function_build ?? result?.debug?.function_build ?? null,
+      debug: result?.debug ?? null
+    });
+    const error = new Error(code);
+    error.code = code;
+    error.details = result;
+    error.correlationId = result?.correlation_id || correlationId;
+    throw error;
+  }
+
+  if (!result?.ok) {
+    const error = new Error(result?.error || "provider_offering_deactivate_failed");
+    error.code = result?.error || "provider_offering_deactivate_failed";
+    error.details = result;
+    error.correlationId = result?.correlation_id || correlationId;
+    throw error;
+  }
+
+  return loadProviderWorkspace(normalizedProviderId);
+}
+
+export function deactivateProviderOffering(providerId, offeringId) {
+  return changeProviderOfferingPublication(providerId, offeringId, "deactivate_offering", "delete");
+}
+
+export function reactivateProviderOffering(providerId, offeringId) {
+  return changeProviderOfferingPublication(providerId, offeringId, "reactivate_offering", "reactivate");
+}
+
+export async function saveProviderOfferingAddons(providerId, offeringId, addons = []) {
+  const functionName = appConfig.functions.saveProviderService;
+  if (!functionName) {
+    const error = new Error("provider_service_save_function_missing");
+    error.code = "provider_service_save_function_missing";
+    throw error;
+  }
+
+  const normalizedProviderId = normalizeProviderIdForSave(providerId);
+  if (!normalizedProviderId) {
+    const error = new Error("provider_id_invalid");
+    error.code = "provider_id_invalid";
+    throw error;
+  }
+
+  const normalizedOfferingId = normalizeUuidForSave(offeringId);
+  if (!normalizedOfferingId) {
+    const error = new Error("offering_id_invalid");
+    error.code = "offering_id_invalid";
+    throw error;
+  }
+
+  const correlationId =
+    crypto.randomUUID?.() ||
+    `provider-offering-addons-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+  if (!appConfig.supabaseUrl || !appConfig.supabaseAnonKey) {
+    const error = new Error("provider_service_save_config_missing");
+    error.code = "provider_service_save_config_missing";
+    error.correlationId = correlationId;
+    throw error;
+  }
+
+  const session = await requireSession();
+  const response = await fetch(
+    `${appConfig.supabaseUrl.replace(/\/+$/, "")}/functions/v1/${functionName}?provider_id=${encodeURIComponent(normalizedProviderId)}`,
+    {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        "Authorization": `Bearer ${session.access_token}`,
+        "apikey": appConfig.supabaseAnonKey,
+        "Content-Type": "application/json",
+        "X-MIMI-Provider-Id": normalizedProviderId,
+        "X-MIMI-Correlation-Id": correlationId
+      },
+      body: JSON.stringify({
+        mode: "save_offering_addons",
+        providerId: normalizedProviderId,
+        provider_id: normalizedProviderId,
+        offeringId: normalizedOfferingId,
+        offering_id: normalizedOfferingId,
+        payload: {
+          offeringId: normalizedOfferingId,
+          offering_id: normalizedOfferingId,
+          addons: Array.isArray(addons) ? addons : []
+        },
+        correlationId,
+        correlation_id: correlationId
+      })
+    }
+  );
+
+  const result = await response.json().catch(() => null);
+
+  if (!response.ok || !result?.ok) {
+    const code = result?.code || result?.error || `provider_service_addons_http_${response.status}`;
+    console.warn("[MIMI Save] svc-save-provider-service addons rejected", {
+      status: response.status,
+      code,
+      correlationId: result?.correlation_id || correlationId,
+      providerIdLength: normalizedProviderId.length,
+      providerIdTail: normalizedProviderId.slice(-8),
+      offeringIdTail: normalizedOfferingId.slice(-8),
+      functionBuild: result?.function_build ?? result?.debug?.function_build ?? null
+    });
+    const error = new Error(code);
+    error.code = code;
+    error.details = result;
+    error.correlationId = result?.correlation_id || correlationId;
+    throw error;
+  }
+
+  return loadProviderWorkspace(normalizedProviderId);
 }
 
 export async function saveProviderWorkspace(providerId, payload = {}) {
@@ -1717,6 +2712,9 @@ export async function saveProviderWorkspace(providerId, payload = {}) {
 
   await requireSession();
 
+  const edgeWorkspace = await saveProviderWorkspaceViaEdge(providerId, payload);
+  return edgeWorkspace;
+
   const profileInput = {
     provider_id: providerId,
     pricing_mode: normalizePricingMode(payload.pricingMode),
@@ -1727,7 +2725,8 @@ export async function saveProviderWorkspace(providerId, payload = {}) {
   };
 
   if (typeof payload.firstName === "string") {
-    profileInput.first_name = payload.firstName.trim();
+    const firstName = payload.firstName.trim();
+    if (firstName) profileInput.first_name = firstName;
   }
 
   if (typeof payload.bio === "string") {
@@ -1756,6 +2755,46 @@ export async function saveProviderWorkspace(providerId, payload = {}) {
 
   if (typeof payload.province === "string") {
     profileInput.province = payload.province.trim();
+  }
+
+  if (Object.prototype.hasOwnProperty.call(payload, "coverageRadiusMeters")) {
+    const { data: existingProfile } = await supabase
+      .from("svc_provider_profiles")
+      .select("metadata_json")
+      .eq("provider_id", providerId)
+      .maybeSingle();
+
+    const existingMetadata =
+      existingProfile?.metadata_json && typeof existingProfile.metadata_json === "object"
+        ? existingProfile.metadata_json
+        : {};
+
+    const baseLocation = payload.providerBaseLocation || {};
+    const baseLat = Number(baseLocation.lat);
+    const baseLng = Number(baseLocation.lng);
+    const baseAccuracy = Number(baseLocation.accuracyM);
+    const hasBaseLocation = Number.isFinite(baseLat) && Number.isFinite(baseLng);
+
+    profileInput.metadata_json = {
+      ...existingMetadata,
+      coverage_radius_meters: Number(payload.coverageRadiusMeters) || null
+    };
+
+    if (hasBaseLocation) {
+      profileInput.metadata_json.provider_base_location = {
+        lat: baseLat,
+        lng: baseLng,
+        accuracy_m: Number.isFinite(baseAccuracy) ? Math.round(baseAccuracy) : null,
+        source: String(baseLocation.source || "browser_geolocation").trim() || "browser_geolocation",
+        updated_at: new Date().toISOString()
+      };
+      profileInput.metadata_json.provider_base_location_lat = baseLat;
+      profileInput.metadata_json.provider_base_location_lng = baseLng;
+      profileInput.metadata_json.provider_base_location_accuracy_m =
+        Number.isFinite(baseAccuracy) ? Math.round(baseAccuracy) : null;
+      profileInput.metadata_json.provider_base_location_source =
+        String(baseLocation.source || "browser_geolocation").trim() || "browser_geolocation";
+    }
   }
 
   const { error: profileError } = await supabase
@@ -1901,7 +2940,7 @@ export async function saveProviderWorkspace(providerId, payload = {}) {
 }
 
 
-export async function uploadProviderDocument({ providerId, documentType, file }) {
+export async function uploadProviderDocument({ providerId, documentType, file, metadata = {} }) {
   const supabase = getSupabaseClient();
 
   if (!supabase || !providerId || !file) {
@@ -1966,6 +3005,11 @@ const safeDocumentType = normalizeDocumentType(documentType);
     throw uploadError;
   }
 
+  const safeMetadata =
+    metadata && typeof metadata === "object" && !Array.isArray(metadata)
+      ? metadata
+      : {};
+
   const { data, error } = await supabase
     .from("svc_provider_documents")
     .insert({
@@ -1977,6 +3021,7 @@ const safeDocumentType = normalizeDocumentType(documentType);
       file_size_bytes: file.size || null,
       review_status: "PENDING",
       metadata_json: {
+        ...safeMetadata,
         original_name: file.name || null,
         uploaded_from: "prestador.html",
         uploaded_at: new Date().toISOString()
@@ -1987,7 +3032,7 @@ const safeDocumentType = normalizeDocumentType(documentType);
 
 if (error) throw error;
 
-const normalized = normalizeProviderDocuments([data])[0] ?? data;
+const normalized = (await normalizeProviderDocuments([data]))[0] ?? data;
 
 /*
 if (safeDocumentType === "selfie") {
@@ -2194,10 +3239,6 @@ export async function getProviderDashboard(providerId) {
   if (!providerId || !supabase) {
     return {
       earnings: 0,
-      available_balance: 0,
-      pending_balance: 0,
-      negative_balance: 0,
-      cash_debt_balance: 0,
       completed: 0,
       active: null,
       history: []
@@ -2222,34 +3263,55 @@ export async function getProviderDashboard(providerId) {
     console.warn("[service-api] provider wallet snapshot unavailable", walletError?.message || walletError);
   }
 
+  const dashboardHistoryLimit = 50;
+
   // 🔥 servicios completados
   const { data: completedRows, error: completedError } = await supabase
     .from("svc_requests")
-    .select("id,provider_price_snapshot,total_price_snapshot,created_at,address_text,status")
+    .select("id,total_price_snapshot,created_at,address_text,status")
     .or(`selected_provider_id.eq.${providerId},accepted_provider_id.eq.${providerId}`)
     .eq("status", "COMPLETED")
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(dashboardHistoryLimit);
 
   if (completedError) throw completedError;
 
   // 🔥 servicio activo
   const { data: activeRows } = await supabase
     .from("svc_requests")
-    .select("*")
+    .select(SERVICE_REQUEST_SAFE_SELECT)
     .or(`selected_provider_id.eq.${providerId},accepted_provider_id.eq.${providerId}`)
     .not("status", "in", '("COMPLETED","CANCELLED")')
     .order("updated_at", { ascending: false })
     .limit(1);
-  const activeWithPayment = await attachPaymentStatusToOffers(activeRows ?? []);
 
-const earnings = (completedRows ?? []).reduce(
-  (acc, item) => acc + Number(item.provider_price_snapshot ?? 0),
-  0
-);
+  let activePayment = null;
+  const activeRequestId = activeRows?.[0]?.id;
+  if (activeRequestId) {
+    try {
+      const { data: activePayments, error: activePaymentError } = await supabase
+        .from("payments")
+        .select("id,service_request_id,status,provider_name,environment,is_test,checkout_url,created_at,updated_at")
+        .eq("service_request_id", activeRequestId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (!activePaymentError) {
+        activePayment = activePayments?.[0] ?? null;
+      }
+    } catch (paymentError) {
+      console.warn("[service-api] active service payment status unavailable", paymentError?.message || paymentError);
+    }
+  }
+
+  const recentEarnings = (completedRows ?? []).reduce(
+    (acc, item) => acc + Number(item.total_price_snapshot ?? 0),
+    0
+  );
+  const earnings = Number(wallet?.lifetime_earnings ?? recentEarnings);
   return {
-    earnings: Number(wallet?.lifetime_earnings ?? earnings),
-    available_balance: Number(wallet?.available_balance ?? wallet?.lifetime_earnings ?? earnings),
+    earnings,
+    available_balance: Number(wallet?.available_balance ?? earnings),
     pending_balance: Number(wallet?.pending_balance ?? 0),
     negative_balance: Number(wallet?.negative_balance ?? wallet?.cash_debt_balance ?? 0),
     cash_debt_balance: Number(wallet?.cash_debt_balance ?? 0),
@@ -2258,8 +3320,16 @@ const earnings = (completedRows ?? []).reduce(
     wallet_status: wallet?.wallet_status ?? null,
     risk_level: wallet?.risk_level ?? null,
     completed: completedRows?.length ?? 0,
-    active: activeWithPayment?.[0] ?? null,
+    active: activeRows?.[0]
+      ? {
+          ...activeRows[0],
+          payment: activePayment,
+          payment_status: activePayment?.status ?? null,
+          payment_provider_name: activePayment?.provider_name ?? null
+        }
+      : null,
     history: completedRows ?? [],
+    history_limited: (completedRows?.length ?? 0) >= dashboardHistoryLimit,
     wallet_snapshot_at: wallet?.updated_at ?? null
   };
 }
@@ -2286,6 +3356,80 @@ export async function submitProviderPayoutAccount(payload = {}) {
 
   return invokeFunction(appConfig.functions.providerPayoutAccount || "provider-payout-account", {
     action: "submit_for_review",
+    ...payload
+  });
+}
+
+export async function loadCustomerTrustProfile() {
+  if (!hasBackend()) {
+    return {
+      ok: false,
+      profile: null,
+      verification_requests: [],
+      identity_checks: [],
+      verification_events: [],
+      risk_signals: []
+    };
+  }
+
+  try {
+    return await invokeFunction(appConfig.functions.customerTrustProfile || "customer-trust-profile", {
+      action: "get_status"
+    });
+  } catch (error) {
+    console.warn("[service-api] customer trust profile fallback", error?.code || error?.message || error);
+    return {
+      ok: false,
+      profile: null,
+      verification_requests: [],
+      identity_checks: [],
+      verification_events: [],
+      risk_signals: [],
+      error: error?.code || error?.message || "customer_trust_unavailable"
+    };
+  }
+}
+
+export async function requestCustomerIdentityVerification(reason = "voluntary_trust_upgrade") {
+  if (!hasBackend()) {
+    throw new Error("AUTH_REQUIRED");
+  }
+
+  return invokeFunction(appConfig.functions.customerTrustProfile || "customer-trust-profile", {
+    action: "request_verification",
+    reason
+  });
+}
+
+export async function createCustomerIdentityUploadIntent(payload = {}) {
+  if (!hasBackend()) {
+    throw new Error("AUTH_REQUIRED");
+  }
+
+  return invokeFunction(appConfig.functions.customerIdentityVerification || "customer-identity-verification", {
+    action: "create_upload_intent",
+    ...payload
+  });
+}
+
+export async function submitCustomerIdentityEvidence(payload = {}) {
+  if (!hasBackend()) {
+    throw new Error("AUTH_REQUIRED");
+  }
+
+  return invokeFunction(appConfig.functions.customerIdentityVerification || "customer-identity-verification", {
+    action: "submit_evidence",
+    ...payload
+  });
+}
+
+export async function processCustomerIdentityVerification(payload = {}) {
+  if (!hasBackend()) {
+    throw new Error("AUTH_REQUIRED");
+  }
+
+  return invokeFunction(appConfig.functions.customerIdentityVerification || "customer-identity-verification", {
+    action: "process",
     ...payload
   });
 }

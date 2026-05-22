@@ -20,7 +20,6 @@ const APP_ASSETS = [
   "/mimi-servicios/src/config.js",
   "/mimi-servicios/src/main-provider.js",
   "/mimi-servicios/src/services/map.js",
-  "/mimi-servicios/src/services/provider-navigation.js",
   "/mimi-servicios/src/services/realtime-manager.js",
   "/mimi-servicios/src/services/runtime-config.js",
   "/mimi-servicios/src/services/observability.js",
@@ -29,6 +28,7 @@ const APP_ASSETS = [
   "/mimi-servicios/src/services/sound.js",
   "/mimi-servicios/src/services/supabase.js",
   "/mimi-servicios/src/services/provider-storage.js",
+  "/mimi-servicios/src/services/provider-navigation.js",
   "/mimi-servicios/src/services/push.js",
   "/mimi-servicios/src/state/app-state.js",
   "/mimi-servicios/src/ui/render-provider.js",
@@ -199,7 +199,7 @@ function shouldCache(response) {
 }
 
 function offlineResponse() {
-  return new Response("MIMI GO Pro no tiene conexion en este momento.", {
+  return new Response("MIMI GO Partner no tiene conexion en este momento.", {
     status: 503,
     headers: { "Content-Type": "text/plain; charset=utf-8" }
   });

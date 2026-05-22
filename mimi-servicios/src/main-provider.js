@@ -3,13 +3,53 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.18.4";
+const MIMI_PROVIDER_BUILD = "2026.05.21.map1";
+const MIMI_PROVIDER_ICON_REVISION = "mimigo-status-badge-v11";
+const QUOTE_PRICING_LABEL = "Cotizar antes de confirmar";
+const MIMI_PROVIDER_NOTIFICATION_SYNC_MS = providerRuntimeNumber(
+  "MIMI_PROVIDER_NOTIFICATION_SYNC_MS",
+  2 * 60 * 1000
+);
+const MIMI_PROVIDER_NOTIFICATION_REALTIME_FALLBACK_MS = providerRuntimeNumber(
+  "MIMI_PROVIDER_NOTIFICATION_REALTIME_FALLBACK_MS",
+  5 * 60 * 1000
+);
+const MIMI_PROVIDER_NOTIFICATION_HIDDEN_SYNC_MS = providerRuntimeNumber(
+  "MIMI_PROVIDER_NOTIFICATION_HIDDEN_SYNC_MS",
+  15 * 60 * 1000
+);
+const MIMI_PROVIDER_NOTIFICATION_ERROR_MAX_MS = providerRuntimeNumber(
+  "MIMI_PROVIDER_NOTIFICATION_ERROR_MAX_MS",
+  15 * 60 * 1000
+);
+const MIMI_PROVIDER_NOTIFICATION_MIN_GAP_MS = providerRuntimeNumber(
+  "MIMI_PROVIDER_NOTIFICATION_MIN_GAP_MS",
+  30 * 1000
+);
+const MIMI_PROVIDER_BOOT_SLOW_NOTICE_MS = providerRuntimeNumber(
+  "MIMI_PROVIDER_BOOT_SLOW_NOTICE_MS",
+  16 * 1000
+);
+const MIMI_PROVIDER_BOOT_RETRY_NOTICE_MS = Math.max(
+  providerRuntimeNumber("MIMI_PROVIDER_BOOT_RETRY_NOTICE_MS", 34 * 1000),
+  MIMI_PROVIDER_BOOT_SLOW_NOTICE_MS + 8 * 1000
+);
+const MIMI_PROVIDER_NOTIFICATION_REALTIME_RECONCILE_MS = providerRuntimeNumber(
+  "MIMI_PROVIDER_NOTIFICATION_REALTIME_RECONCILE_MS",
+  20 * 1000
+);
+const MIMI_PROVIDER_UPDATE_ASSETS = [
+  `/manifest-partners.json?v=${MIMI_PROVIDER_ICON_REVISION}`,
+  `/mimi-servicios/manifest-prestador.json?v=${MIMI_PROVIDER_ICON_REVISION}`,
+  `/assets/icons/mimigo-pro-icon-v10-192.png?v=${MIMI_PROVIDER_ICON_REVISION}`,
+  `/assets/icons/mimigo-pro-icon-v10-512.png?v=${MIMI_PROVIDER_ICON_REVISION}`,
+  `/assets/icons/mimigo-pro-icon-v10-512-maskable.png?v=${MIMI_PROVIDER_ICON_REVISION}`,
+  `/mimi-servicios/assets/icons/mimigo-pro-icon-v10-192.png?v=${MIMI_PROVIDER_ICON_REVISION}`,
+  `/mimi-servicios/assets/icons/mimigo-pro-badge-v11-96.png?v=${MIMI_PROVIDER_ICON_REVISION}`
+];
 const PARTNER_PWA_INSTALLED_KEY = "mimi_go_partner_pwa_installed";
 const PARTNER_INSTALL_DISMISSED_KEY = "mimi_go_partner_install_dismissed_until";
 const PARTNER_INSTALL_SESSION_KEY = "mimi_go_partner_install_shown_session";
-const PROVIDER_INSTALL_PROMPT_ENABLED = false;
-const PROVIDER_EXTERNAL_NAVIGATION_STARTED_KEY = "mimi_provider_external_navigation_started";
-const PROVIDER_EXTERNAL_NAVIGATION_RETURN_DEBOUNCE_MS = 5000;
 const LEGACY_SW_PATHS = [
   "/mimi-servicios/sw-2026.js",
   "/service-worker.js",
@@ -29,6 +69,15 @@ const PROVIDER_LEGAL_REQUIREMENT_FALLBACKS = [
     version: "2026.1.0"
   }
 ];
+
+function providerRuntimeNumber(key, fallback) {
+  const value =
+    window.MIMI_SERVICES_ENV?.[key] ??
+    window.MIMI_SERVICES_CONFIG?.[key] ??
+    window[key];
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -70,41 +119,68 @@ import {
   loadOfferDetails,
   loadNotifications,
   loadOffers,
+  markRemoteNotificationsDelivered,
+  markRemoteNotificationsRead,
   loadProviderWorkspace,
+  loadProviderGuidedServiceCatalog,
+  loadProviderServiceAddonsConfig,
   getProviderDashboard,
   getProviderPayoutAccount,
   approveSecurityChallenge,
   registerDevice,
   requestOtp,
   resolveServiceIntent,
+  deactivateProviderOffering,
+  reactivateProviderOffering,
+  saveProviderOfferingAddons,
   saveProviderWorkspace,
   sendMessage,
   startSecurityVerification,
-  submitProviderPayoutAccount,
   touchProviderPresence,
-  uploadProviderAvatar,
   uploadProviderDocument,
+  submitProviderPayoutAccount,
   signOut,
   updateProviderStatus,
   verifyOtp
-  } from "./services/service-api.js?v=2026.05.18.2";
+} from "./services/service-api.js?v=2026.05.20.14";
 import {
   detectDefaultCountry,
   loadPhoneCountries,
   normalizePhoneNumber
 } from "./utils/phone-countries.js";
+import {
+  optimizeAvatarImageFile,
+  optimizeDocumentImageFile,
+  qualityMessage
+} from "./utils/document-image-quality.js?v=2026.05.20.14";
+
+import {
+  resolverDireccionActualServicio
+} from "./services/service-geocoding.js?v=2026.05.20.14";
 
 
-import { renderProviderScreen } from "./ui/render-provider.js?v=2026.05.18.4";
+import {
+  renderProviderScreen,
+  renderProviderGuidedTemplateSelection,
+  renderProviderServicePreviewSheet
+} from "./ui/render-provider.js?v=2026.05.20.14";
 import {
   clearAuthRedirectIntent,
   forceCleanSession,
   getSupabaseClient,
+  markProviderRegistrationIntent,
   signInWithGoogle
-} from "./services/supabase.js?v=2026.05.14.9";
-import { getMimiPushToken } from "./services/push.js";
+} from "./services/supabase.js?v=2026.05.20.14";
+import {
+  getMimiPushToken,
+  rememberPushTokenRegistration,
+  shouldRegisterPushToken
+} from "./services/push.js?v=2026.05.20.14";
 import {
   MIMI_ACTIVE_JOB_LOCATION_INTERVAL_MS,
+  MIMI_BOOT_PUSH_REGISTRATION_ENABLED,
+  MIMI_REALTIME_ENABLED,
+  MIMI_REALTIME_OPTIMIZED,
   MIMI_PROVIDER_HEARTBEAT_INTERVAL_MS
 } from "./services/runtime-config.js";
 import {
@@ -114,13 +190,19 @@ import {
   loadCmsServiceCategories
 } from "./services/pocketbase-cms.js";
 import { initObservability, markPerformance } from "./services/observability.js";
+import { recordCriticalRiskEvent } from "./security/risk-events.js";
 import {
   disconnectRealtime as disconnectManagedRealtime,
   subscribeScopedChannel
 } from "./services/realtime-manager.js";
 import { ensureMapLibreAssets } from "./services/map.js";
-import { buildProviderNavigationUrl } from "./services/provider-navigation.js";
-import { recordCriticalRiskEvent } from "./security/risk-events.js";
+import {
+  buildProviderNavigationUrl,
+  clearProviderExternalNavigationStarted,
+  hasProviderExternalNavigationStarted,
+  markProviderExternalNavigationStarted,
+  normalizeNavigationAddress
+} from "./services/provider-navigation.js";
 
 initObservability("provider");
 markPerformance("provider_module_loaded");
@@ -150,7 +232,7 @@ async function removeConflictingServiceWorkers(expectedScopePath) {
       })
     );
   } catch (error) {
-    console.warn("[MIMI GO Pro] No se pudieron limpiar service workers previos:", error);
+    console.warn("[MIMI Partner] No se pudieron limpiar service workers previos:", error);
   }
 }
 
@@ -245,7 +327,7 @@ const partnerLoadingMessages = [
     body: "MIMIGO reduce pasos para que puedas enfocarte en trabajar."
   },
   {
-    eyebrow: "MIMI GO Pro",
+    eyebrow: "MIMIGO Pro",
     title: "La herramienta que menos trabajo te da para conseguir trabajo.",
     body: "Publicá, recibí solicitudes y administrá tu disponibilidad."
   },
@@ -300,6 +382,14 @@ class MimiProviderApp {
     this.partnerLoadingRenderTimeout = null;
     this.partnerLoadingSlideIndex = 0;
     this.notificationsInterval = null;
+    this.syncingNotifications = false;
+    this.notificationLastSyncAt = 0;
+    this.notificationSyncFailures = 0;
+    this.notificationSyncEventsBound = false;
+    this.notificationRealtimeHealthy = false;
+    this.notificationFilter = "all";
+    this.reviewNotificationToastSeen = new Set();
+    this.providerReviewNoticeTimeout = null;
     this.realtimeChannel = null;
     this.offerRealtimeChannel = null;
     this.notificationRealtimeChannel = null;
@@ -319,7 +409,10 @@ class MimiProviderApp {
     this.lastProviderTrackingRequestId = null;
     this.providerTrackingMinDistanceMeters = 1000;
     this.providerTrackingHeartbeatMs = MIMI_PROVIDER_HEARTBEAT_INTERVAL_MS;
+    this.externalNavigationReturnSyncInFlight = false;
+    this.lastExternalNavigationReturnSyncAt = 0;
     this.providerBootTimeout = null;
+    this.providerBootRetryTimeout = null;
     this.sheetHistoryOpen = false;
     this.backGuardReady = false;
     this.allowProviderBackExit = false;
@@ -327,8 +420,6 @@ class MimiProviderApp {
     this.sheetReturnTab = null;
     this.verificationReturnStep = null;
     this.installPromptSetupDone = false;
-    this.externalNavigationReturnInFlight = false;
-    this.externalNavigationLastResyncAt = 0;
     
     // DOM Elements cache
     this.elements = {};
@@ -456,34 +547,70 @@ if (!canBootProviderPanel) {
   this.setupBottomSheetGestures();
   this.checkLocationPermission();
   this.startBackgroundSync();
-  this.subscribeRealtime();
-  window.setTimeout(() => this.handleExternalNavigationReturn("boot"), 0);
+  if (MIMI_REALTIME_ENABLED) {
+    this.subscribeRealtime();
+  }
+  this.startNotificationSync();
 
   // Push notifications: si Firebase Messaging logró obtener token FCM,
   // lo registramos en svc_user_devices para que el backend pueda enviar
   // pushes cuando entre una solicitud nueva (incluso con la app cerrada).
-  this.registerProviderPushToken({ prompt: false });
+  if (MIMI_BOOT_PUSH_REGISTRATION_ENABLED) {
+    this.setupProviderPushAutoRefresh();
+    this.registerProviderPushToken({ prompt: false });
+  }
 
   console.log("[MIMI] App initialized");
+}
+
+setupProviderPushAutoRefresh() {
+  if (this.providerPushRefreshEventsBound) return;
+  this.providerPushRefreshEventsBound = true;
+
+  const refresh = () => {
+    if (!MIMI_BOOT_PUSH_REGISTRATION_ENABLED) return;
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    const now = Date.now();
+    if (this.providerPushRefreshAt && now - this.providerPushRefreshAt < 6 * 60 * 60 * 1000) return;
+    this.providerPushRefreshAt = now;
+    this.registerProviderPushToken({ prompt: false }).catch(() => {});
+  };
+
+  window.addEventListener("focus", refresh);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") refresh();
+  });
+  window.addEventListener("online", refresh);
 }
 
 async registerProviderPushToken({ prompt = false } = {}) {
   try {
     if (!this.state?.session?.userId) return;
-    const token = await getMimiPushToken({ prompt });
+    const token = await getMimiPushToken({ prompt, surface: "provider" });
     if (!token) {
       console.info("[MIMI Push] sin token, no registramos device para push");
+      this.renderProviderPushStatus();
       return;
     }
-    await registerDevice({
+    if (!shouldRegisterPushToken("provider", token, { prompt })) {
+      this.renderProviderPushStatus({ skipped: true, cached: true });
+      return;
+    }
+    const result = await registerDevice({
       role: "provider",
       pushToken: token,
       notificationsEnabled: Boolean(token),
       deviceLabel: navigator.userAgentData?.platform || navigator.platform || "Web"
     });
+    rememberPushTokenRegistration("provider", token);
     console.log("[MIMI Push] device registrado con FCM token");
+    if (prompt) {
+      this.showToast("Notificaciones activadas en este dispositivo.", "success");
+    }
+    this.renderProviderPushStatus(result);
   } catch (err) {
     console.warn("[MIMI Push] no se pudo registrar device:", err?.message ?? err);
+    this.renderProviderPushStatus({ error: err?.message ?? String(err) });
   }
 }
   /**
@@ -604,6 +731,8 @@ verificationResultList: document.getElementById("verificationResultList"),
       sheetBasePrice: document.getElementById("sheetBasePrice"),
       sheetPricingMode: document.getElementById("sheetPricingMode"),
       sheetUpcomingTime: document.getElementById("sheetUpcomingTime"),
+      sheetNotificationBell: document.getElementById("sheetNotificationBell"),
+      sheetNotificationBadge: document.getElementById("sheetNotificationBadge"),
       
       // Tabs
       tabButtons: document.querySelectorAll('.tab-btn'),
@@ -617,6 +746,7 @@ verificationResultList: document.getElementById("verificationResultList"),
       quickChat: document.getElementById('quickChat'),
       quickSupport: document.getElementById('quickSupport'),
       notificationBadge: document.getElementById('notificationBadge'),
+      notificationsClose: document.getElementById('notificationsClose'),
       chatBadge: document.getElementById('chatBadge'),
       
       // Scheduled list
@@ -1048,6 +1178,28 @@ setTimeout(() => {
     };
 
     return this.isValidServiceLatLng(position) ? position : { lat: null, lng: null };
+  }
+
+  activeServiceAddressText() {
+    const activeService = this.state?.activeService ?? {};
+    const raw = activeService.raw ?? {};
+    const details = activeService.details ?? {};
+    const candidates = [
+      activeService.address,
+      activeService.address_text,
+      activeService.location,
+      details.address_text,
+      details.service_address,
+      raw.address_text,
+      raw.service_address,
+      raw.formatted_address,
+      raw.metadata_json?.address_text,
+      raw.metadata_json?.service_address
+    ];
+
+    return candidates
+      .map((value) => normalizeNavigationAddress(value))
+      .find(Boolean) ?? "";
   }
 
   isValidLatLng(position, { allowZeroZero = true } = {}) {
@@ -1538,7 +1690,7 @@ setTimeout(() => {
 
     if (this.elements.serviceNavModeLabel) {
       this.elements.serviceNavModeLabel.textContent = this.navigationMode
-        ? "Camara siguiendo tu ubicacion en tiempo real"
+        ? "Cámara siguiendo tu ubicación en tiempo real"
         : "Activa Seguir en app para navegar sin salir de MIMI";
     }
 
@@ -1550,89 +1702,49 @@ setTimeout(() => {
   openExternalNavigation() {
     const destination = this.servicePositionFromState();
     const url = buildProviderNavigationUrl({
-      lat: destination.lat,
-      lng: destination.lng,
-      addressText: this.providerNavigationAddressText(),
+      lat: destination?.lat,
+      lng: destination?.lng,
+      addressText: this.activeServiceAddressText(),
       app: "google"
     });
 
     if (!url) {
-      this.showToast("Todavia no tenemos la ubicacion o direccion del cliente", "warning");
+      this.showToast("Necesitamos la direccion del cliente para abrir el mapa.", "warning");
       return;
     }
 
-    this.markProviderExternalNavigationStarted();
+    markProviderExternalNavigationStarted();
+    this.showToast("Cuando llegues, volv\u00e9 a MIMIGO y toc\u00e1 'Llegu\u00e9' para continuar.", "info");
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
-  providerNavigationAddressText(service = this.state?.activeService) {
-    const raw = service?.raw ?? {};
-    const candidates = [
-      service?.address,
-      raw.address_text,
-      raw.service_address,
-      raw.formatted_address,
-      raw.address,
-      service?.location,
-      raw.location
-    ];
-
-    return candidates
-      .map((value) => String(value ?? "").trim())
-      .find(Boolean) || "";
-  }
-
-  markProviderExternalNavigationStarted() {
-    try {
-      localStorage.setItem(PROVIDER_EXTERNAL_NAVIGATION_STARTED_KEY, String(Date.now()));
-    } catch (_) {}
-  }
-
-  hasProviderExternalNavigationStarted() {
-    try {
-      return Boolean(localStorage.getItem(PROVIDER_EXTERNAL_NAVIGATION_STARTED_KEY));
-    } catch (_) {
-      return false;
-    }
-  }
-
-  clearProviderExternalNavigationStarted() {
-    try {
-      localStorage.removeItem(PROVIDER_EXTERNAL_NAVIGATION_STARTED_KEY);
-    } catch (_) {}
-  }
-
   async handleExternalNavigationReturn(trigger = "focus", { skipResync = false } = {}) {
-    if (!this.hasProviderExternalNavigationStarted()) return null;
-    if (this.externalNavigationReturnInFlight) return null;
+    if (document.visibilityState === "hidden") return;
+    if (!this.state?.activeService) return;
+    if (!hasProviderExternalNavigationStarted()) return;
 
     const now = Date.now();
-    if (now - this.externalNavigationLastResyncAt < PROVIDER_EXTERNAL_NAVIGATION_RETURN_DEBOUNCE_MS) {
-      return null;
-    }
+    if (this.externalNavigationReturnSyncInFlight) return;
+    if (!skipResync && now - this.lastExternalNavigationReturnSyncAt < 5000) return;
 
-    const providerId = this.state?.session?.providerId;
-    if (!providerId && !this.state?.activeService) return null;
-
-    this.externalNavigationReturnInFlight = true;
-    this.externalNavigationLastResyncAt = now;
+    this.externalNavigationReturnSyncInFlight = true;
+    this.lastExternalNavigationReturnSyncAt = now;
 
     try {
-      const activeRequest = skipResync ? null : await this.resyncActiveService(`external-navigation:${trigger}`);
-      const activeService = activeRequest
-        ? this.normalizeServiceForState(activeRequest)
-        : this.state?.activeService;
-
-      if (activeService) {
-        this.showToast("\u00bfYa llegaste? Toc\u00e1 'Llegu\u00e9' para continuar con el PIN.", "info");
-        this.clearProviderExternalNavigationStarted();
-        return activeRequest ?? activeService;
+      if (!skipResync) {
+        await this.resyncActiveService(`external-navigation-${trigger}`);
       }
 
-      this.clearProviderExternalNavigationStarted();
-      return null;
+      const status = this.normalizeRequestStatus(this.state?.activeService?.status);
+      if (["ACCEPTED", "SCHEDULED", "PROVIDER_EN_ROUTE"].includes(status)) {
+        this.showToast("\u00bfYa llegaste? Toc\u00e1 'Llegu\u00e9' para continuar con el PIN.", "info");
+      } else if (status === "PROVIDER_ARRIVED") {
+        this.showToast("Pedile el PIN al cliente para iniciar el servicio.", "info");
+      }
+
+      clearProviderExternalNavigationStarted();
     } finally {
-      this.externalNavigationReturnInFlight = false;
+      this.externalNavigationReturnSyncInFlight = false;
     }
   }
 
@@ -1801,11 +1913,18 @@ container.style.background = "";
   if (!googleButton) return;
 
   googleButton.addEventListener("click", async () => {
+    let redirectResetTimer = null;
     try {
       googleButton.disabled = true;
       document.body.classList.add("provider-auth-submitting");
+      redirectResetTimer = window.setTimeout(() => {
+        googleButton.disabled = false;
+        document.body.classList.remove("provider-auth-submitting");
+        this.showToast("No pudimos abrir Google. Revisá la conexión e intentá nuevamente.", "error");
+      }, 12000);
       localStorage.setItem("mimi_services_active_mode", "provider");
       sessionStorage.setItem("mimi_services_active_mode", "provider");
+      markProviderRegistrationIntent("provider_login_button");
       sessionStorage.setItem(
         "mimi_services_auth_redirect_in_progress",
         "./prestador.html"
@@ -1813,6 +1932,7 @@ container.style.background = "";
 
       await signInWithGoogle({ mode: "provider" });
     } catch (err) {
+      if (redirectResetTimer) window.clearTimeout(redirectResetTimer);
       googleButton.disabled = false;
       document.body.classList.remove("provider-auth-submitting");
       console.error("[MIMI] Error iniciando sesin prestador:", err);
@@ -1926,6 +2046,7 @@ async loadProviderCmsVisuals(baseCategories = []) {
 renderDrawerProfile() {
   const session = this.state?.session ?? {};
   const profile = this.state?.provider?.profile ?? {};
+  const businessProfile = this.state?.provider?.business?.profile ?? {};
 
   const name =
     profile.full_name ||
@@ -1939,6 +2060,7 @@ renderDrawerProfile() {
     "Sin email conectado";
 
   const avatar =
+    businessProfile.avatar_public_url ||
     profile.avatar_url ||
     session.userAvatar ||
     null;
@@ -2012,22 +2134,34 @@ dismissInstallBanner(event = null) {
   }
 
   try {
-    localStorage.setItem(PARTNER_INSTALL_DISMISSED_KEY, String(Date.now() + 30 * 24 * 60 * 60 * 1000));
+    localStorage.removeItem(PARTNER_INSTALL_DISMISSED_KEY);
   } catch (_) {}
 }
 
-showProviderBootLoader({ title = "Preparando tu panel", subtitle = "Sincronizando tu cuenta, tus servicios y tu estado de verificación.", error = false } = {}) {
+showProviderBootLoader({
+  title = "Preparando tu panel",
+  subtitle = "Sincronizando tu cuenta, tus servicios y tu estado de verificación.",
+  error = false,
+  retry = false,
+  state = ""
+} = {}) {
   const loader = this.elements.providerBootLoader;
   if (!loader) return;
 
+  const bootState = error ? "error" : retry ? "retry" : state || "loading";
+
   loader.hidden = false;
   loader.removeAttribute("aria-hidden");
-  loader.dataset.state = error ? "error" : "loading";
+  loader.dataset.state = bootState;
+  loader.classList.toggle("is-error", bootState === "error");
+  loader.classList.toggle("is-slow", bootState === "slow");
+  loader.classList.toggle("is-retry", bootState === "retry");
 
   if (this.elements.providerBootTitle) this.elements.providerBootTitle.textContent = title;
   if (this.elements.providerBootSubtitle) this.elements.providerBootSubtitle.textContent = subtitle;
   if (this.elements.providerBootRetry) {
-    this.elements.providerBootRetry.hidden = !error;
+    this.elements.providerBootRetry.hidden = !(error || retry);
+    this.elements.providerBootRetry.textContent = error ? "Reintentar" : "Reintentar ahora";
     this.elements.providerBootRetry.onclick = () => window.location.reload();
   }
 
@@ -2073,7 +2207,9 @@ renderPartnerLoadingMarketing(index = 0) {
     if (this.elements.providerBootMarketingEyebrow) this.elements.providerBootMarketingEyebrow.textContent = slide.eyebrow;
     if (this.elements.providerBootMarketingTitle) this.elements.providerBootMarketingTitle.textContent = slide.title;
     if (this.elements.providerBootMarketingBody) this.elements.providerBootMarketingBody.textContent = slide.body;
-    if (this.elements.providerBootSubtitle) this.elements.providerBootSubtitle.textContent = microcopy;
+    if (this.elements.providerBootSubtitle && this.elements.providerBootLoader?.dataset?.state === "loading") {
+      this.elements.providerBootSubtitle.textContent = microcopy;
+    }
 
     if (this.elements.providerBootMarketingDots) {
       this.elements.providerBootMarketingDots.innerHTML = slides
@@ -2129,17 +2265,117 @@ startProviderBootTimeout() {
 
     this.showProviderBootLoader({
       title: "Seguimos preparando tu panel",
-      subtitle: "La conexión está tardando más de lo normal. Podés esperar unos segundos o reintentar.",
-      error: true
+      subtitle: "Estamos sincronizando tu cuenta y tus servicios. En redes móviles puede tardar unos segundos más.",
+      state: "slow"
     });
-  }, 14000);
+  }, MIMI_PROVIDER_BOOT_SLOW_NOTICE_MS);
+
+  this.providerBootRetryTimeout = window.setTimeout(() => {
+    if (!document.body.classList.contains("provider-auth-loading")) return;
+
+    this.showProviderBootLoader({
+      title: "La conexión sigue lenta",
+      subtitle: "Podés esperar un poco más o reintentar si cambió tu señal.",
+      retry: true,
+      state: "retry"
+    });
+  }, MIMI_PROVIDER_BOOT_RETRY_NOTICE_MS);
 }
 
 clearProviderBootTimeout() {
-  if (!this.providerBootTimeout) return;
+  if (this.providerBootTimeout) {
+    window.clearTimeout(this.providerBootTimeout);
+    this.providerBootTimeout = null;
+  }
 
-  window.clearTimeout(this.providerBootTimeout);
-  this.providerBootTimeout = null;
+  if (this.providerBootRetryTimeout) {
+    window.clearTimeout(this.providerBootRetryTimeout);
+    this.providerBootRetryTimeout = null;
+  }
+}
+
+providerWorkspaceFallback() {
+  return {
+    profile: null,
+    profileDetail: null,
+    pricing: [],
+    offerings: [],
+    addons: [],
+    availability: [],
+    documents: [],
+    reviews: [],
+    categories: [],
+    completedCount: 0,
+    offersCount: 0,
+    earningsTotal: 0,
+    legalRequirements: [],
+    legalAcceptances: []
+  };
+}
+
+providerGuidedServiceFallback(error = null) {
+  return {
+    enabled: false,
+    templates: [],
+    source: error ? "fallback_error" : "default_false",
+    error: error?.message ?? null
+  };
+}
+
+providerServiceAddonsFallback(error = null) {
+  return {
+    enabled: false,
+    flagKey: "MIMI_PROVIDER_SERVICE_ADDONS_ENABLED",
+    source: error ? "fallback_error" : "default_false",
+    error: error?.message ?? null
+  };
+}
+
+normalizeProviderGuidedService(catalog = {}) {
+  const previous = this.state?.provider?.guidedService ?? {};
+  return {
+    enabled: Boolean(catalog.enabled),
+    source: catalog.source ?? "default_false",
+    flagKey: catalog.flagKey ?? "MIMI_PROVIDER_GUIDED_SERVICE_ENABLED",
+    templates: Array.isArray(catalog.templates) ? catalog.templates : [],
+    selectedTemplateId: previous.selectedTemplateId ?? null,
+    loadedAt: catalog.loadedAt ?? previous.loadedAt ?? null,
+    error: catalog.error ?? null
+  };
+}
+
+normalizeProviderServiceAddons(config = {}) {
+  const previous = this.state?.provider?.serviceAddons ?? {};
+  return {
+    enabled: Boolean(config.enabled),
+    source: config.source ?? "default_false",
+    flagKey: config.flagKey ?? "MIMI_PROVIDER_SERVICE_ADDONS_ENABLED",
+    loadedAt: config.loadedAt ?? previous.loadedAt ?? null,
+    error: config.error ?? null
+  };
+}
+
+providerPayoutFallback(error) {
+  return {
+    ok: false,
+    account: null,
+    error: error?.details?.error || error?.code || error?.message || "payout_account_unavailable"
+  };
+}
+
+async loadProviderBootResource(label, loader, fallback, warnings = []) {
+  let failure = null;
+  try {
+    const value = await loader();
+    if (value !== undefined && value !== null) return value;
+  } catch (error) {
+    failure = error;
+    const code = error?.details?.error || error?.code || error?.message || String(error || "unknown_error");
+    warnings.push({ label, code });
+    console.warn(`[MIMI Provider] ${label} no disponible durante el arranque:`, error);
+  }
+
+  return typeof fallback === "function" ? fallback(failure) : fallback;
 }
   
   /**
@@ -2172,6 +2408,12 @@ async loadInitialData() {
       return false;
     }
 
+    recordCriticalRiskEvent("provider_login", {
+      actorRole: "provider",
+      source: "provider_bootstrap",
+      providerId: session.providerId ?? null
+    });
+
     document.body.classList.add("provider-auth-loading");
     document.body.classList.remove("provider-auth-required", "provider-authenticated");
     this.showProviderBootLoader();
@@ -2188,22 +2430,90 @@ async loadInitialData() {
     if (this.elements.mapContainer) this.elements.mapContainer.style.display = "none";
     
     if (!session?.providerId) {
-      this.showToast("No se encontr un perfil de prestador para esta cuenta", "error");
+      this.showToast("No se encontró un perfil de prestador para esta cuenta", "error");
       this.showProviderLoginGate();
       return false;
     }
 
-const [categories, workspace, notifications, offers, activeRequest, payoutAccountResult] = await Promise.all([
+    const bootWarnings = [];
+    const fallbackCategories = this.state?.appConfig?.categories?.length
+      ? this.state.appConfig.categories
+      : (appConfig.categories ?? []);
+
+const [
+  categories,
+  workspace,
+  notifications,
+  offers,
+  activeRequest,
+  payoutAccountResult,
+  guidedServiceCatalog,
+  serviceAddonsConfig
+] = await Promise.all([
   // Reusar categorías ya cargadas en init(); si están vacías, recargar
-  (this.state?.appConfig?.categories?.length
-    ? Promise.resolve(this.state.appConfig.categories)
-    : loadCategories()),
-  loadProviderWorkspace(session.providerId),
-  loadNotifications(session.userId),
-  loadOffers(session.providerId),
-  loadActiveRequest({ providerId: session.providerId }),
-  getProviderPayoutAccount()
+  this.loadProviderBootResource(
+    "categorias",
+    () => (this.state?.appConfig?.categories?.length
+      ? Promise.resolve(this.state.appConfig.categories)
+      : loadCategories()),
+    () => fallbackCategories,
+    bootWarnings
+  ),
+  this.loadProviderBootResource(
+    "workspace",
+    () => loadProviderWorkspace(session.providerId),
+    () => this.providerWorkspaceFallback(),
+    bootWarnings
+  ),
+  this.loadProviderBootResource(
+    "notificaciones",
+    () => loadNotifications(session.userId),
+    () => [],
+    bootWarnings
+  ),
+  this.loadProviderBootResource(
+    "ofertas",
+    () => loadOffers(session.providerId),
+    () => [],
+    bootWarnings
+  ),
+  this.loadProviderBootResource(
+    "servicio activo",
+    () => loadActiveRequest({ providerId: session.providerId }),
+    () => null,
+    bootWarnings
+  ),
+  this.loadProviderBootResource(
+    "wallet",
+    () => getProviderPayoutAccount(),
+    () => this.providerPayoutFallback(),
+    bootWarnings
+  ),
+  this.loadProviderBootResource(
+    "catalogo guiado de servicios",
+    () => loadProviderGuidedServiceCatalog({ limit: 80 }),
+    (error) => this.providerGuidedServiceFallback(error),
+    bootWarnings
+  ),
+  this.loadProviderBootResource(
+    "adicionales de servicios",
+    () => loadProviderServiceAddonsConfig({ providerId: session.providerId }),
+    (error) => this.providerServiceAddonsFallback(error),
+    bootWarnings
+  )
 ]);
+
+const payoutAccountError = payoutAccountResult?.ok === false && payoutAccountResult?.error
+  ? this.providerPayoutErrorMessage(payoutAccountResult.error)
+  : null;
+
+if (bootWarnings.length) {
+  const affected = bootWarnings.map((item) => item.label).join(", ");
+  const message = "Panel cargado con datos parciales. Vamos a reintentar sincronizar las secciones afectadas.";
+  actions.setInfo?.(message);
+  console.warn(`[MIMI Provider] Arranque parcial: ${affected}`);
+  this.showToast(message, "warning");
+}
 
 if (Array.isArray(categories) && categories.length) {
   const normalizedCategories = categories.map(normalizeProviderCategory);
@@ -2221,7 +2531,8 @@ setTimeout(async () => {
       provider: {
         ...(this.state?.provider ?? {}),
         dashboard: freshDashboard,
-        payoutAccount: payoutAccountResult?.account ?? this.state?.provider?.payoutAccount ?? null
+        payoutAccount: payoutAccountResult?.account ?? this.state?.provider?.payoutAccount ?? null,
+        payoutAccountError: payoutAccountError ?? this.state?.provider?.payoutAccountError ?? null
       }
     });
   } catch (err) {
@@ -2234,6 +2545,16 @@ setTimeout(async () => {
       provider: {
         ...(this.state?.provider ?? {}),
         payoutAccount: payoutAccountResult?.account ?? null,
+        payoutAccountError,
+        walletLoading: false,
+        guidedService: this.normalizeProviderGuidedService(guidedServiceCatalog),
+        serviceAddons: this.normalizeProviderServiceAddons(serviceAddonsConfig)
+      }
+    });
+
+    actions.updateState({
+      provider: {
+        ...(this.state?.provider ?? {}),
         offers: this.filterUsableOffers(offers)
       }
     });
@@ -2244,6 +2565,7 @@ setTimeout(async () => {
         unreadCount: (notifications ?? []).filter((item) => !item.read_at).length
       }
     });
+    this.ackNotificationReceipts(notifications, { silent: true });
 
     const firstOffer = this.filterUsableOffers(offers)[0] ?? null;
     if (firstOffer) {
@@ -2255,6 +2577,9 @@ setTimeout(async () => {
     if (activeRequest) {
       actions.setActiveService(this.normalizeServiceForState(activeRequest));
       this.subscribeActiveRequestRealtime(activeRequest.id);
+      this.handleExternalNavigationReturn("boot", { skipResync: true }).catch((error) => {
+        console.warn("[MIMI navigation] return notice skipped", error);
+      });
     } else {
       actions.clearActiveService();
       this.stopLocationTracking();
@@ -2414,7 +2739,7 @@ async openProviderPhoneTrustModal({ forceChange = false, existingProfile = null,
 
   const fallbackCopy = (response = {}) => (
     response?.message ||
-    "WhatsApp todavia no esta disponible para esta verificacion. Podes continuar por otro metodo."
+    "WhatsApp todavía no está disponible para esta verificación. Podés continuar por otro método."
   );
 
   const fallbackList = (response = {}) => {
@@ -2433,7 +2758,7 @@ async openProviderPhoneTrustModal({ forceChange = false, existingProfile = null,
     const emailAvailable = response?.email_available === true || methods.includes("email");
 
     fallbackActions.innerHTML = `
-      <p>Podes seguir sin esperar la habilitacion de WhatsApp.</p>
+      <p>Podés seguir sin esperar la habilitación de WhatsApp.</p>
       <div class="provider-phone-fallback-row">
         ${emailAvailable ? `<button type="button" class="provider-phone-fallback-btn is-secondary" data-provider-phone-fallback="email">Verificar por email</button>` : ""}
         ${smsAvailable ? `<button type="button" class="provider-phone-fallback-btn is-primary" data-provider-phone-fallback="sms">Enviar SMS</button>` : ""}
@@ -2638,7 +2963,7 @@ async openProviderPhoneTrustModal({ forceChange = false, existingProfile = null,
     setLoading(true, method === "sms" ? "Enviando SMS..." : method === "email" ? "Enviando email..." : "Reintentando...");
     try {
       if (method === "sms") {
-        setStatus("Te vamos a enviar un codigo por SMS. Usalo si no podes verificar por WhatsApp.", "neutral");
+        setStatus("Te vamos a enviar un código por SMS. Usalo si no podés verificar por WhatsApp.", "neutral");
         await startOtp("sms");
         return;
       }
@@ -2650,7 +2975,7 @@ async openProviderPhoneTrustModal({ forceChange = false, existingProfile = null,
         });
         setStatus(
           result?.channel === "email"
-            ? "Te enviamos una verificacion por email para proteger tu cuenta. Para validar este telefono, usa WhatsApp o SMS."
+            ? "Te enviamos una verificación por email para proteger tu cuenta. Para validar este teléfono, usá WhatsApp o SMS."
             : "No pudimos enviar el email ahora. Proba por SMS o intenta nuevamente.",
           result?.channel === "email" ? "success" : "neutral"
         );
@@ -2666,7 +2991,7 @@ async openProviderPhoneTrustModal({ forceChange = false, existingProfile = null,
         setStatus(this.phoneVerificationErrorText(error), "error");
       }
     } finally {
-      setLoading(false, currentStep === "otp" ? "Verificar y continuar" : "Enviar codigo");
+      setLoading(false, currentStep === "otp" ? "Verificar y continuar" : "Enviar código");
     }
   };
 
@@ -2755,9 +3080,9 @@ phoneVerificationErrorText(error) {
   const map = {
     phone_invalid: "Ingresá un número válido con código de país.",
     phone_already_used: "Ese número ya está verificado en otra cuenta.",
-    sms_provider_not_configured: "No pudimos verificarte en este momento. Proba mas tarde o contacta soporte.",
-    whatsapp_channel_disabled: "WhatsApp todavia no esta disponible para esta verificacion. Podes continuar por otro metodo.",
-    sms_channel_disabled: "SMS todavia no esta disponible. Proba por email o intenta mas tarde.",
+    sms_provider_not_configured: "No pudimos verificarte en este momento. Probá más tarde o contactá soporte.",
+    whatsapp_channel_disabled: "WhatsApp todavía no está disponible para esta verificación. Podés continuar por otro método.",
+    sms_channel_disabled: "SMS todavía no está disponible. Probá por email o intentá más tarde.",
     sms_recipient_unverified: "No pudimos enviar el código a este número. Contactá soporte si el problema continúa.",
     sms_provider_error: "No pudimos enviar el código por WhatsApp ni por SMS. Revisá el número e intentá nuevamente.",
     otp_provider_timeout: "La verificación tardó demasiado. Intentá nuevamente.",
@@ -2782,6 +3107,7 @@ phoneVerificationErrorText(error) {
     const categories = Array.isArray(workspace.categories) ? workspace.categories : [];
     const pricingRows = Array.isArray(workspace.pricing) ? workspace.pricing : [];
     const offerings = Array.isArray(workspace.offerings) ? workspace.offerings : [];
+    const addons = Array.isArray(workspace.addons) ? workspace.addons : [];
     const availability = Array.isArray(workspace.availability) ? workspace.availability : [];
     const reviews = Array.isArray(workspace.reviews) ? workspace.reviews : [];
 
@@ -2828,11 +3154,13 @@ phoneVerificationErrorText(error) {
           profile: workspace.profileDetail ?? null,
           pricing: pricingRows,
           offerings,
+          addons,
           availability,
           documents,
           reviews,
           legalAcceptances: Array.isArray(workspace.legalAcceptances) ? workspace.legalAcceptances : []
         },
+        guidedService: this.state?.provider?.guidedService ?? this.providerGuidedServiceFallback(),
 stats: {
   rating: Number(profile?.rating_avg ?? 0),
   completedServices: Number(workspace.completedCount ?? 0),
@@ -2877,17 +3205,17 @@ stats: {
         safeService.svc_categories?.name ??
         "Servicio",
       clientName:
+        details.client_name ??
         safeService.client_name ??
         safeService.client?.full_name ??
         safeService.svc_clients?.full_name ??
         "Cliente",
       clientAvatar: safeService.client_avatar ?? safeService.client?.avatar_url ?? null,
-      location: safeService.address_text ?? safeService.location ?? "Ubicacin a confirmar",
-      address: safeService.address_text ?? null,
+      location: details.address_text ?? safeService.address_text ?? safeService.location ?? "Ubicación a confirmar",
+      address: details.address_text ?? safeService.address_text ?? null,
       price:
         Number(details.provider_price ?? safeService.provider_price_snapshot ?? safeService.provider_amount ?? 0),
-      payment: safeService.payment ?? null,
-      paymentStatus: this.normalizePaymentStatus(safeService.payment_status ?? safeService.payment?.status ?? "PENDING"),
+      paymentStatus: this.normalizePaymentStatus(safeService.payment_status ?? safeService.payment?.status),
       details,
       scheduledFor: safeService.scheduled_for ?? null,
       startedAt: safeService.started_at ?? null,
@@ -2913,37 +3241,16 @@ stats: {
     }).format(amount);
   }
 
-  normalizePaymentStatus(status = "PENDING") {
-    return String(status || "PENDING").trim().toUpperCase();
+  normalizePaymentStatus(status) {
+    const value = String(status || "").trim().toUpperCase();
+    return value || "PENDING";
   }
 
-  providerPaymentStatusLabel(status = "PENDING") {
-    const normalized = this.normalizePaymentStatus(status);
-    if (["APPROVED", "CAPTURED", "SETTLED"].includes(normalized)) return "Pago confirmado";
+  paymentStatusLabel(status) {
+    const value = this.normalizePaymentStatus(status);
+    if (value === "APPROVED" || value === "CAPTURED") return "Pago confirmado";
+    if (value === "REJECTED" || value === "CANCELLED") return "Pago no completado";
     return "Pago pendiente";
-  }
-
-  serviceRequiresApprovedPayment(service = {}) {
-    const raw = service.raw ?? service;
-    const details = service.details ?? this.extractServiceDetails(raw);
-    const total = Number(
-      raw.total_price_snapshot ??
-      raw.total_price ??
-      details.total_price ??
-      service.price ??
-      0
-    );
-    const model = String(details.pricing_model ?? raw.pricing_model ?? "").trim().toUpperCase();
-    return Number.isFinite(total) && total > 0 && model !== "QUOTE";
-  }
-
-  isServicePaymentApproved(service = {}) {
-    const status = this.normalizePaymentStatus(service.paymentStatus ?? service.payment_status ?? service.payment?.status);
-    return ["APPROVED", "CAPTURED", "SETTLED"].includes(status);
-  }
-
-  canAdvancePaidService(service = {}) {
-    return !this.serviceRequiresApprovedPayment(service) || this.isServicePaymentApproved(service);
   }
 
   distanceKmBetween(latA, lngA, latB, lngB) {
@@ -2990,7 +3297,6 @@ stats: {
     const unitPrice = Number(details.unit_price || 0);
     const providerAmount = Number(details.provider_price ?? request.provider_price_snapshot ?? offer.provider_price_snapshot ?? 0);
     const currency = details.currency || request.currency || "ARS";
-    const paymentStatus = this.normalizePaymentStatus(offer.payment_status ?? offer.payment?.status ?? request.payment_status ?? request.payment?.status ?? "PENDING");
 
     if (quantity > 0 && unitName) {
       rows.push({
@@ -3014,10 +3320,13 @@ stats: {
     if (providerAmount > 0) {
       rows.push({ label: "Tu precio", value: this.formatMoney(providerAmount, currency) });
     } else {
-      rows.push({ label: "Precio", value: "A coordinar" });
+      rows.push({ label: "Precio", value: QUOTE_PRICING_LABEL });
     }
 
-    rows.push({ label: "Pago", value: this.providerPaymentStatusLabel(paymentStatus) });
+    rows.push({
+      label: "Pago",
+      value: this.paymentStatusLabel(request.payment_status ?? offer.payment_status ?? request.payment?.status ?? offer.payment?.status)
+    });
 
     const notes = String(details.client_notes || request.notes || "").trim();
     if (notes) {
@@ -3036,6 +3345,7 @@ stats: {
     const detailRows = this.buildServiceDetailRows(offer);
     const providerAmount = Number(details.provider_price ?? offer.provider_price_snapshot ?? request.provider_price_snapshot ?? 0);
     const displayAmount = providerAmount;
+    const paymentStatus = this.normalizePaymentStatus(request.payment_status ?? offer.payment_status ?? request.payment?.status ?? offer.payment?.status);
 
     return {
       id: offer.id,
@@ -3048,12 +3358,12 @@ stats: {
         request.category_name ??
         request.svc_categories?.name ??
         "Servicio",
-      clientName: offer.client_name ?? request.client_name ?? "Cliente",
-      location: offer.address_text ?? request.address_text ?? "Ubicacin a confirmar",
+      clientName: details.client_name ?? offer.client_name ?? request.client_name ?? "Cliente",
+      location: details.address_text ?? offer.address_text ?? request.address_text ?? "Ubicación a confirmar",
       price: displayAmount,
-      priceLabel: displayAmount > 0 ? `Tu precio ${this.formatMoney(displayAmount, details.currency || request.currency || "ARS")}` : "Precio a coordinar",
-      payment: offer.payment ?? null,
-      paymentStatus: this.normalizePaymentStatus(offer.payment_status ?? offer.payment?.status ?? "PENDING"),
+      priceLabel: displayAmount > 0 ? `Tu precio ${this.formatMoney(displayAmount, details.currency || request.currency || "ARS")}` : QUOTE_PRICING_LABEL,
+      paymentStatus,
+      paymentLabel: this.paymentStatusLabel(paymentStatus),
       detailRows,
       details,
       mode: request.request_type ?? "IMMEDIATE",
@@ -3089,14 +3399,96 @@ stats: {
     return (Array.isArray(offers) ? offers : []).filter((offer) => this.isUsableOffer(offer));
   }
 
+  findOfferForAction(offerId) {
+    const normalizedId = String(offerId || "").trim();
+    if (!normalizedId) return this.state?.activeOffer ?? null;
+
+    const activeOffer = this.state?.activeOffer;
+    if (String(activeOffer?.id || activeOffer?.raw?.id || "") === normalizedId) {
+      return activeOffer;
+    }
+
+    return (this.state?.provider?.offers ?? []).find((offer) => String(offer?.id || "") === normalizedId) ?? null;
+  }
+
+  async prepareOfferForAction(offerId) {
+    const source = this.findOfferForAction(offerId);
+    if (!source?.id && !source?.raw?.id) return null;
+
+    let normalized = source.details ? source : this.normalizeOfferForState(source);
+
+    if (!this.offerHasDisplayDetails(normalized)) {
+      try {
+        const detailed = await loadOfferDetails(normalized.id);
+        if (detailed && this.isUsableOffer(detailed)) {
+          normalized = this.normalizeOfferForState(detailed);
+          actions.updateState({
+            provider: {
+              ...(this.state?.provider ?? {}),
+              offers: [
+                detailed,
+                ...(this.state?.provider?.offers ?? []).filter((item) => item.id !== detailed.id)
+              ]
+            }
+          });
+        }
+      } catch (error) {
+        console.warn("[MIMI] No pudimos refrescar la oferta antes de responder:", error);
+      }
+    }
+
+    actions.setActiveOffer(normalized);
+    return normalized;
+  }
+
+  removeOfferFromState(offerId) {
+    const normalizedId = String(offerId || "").trim();
+    if (!normalizedId) return;
+
+    actions.updateState({
+      provider: {
+        ...(this.state?.provider ?? {}),
+        offers: (this.state?.provider?.offers ?? []).filter((item) => String(item?.id || "") !== normalizedId)
+      }
+    });
+
+    if (String(this.state?.activeOffer?.id || "") === normalizedId) {
+      actions.clearActiveOffer();
+    }
+  }
+
+  async handleOfferCardAction(action, offerId) {
+    const normalizedAction = String(action || "").trim().toLowerCase();
+    const offer = await this.prepareOfferForAction(offerId);
+    if (!offer) {
+      this.showToast("La solicitud ya no está disponible.", "warning");
+      return;
+    }
+
+    if (normalizedAction === "accept") {
+      await this.handleAcceptOffer(offer);
+      return;
+    }
+
+    if (normalizedAction === "reject") {
+      await this.handleRejectOffer(offer);
+    }
+  }
+
   normalizeNotifications(items = []) {
     return (items ?? []).map((item) => ({
       id: item.id ?? crypto.randomUUID?.() ?? String(Date.now()),
-      title: item.title ?? "Nueva notificacion",
+      type: item.type ?? item.notification_type ?? "",
+      title: item.title ?? "Nueva notificación",
       text: item.body ?? item.message ?? "",
       timestamp: item.created_at ?? new Date().toISOString(),
       unread: !item.read_at,
+      read_at: item.read_at ?? null,
+      received_at: item.received_at ?? null,
+      delivered_at: item.delivered_at ?? null,
+      delivery_status: item.delivery_status ?? "PENDING",
       icon: item.icon ?? "",
+      data: item.data_json ?? item.data ?? {},
       raw: item
     }));
   }
@@ -3113,6 +3505,503 @@ stats: {
     return raw?.type === "PROVIDER_KYC_REVIEW" ||
       data?.type === "PROVIDER_KYC_REVIEW" ||
       ["needs_resubmission", "request_document_correction", "reject", "block", "approve"].includes(action);
+  }
+
+  isReviewReceivedNotification(item = {}) {
+    const raw = item.raw || item;
+    const data = this.notificationData(item);
+    const type = String(item.type || raw?.type || data?.type || "").toUpperCase();
+    return type === "PROVIDER_REVIEW_RECEIVED" || data?.channel === "provider_reviews";
+  }
+
+  reviewStarsFromNotification(item = {}) {
+    const data = this.notificationData(item);
+    const stars = Number(data?.stars ?? data?.rating ?? 0);
+    return Number.isFinite(stars) && stars > 0 ? Math.max(1, Math.min(5, Math.round(stars))) : null;
+  }
+
+  reviewMetricFromNotification(item = {}, key) {
+    const data = this.notificationData(item);
+    const value = Number(data?.[key] ?? 0);
+    return Number.isFinite(value) && value > 0 ? value : null;
+  }
+
+  reviewStarsHtml(stars) {
+    const value = Number.isFinite(Number(stars)) ? Math.max(1, Math.min(5, Math.round(Number(stars)))) : 0;
+    return Array.from({ length: 5 }, (_, index) => (
+      `<span class="${index < value ? "is-filled" : ""}" aria-hidden="true">&#9733;</span>`
+    )).join("");
+  }
+
+  showProviderReviewMomentCard(item = {}) {
+    const stars = this.reviewStarsFromNotification(item) ?? 5;
+    const average = this.reviewMetricFromNotification(item, "rating_avg");
+    const count = this.reviewMetricFromNotification(item, "rating_count");
+    const scoreLabel = `${stars} de 5`;
+    const headline = stars >= 5
+      ? "Excelente servicio"
+      : stars >= 4
+        ? "Muy buena calificación"
+        : "Nueva calificación";
+
+    let host = document.querySelector(".provider-review-notice-host");
+    if (!host) {
+      host = document.createElement("div");
+      host.className = "provider-review-notice-host";
+      host.setAttribute("aria-live", "polite");
+      document.body.appendChild(host);
+    }
+
+    if (this.providerReviewNoticeTimeout) {
+      window.clearTimeout(this.providerReviewNoticeTimeout);
+      this.providerReviewNoticeTimeout = null;
+    }
+
+    host.innerHTML = `
+      <section class="provider-review-notice-card" role="status" aria-label="Calificación de tu último servicio">
+        <div class="provider-review-notice-topline">
+          <span>Último servicio</span>
+          <button type="button" data-provider-review-dismiss aria-label="Cerrar calificación">&times;</button>
+        </div>
+        <div class="provider-review-notice-body">
+          <div class="provider-review-notice-score">
+            <strong>${stars.toFixed(1)}</strong>
+            <small>${scoreLabel}</small>
+          </div>
+          <div class="provider-review-notice-copy">
+            <span>Calificación de tu último servicio</span>
+            <h3>${headline}</h3>
+            <div class="provider-review-notice-stars" aria-label="${scoreLabel} estrellas">
+              ${this.reviewStarsHtml(stars)}
+            </div>
+          </div>
+        </div>
+        ${average ? `
+          <div class="provider-review-notice-footer">
+            <span>Tu promedio ahora</span>
+            <strong>${average.toFixed(1)}${count ? ` · ${Math.round(count)} calificaciones` : ""}</strong>
+          </div>
+        ` : ""}
+      </section>
+    `;
+
+    const card = host.querySelector(".provider-review-notice-card");
+    const dismiss = () => {
+      if (!card) return;
+      if (this.providerReviewNoticeTimeout) {
+        window.clearTimeout(this.providerReviewNoticeTimeout);
+        this.providerReviewNoticeTimeout = null;
+      }
+      card.classList.remove("is-visible");
+      this.providerReviewNoticeTimeout = window.setTimeout(() => {
+        host?.remove();
+        this.providerReviewNoticeTimeout = null;
+      }, 260);
+    };
+
+    host.querySelector("[data-provider-review-dismiss]")?.addEventListener("click", dismiss);
+    window.requestAnimationFrame(() => card?.classList.add("is-visible"));
+    this.providerReviewNoticeTimeout = window.setTimeout(dismiss, 7200);
+  }
+
+  showReviewNotificationToast(item = {}) {
+    const stars = this.reviewStarsFromNotification(item);
+    this.showProviderReviewMomentCard(item);
+    this.playNotificationSound(stars && stars >= 4 ? "success" : "info");
+  }
+
+  showNewReviewNotificationToasts(items = []) {
+    const reviewItems = (Array.isArray(items) ? items : [])
+      .filter((item) => this.isReviewReceivedNotification(item) && item.unread);
+    const unseen = reviewItems.filter((item) => {
+      const id = String(item.id || "");
+      return id && !this.reviewNotificationToastSeen.has(id);
+    });
+    if (!unseen.length) return;
+
+    for (const item of unseen) {
+      this.reviewNotificationToastSeen.add(String(item.id || ""));
+    }
+
+    const newest = unseen.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0))[0];
+    if (newest) this.showReviewNotificationToast(newest);
+  }
+
+  notificationSemantic(item = {}) {
+    const raw = item.raw || item;
+    const data = this.notificationData(item);
+    const type = String(item.type || raw?.type || data?.type || "").toUpperCase();
+    const action = String(data?.action || "").toLowerCase();
+    const haystack = [
+      item.title,
+      item.text,
+      raw?.title,
+      raw?.body,
+      type,
+      action,
+      data?.category,
+      data?.channel
+    ].map((value) => String(value || "").toLowerCase()).join(" ");
+    const normalizedHaystack = haystack.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    if (
+      /promo|promocion|marketing|beneficio|benefit|cashback|descuento|campana|anuncio|announcement/.test(normalizedHaystack) ||
+      /PROMO|MARKETING|BENEFIT|CAMPAIGN|ANNOUNCEMENT/.test(type)
+    ) {
+      return {
+        category: "marketing",
+        label: "Marketing",
+        tabLabel: "Promos",
+        tone: "promo",
+        icon: "sparkles",
+        actionLabel: "Ver novedad",
+        emptyTitle: "Sin promociones",
+        emptyText: "Las campañas y beneficios van a aparecer acá."
+      };
+    }
+
+    if (this.isReviewReceivedNotification(item)) {
+      return {
+        category: "service",
+        label: "Servicio",
+        tabLabel: "Servicios",
+        tone: "success",
+        icon: "sparkles",
+        actionLabel: "Ver reputacion",
+        emptyTitle: "Sin calificaciones",
+        emptyText: "Las reseñas de clientes aparecen aca."
+      };
+    }
+
+    if (this.isKycReviewNotification(item)) {
+      const isGoodNews = ["approve", "approve_document"].includes(action) || /aprob/.test(normalizedHaystack);
+      const isBlocked = action === "block" || /bloque/.test(normalizedHaystack);
+      return {
+        category: "system",
+        label: "Sistema",
+        tabLabel: "Sistema",
+        tone: isGoodNews ? "success" : isBlocked ? "danger" : "warning",
+        icon: isGoodNews ? "shield-check" : "shield-alert",
+        actionLabel: "Ver documentos",
+        emptyTitle: "Sin avisos de sistema",
+        emptyText: "Las revisiones de cuenta y documentos quedan acá."
+      };
+    }
+
+    if (
+      /SERVICE|REQUEST|OFFER|MESSAGE|CHAT|ARRIVED|EN_ROUTE|COMPLETED|START/.test(type) ||
+      /servicio|solicitud|cliente|prestador|camino|llego|aceptad|completad|iniciad|mensaje|chat|agenda/.test(normalizedHaystack)
+    ) {
+      return {
+        category: "service",
+        label: "Servicio",
+        tabLabel: "Servicios",
+        tone: "service",
+        icon: /mensaje|chat/.test(normalizedHaystack) ? "message" : /camino|llego|ruta/.test(normalizedHaystack) ? "route" : "briefcase",
+        actionLabel: /mensaje|chat/.test(normalizedHaystack) ? "Abrir chat" : "Ver servicio",
+        emptyTitle: "Sin mensajes de servicio",
+        emptyText: "Las solicitudes, estados y chats de servicios aparecen acá."
+      };
+    }
+
+    return {
+      category: "system",
+      label: "Sistema",
+      tabLabel: "Sistema",
+      tone: "system",
+      icon: "bell",
+      actionLabel: "Ver detalle",
+      emptyTitle: "Sin avisos de sistema",
+      emptyText: "Las novedades importantes de tu cuenta aparecen acá."
+    };
+  }
+
+  notificationIconSvg(name = "bell") {
+    const icons = {
+      bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.27 21a2 2 0 0 0 3.46 0"/><path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/></svg>',
+      briefcase: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 6V5a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v1"/><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M3 13h18"/><path d="M9 13v2h6v-2"/></svg>',
+      route: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="18" r="3"/><circle cx="18" cy="6" r="3"/><path d="M9 18h3a4 4 0 0 0 4-4v-1"/><path d="M15 6h-3a4 4 0 0 0-4 4v1"/></svg>',
+      message: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/><path d="M8 9h8"/><path d="M8 13h5"/></svg>',
+      sparkles: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.9 4.1L18 9l-4.1 1.9L12 15l-1.9-4.1L6 9l4.1-1.9Z"/><path d="m19 14 .9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9Z"/><path d="m5 13 .7 1.6L7.3 15l-1.6.7L5 17.3l-.7-1.6L2.7 15l1.6-.7Z"/></svg>',
+      "shield-alert": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>',
+      "shield-check": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>',
+      check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>'
+    };
+
+    return icons[name] || icons.bell;
+  }
+
+  notificationIds(item = {}) {
+    const ids = Array.isArray(item.ids) ? item.ids : [item.id];
+    return ids.map((id) => String(id || "").trim()).filter(Boolean);
+  }
+
+  compactNotificationByIds(ids = []) {
+    const wanted = new Set(ids.map((id) => String(id || "").trim()).filter(Boolean));
+    if (!wanted.size) return null;
+
+    return this.compactNotificationItems(this.state?.notifications?.items || [])
+      .find((item) => this.notificationIds(item).some((id) => wanted.has(id))) || null;
+  }
+
+  async markNotificationIdsRead(ids = [], options = {}) {
+    const notificationIds = ids.map((id) => String(id || "").trim()).filter(Boolean);
+    if (!notificationIds.length) return;
+
+    actions.markNotificationRead(notificationIds);
+
+    try {
+      await markRemoteNotificationsRead({ notificationIds });
+    } catch (error) {
+      console.warn("[MIMI] No pudimos persistir lectura de notificación:", error?.message || error);
+      if (!options.silent) {
+        this.showToast("No pudimos guardar la lectura. Reintentamos al sincronizar.", "warning");
+      }
+    }
+  }
+
+  async markNotificationIdsReceived(ids = [], options = {}) {
+    const notificationIds = ids.map((id) => String(id || "").trim()).filter(Boolean);
+    if (!notificationIds.length) return;
+
+    try {
+      await markRemoteNotificationsDelivered({ notificationIds });
+      const now = new Date().toISOString();
+      const wanted = new Set(notificationIds);
+      const current = this.state?.notifications?.items || [];
+      if (current.length) {
+        actions.updateState({
+          notifications: {
+            items: current.map((item) => this.notificationIds(item).some((id) => wanted.has(id))
+              ? { ...item, received_at: item.received_at || now, delivery_status: item.delivery_status || "RECEIVED" }
+              : item),
+            unreadCount: current.filter((item) => item.unread).length
+          }
+        });
+      }
+    } catch (error) {
+      if (window.MIMI_DEBUG_NOTIFICATIONS) {
+        console.warn("[MIMI] No pudimos persistir recepcion de notificacion:", error?.message || error);
+      }
+      if (!options.silent) {
+        this.showToast("Recibimos la notificacion, pero falta sincronizar el acuse.", "warning");
+      }
+    }
+  }
+
+  ackNotificationReceipts(items = [], options = {}) {
+    const ids = (Array.isArray(items) ? items : [])
+      .filter((item) => item?.id && !item.received_at)
+      .map((item) => item.id);
+
+    if (!ids.length) return;
+    this.markNotificationIdsReceived(ids, { silent: true, ...options });
+  }
+
+  async syncNotifications(options = {}) {
+    const userId = this.state?.session?.userId;
+    if (!userId || this.syncingNotifications) return false;
+
+    const minAgeMs = Math.max(0, Number(options.minAgeMs ?? 0));
+    if (
+      !options.force &&
+      minAgeMs > 0 &&
+      this.notificationLastSyncAt &&
+      Date.now() - this.notificationLastSyncAt < minAgeMs
+    ) {
+      return true;
+    }
+
+    this.syncingNotifications = true;
+    try {
+      const notifications = await loadNotifications(userId);
+      const normalized = this.normalizeNotifications(notifications);
+      actions.updateState({
+        notifications: {
+          items: normalized,
+          unreadCount: normalized.filter((item) => item.unread).length
+        }
+      });
+      this.showNewReviewNotificationToasts(normalized);
+      this.ackNotificationReceipts(notifications, { silent: true });
+      this.updateAppBadge(normalized.filter((item) => item.unread).length);
+      this.notificationLastSyncAt = Date.now();
+      this.notificationSyncFailures = 0;
+      return true;
+    } catch (error) {
+      this.notificationSyncFailures += 1;
+      if (window.MIMI_DEBUG_NOTIFICATIONS) {
+        console.warn("[MIMI] syncNotifications failed:", error?.message || error);
+      }
+      if (!options.silent) {
+        this.showToast("No pudimos sincronizar notificaciones. Reintentamos en segundos.", "warning");
+      }
+      return false;
+    } finally {
+      this.syncingNotifications = false;
+    }
+  }
+
+  notificationSyncDelay() {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      return MIMI_PROVIDER_NOTIFICATION_HIDDEN_SYNC_MS;
+    }
+
+    const visible = !document.visibilityState || document.visibilityState === "visible";
+    const realtimeBacked =
+      MIMI_REALTIME_ENABLED &&
+      MIMI_REALTIME_OPTIMIZED &&
+      this.notificationRealtimeHealthy;
+
+    const baseDelay = visible
+      ? (realtimeBacked ? MIMI_PROVIDER_NOTIFICATION_REALTIME_FALLBACK_MS : MIMI_PROVIDER_NOTIFICATION_SYNC_MS)
+      : MIMI_PROVIDER_NOTIFICATION_HIDDEN_SYNC_MS;
+
+    if (!this.notificationSyncFailures) return baseDelay;
+
+    return Math.min(
+      MIMI_PROVIDER_NOTIFICATION_ERROR_MAX_MS,
+      baseDelay * (2 ** Math.min(this.notificationSyncFailures, 4))
+    );
+  }
+
+  scheduleNotificationSync(options = {}) {
+    if (!this.state?.session?.userId) return;
+
+    window.clearTimeout(this.notificationsInterval);
+    const delay = Number.isFinite(Number(options.delay))
+      ? Math.max(0, Number(options.delay))
+      : this.notificationSyncDelay();
+
+    this.notificationsInterval = window.setTimeout(async () => {
+      this.notificationsInterval = null;
+
+      if (document.visibilityState && document.visibilityState !== "visible" && !options.force) {
+        this.scheduleNotificationSync();
+        return;
+      }
+
+      await this.syncNotifications({
+        silent: true,
+        force: Boolean(options.force),
+        minAgeMs: options.force ? 0 : MIMI_PROVIDER_NOTIFICATION_MIN_GAP_MS
+      });
+      this.scheduleNotificationSync();
+    }, delay);
+  }
+
+  requestNotificationSync(options = {}) {
+    if (!this.state?.session?.userId) return;
+
+    if (document.visibilityState && document.visibilityState !== "visible" && !options.force) {
+      this.scheduleNotificationSync();
+      return;
+    }
+
+    const minAgeMs = Math.max(0, Number(options.minAgeMs ?? MIMI_PROVIDER_NOTIFICATION_MIN_GAP_MS));
+    const ageMs = this.notificationLastSyncAt ? Date.now() - this.notificationLastSyncAt : Infinity;
+    const gapDelay = !options.force && ageMs < minAgeMs ? minAgeMs - ageMs : 0;
+    const requestedDelay = Math.max(0, Number(options.delay ?? 0));
+
+    this.scheduleNotificationSync({
+      delay: Math.max(requestedDelay, gapDelay),
+      force: Boolean(options.force)
+    });
+  }
+
+  startNotificationSync() {
+    if (!this.state?.session?.userId) return;
+    this.stopNotificationSync();
+
+    this.requestNotificationSync({ delay: 1200, force: true, minAgeMs: 0 });
+
+    if (this.notificationSyncEventsBound) return;
+    this.notificationSyncEventsBound = true;
+    const syncIfVisible = () => {
+      if (document.visibilityState && document.visibilityState !== "visible") return;
+      this.requestNotificationSync({
+        minAgeMs: MIMI_PROVIDER_NOTIFICATION_MIN_GAP_MS
+      });
+    };
+    window.addEventListener("focus", syncIfVisible);
+    window.addEventListener("online", syncIfVisible);
+    document.addEventListener("visibilitychange", syncIfVisible);
+  }
+
+  stopNotificationSync() {
+    if (this.notificationsInterval) {
+      window.clearTimeout(this.notificationsInterval);
+    }
+    this.notificationsInterval = null;
+  }
+
+  async markAllNotificationsReadRemote() {
+    const unread = (this.state?.notifications?.items || []).filter((item) => item.unread);
+    if (!unread.length) {
+      this.showToast("No tenés notificaciones pendientes.", "info");
+      return;
+    }
+
+    actions.markNotificationsRead();
+
+    try {
+      await markRemoteNotificationsRead({ markAll: true });
+      this.showToast("Notificaciones marcadas como leídas.", "success");
+    } catch (error) {
+      console.warn("[MIMI] No pudimos persistir lectura completa:", error?.message || error);
+      this.showToast("Las marcamos en esta sesion, pero falta sincronizar con backend.", "warning");
+    }
+  }
+
+  async openNotificationFromIds(ids = []) {
+    const item = this.compactNotificationByIds(ids);
+    if (!item) return;
+
+    await this.markNotificationIdsRead(this.notificationIds(item), { silent: true });
+    actions.closeNotifications();
+
+    const semantic = this.notificationSemantic(item);
+    const data = this.notificationData(item);
+
+    if (this.isReviewReceivedNotification(item)) {
+      this.switchTab("account");
+      this.setBottomSheetState("expanded");
+      window.setTimeout(() => {
+        document.getElementById("providerTrustPanel")?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      }, 80);
+      return;
+    }
+
+    if (this.isKycReviewNotification(item)) {
+      this.openProviderSection("documents");
+      actions.openModal("verification");
+      window.setTimeout(() => {
+        const documentType = String(data?.document_type || data?.documentType || "").trim();
+        if (documentType) {
+          this.openVerificationDocumentStep(documentType);
+        } else {
+          this.showVerificationEntry(true);
+        }
+      }, 80);
+      return;
+    }
+
+    if (semantic.category === "service") {
+      this.switchTab("now");
+      this.setBottomSheetState("expanded");
+      this.syncOnlineButtonVisibility();
+      window.setTimeout(() => {
+        this.elements.activeServiceCard?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      }, 80);
+      return;
+    }
+
+    if (semantic.category === "marketing") {
+      this.showToast("Novedad guardada en Promos.", "info");
+      return;
+    }
+
+    this.openProviderSection("profile");
   }
 
   latestKycAdminNotice() {
@@ -3153,8 +4042,179 @@ stats: {
     }
   }
 
+  updateAppBadge(count = 0) {
+    try {
+      const unreadCount = Math.max(0, Number(count) || 0);
+      if (unreadCount > 0 && navigator.setAppBadge) {
+        navigator.setAppBadge(unreadCount).catch(() => {});
+      } else if (unreadCount === 0 && navigator.clearAppBadge) {
+        navigator.clearAppBadge().catch(() => {});
+      }
+    } catch {
+      // The Badging API is optional and not available on every browser.
+    }
+  }
+
+  ensureNotificationUrgencyBanner() {
+    let banner = document.getElementById("providerNotificationUrgencyBanner");
+    if (banner) return banner;
+
+    banner = document.createElement("section");
+    banner.id = "providerNotificationUrgencyBanner";
+    banner.className = "provider-notification-urgency";
+    banner.hidden = true;
+    banner.setAttribute("role", "status");
+    banner.setAttribute("aria-live", "polite");
+    banner.innerHTML = `
+      <div class="provider-notification-urgency-icon">!</div>
+      <div class="provider-notification-urgency-copy">
+        <strong></strong>
+        <span></span>
+      </div>
+      <button type="button" data-provider-open-notifications>Ver</button>
+    `;
+    document.body.appendChild(banner);
+    banner.querySelector("[data-provider-open-notifications]")?.addEventListener("click", () => {
+      const ids = String(banner.dataset.notificationIds || "")
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean);
+
+      if (ids.length) {
+        this.openNotificationFromIds(ids);
+        return;
+      }
+
+      this.hideNotificationUrgencyBanner(banner);
+    });
+    return banner;
+  }
+
+  hideNotificationUrgencyBanner(banner = null) {
+    const target = banner || document.getElementById("providerNotificationUrgencyBanner");
+    if (!target) return;
+
+    if (target.contains(document.activeElement)) {
+      document.activeElement.blur();
+    }
+
+    target.hidden = true;
+    target.setAttribute("aria-hidden", "true");
+    target.removeAttribute("data-notification-ids");
+  }
+
+  isActionableKycNotification(item = {}) {
+    if (!this.isKycReviewNotification(item)) return false;
+
+    const data = this.notificationData(item);
+    const action = String(data?.action || "").toLowerCase();
+    const reviewStatus = String(data?.review_status || data?.kyc_status || data?.status || "").toLowerCase();
+    const documentStatus = String(data?.document_status || data?.document_review_status || "").toLowerCase();
+
+    return (
+      ["needs_resubmission", "request_document_correction", "reject", "rejected", "block", "blocked"].includes(action) ||
+      ["needs_resubmission", "rejected", "blocked", "observed", "document_observed", "document_rejected"].includes(reviewStatus) ||
+      ["needs_resubmission", "rejected", "blocked", "observed", "document_observed", "document_rejected"].includes(documentStatus)
+    );
+  }
+
+  renderNotificationUrgencyBanner() {
+    this.hideNotificationUrgencyBanner();
+    return;
+
+    const banner = this.ensureNotificationUrgencyBanner();
+    const unreadItems = (this.state?.notifications?.items || []).filter((item) => item.unread);
+    const urgentItems = unreadItems.filter((item) => {
+      if (this.isKycReviewNotification(item)) return this.isActionableKycNotification(item);
+      return ["service", "system"].includes(this.notificationSemantic(item).category);
+    });
+    const kycItem = urgentItems.find((item) => this.isKycReviewNotification(item));
+    const item = kycItem || urgentItems[0] || null;
+    const updateBanner = document.getElementById("mimiProviderUpdateBanner");
+    const updateVisible = updateBanner && !updateBanner.hidden && updateBanner.getAttribute("aria-hidden") !== "true";
+
+    if (!item || updateVisible) {
+      this.hideNotificationUrgencyBanner(banner);
+      return;
+    }
+
+    if (this.state?.ui?.notificationDrawerOpen) {
+      this.hideNotificationUrgencyBanner(banner);
+      return;
+    }
+
+    banner.hidden = false;
+    banner.setAttribute("aria-hidden", "false");
+    banner.dataset.notificationIds = this.notificationIds(item).join(",");
+    banner.classList.toggle("is-kyc", Boolean(kycItem));
+    const title = banner.querySelector("strong");
+    const copy = banner.querySelector("span");
+    if (title) title.textContent = item.title || "Nueva notificación";
+    if (copy) copy.textContent = item.text || "Tenés una novedad pendiente en MIMIGO Prestadores.";
+  }
+
+  readProviderPushDiagnostic() {
+    try {
+      return JSON.parse(localStorage.getItem("mimi_provider_push_diagnostic") || "null");
+    } catch {
+      return null;
+    }
+  }
+
+  renderProviderPushStatus(result = null) {
+    const host = document.getElementById("providerTrustPanel") || document.getElementById("providerSupportPanel");
+    if (!host) return;
+
+    let panel = document.getElementById("providerPushStatusPanel");
+    if (!panel) {
+      panel = document.createElement("section");
+      panel.id = "providerPushStatusPanel";
+      panel.className = "provider-push-status-panel";
+      host.prepend(panel);
+    }
+
+    const diagnostic = this.readProviderPushDiagnostic();
+    const permission = typeof Notification !== "undefined" ? Notification.permission : "unsupported";
+    const ok = permission === "granted" && (diagnostic?.status === "token_ready" || result?.push_enabled === true);
+    if (ok) {
+      panel.remove();
+      return;
+    }
+
+    const rawPushError = String(diagnostic?.detail?.message || result?.error || "").toLowerCase();
+    const statusText = ok
+      ? "Activas"
+      : permission === "denied"
+        ? "Bloqueadas"
+        : permission === "default"
+          ? "Pendientes"
+          : "Sin token";
+    const detailText = ok
+      ? "Este equipo puede recibir avisos importantes."
+      : diagnostic?.status === "firebase_messaging_not_supported"
+        ? "Este navegador no habilita Firebase Messaging para esta instalación."
+        : diagnostic?.status === "token_error"
+          ? rawPushError.includes("token-subscribe-failed") || rawPushError.includes("missing required authentication credential")
+            ? "No pudimos conectar el canal push de Firebase. Actualizá la app y tocá Activar otra vez."
+            : "No pudimos generar el token push. Tocá Activar nuevamente."
+          : "Toca activar para registrar este equipo.";
+
+    panel.dataset.status = ok ? "ok" : "warning";
+    panel.innerHTML = `
+      <div>
+        <strong>Notificaciones del dispositivo: ${this.escapeHtml(statusText)}</strong>
+        <span>${this.escapeHtml(detailText)}</span>
+      </div>
+      <button type="button" data-provider-enable-push>Activar</button>
+    `;
+    panel.querySelector("[data-provider-enable-push]")?.addEventListener("click", () => {
+      this.registerProviderPushToken({ prompt: true });
+    });
+  }
+
   showKycRealtimeAlert(item) {
     const message = item?.text || "El equipo MIMI dejo una observacion sobre tu verificacion.";
+    this.applyKycNotificationToState(item);
     this.showToast(`${item?.title || "Verificacion"}: ${message}`, "warning");
     this.playNotificationSound("kyc");
     this.renderKycAdminNotice();
@@ -3253,6 +4313,8 @@ stats: {
   }
 
   subscribeActiveRequestRealtime(requestId = this.activeServiceRequestId()) {
+    if (!MIMI_REALTIME_ENABLED) return;
+
     const supabase = getSupabaseClient();
     if (!supabase?.channel || !requestId) return;
 
@@ -3347,7 +4409,7 @@ stats: {
     const status = this.elements.providerPinStatus;
 
     if (!overlay || !inputs.length || !submit) {
-      this.showToast("No pudimos abrir el validador de codigo. Reintenta en unos segundos.", "error");
+      this.showToast("No pudimos abrir el validador de código. Reintentá en unos segundos.", "error");
       return Promise.resolve(null);
     }
 
@@ -3375,7 +4437,7 @@ stats: {
       const onSubmit = () => {
         const pin = pinValue();
         if (!/^\d{4}$/.test(pin)) {
-          setStatus("Completa los 4 digitos para validar el servicio.");
+          setStatus("Completá los 4 dígitos para validar el servicio.");
           inputs.find((input) => !input.value)?.focus();
           return;
         }
@@ -3437,6 +4499,16 @@ stats: {
       button.innerHTML = button.dataset.idleHtml;
       delete button.dataset.idleHtml;
     }
+  }
+
+  primeProviderSaveButton(button) {
+    if (!button || button.disabled || button.classList.contains("is-loading")) return;
+    button.classList.remove("is-save-primed");
+    void button.offsetWidth;
+    button.classList.add("is-save-primed");
+    window.setTimeout(() => {
+      button.classList.remove("is-save-primed");
+    }, 900);
   }
 
   async runProviderAction(key, button, loadingLabel, action) {
@@ -3630,6 +4702,9 @@ stats: {
 this.elements.tabButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
     const tab = btn.dataset.tab;
+    if (tab === "pricing") {
+      this.closeProviderServiceComposer();
+    }
 
     const isSameTab =
       btn.classList.contains("active") &&
@@ -3687,6 +4762,16 @@ this.elements.tabButtons.forEach((btn) => {
     // Quick actions
     this.elements.quickNotifications?.addEventListener('click', () => {
       actions.toggleNotifications();
+      if (this.state?.ui?.notificationDrawerOpen) {
+        this.requestNotificationSync({ force: true, minAgeMs: 0 });
+      }
+    });
+
+    this.elements.sheetNotificationBell?.addEventListener('click', () => {
+      actions.toggleNotifications();
+      if (this.state?.ui?.notificationDrawerOpen) {
+        this.requestNotificationSync({ force: true, minAgeMs: 0 });
+      }
     });
 
     this.elements.quickChat?.addEventListener('click', () => {
@@ -3703,8 +4788,39 @@ this.elements.tabButtons.forEach((btn) => {
 
     // Notification drawer
     this.elements.markAllRead?.addEventListener('click', () => {
-      actions.markNotificationsRead();
-      this.showToast('Notificaciones marcadas como ledas', 'success');
+      this.markAllNotificationsReadRemote();
+    });
+
+    this.elements.notificationsClose?.addEventListener('click', () => {
+      actions.closeNotifications();
+    });
+
+    this.elements.notificationsList?.addEventListener("click", (event) => {
+      const filterButton = event.target.closest("[data-notification-filter]");
+      if (filterButton) {
+        this.notificationFilter = filterButton.dataset.notificationFilter || "all";
+        this.renderNotifications();
+        return;
+      }
+
+      const readButton = event.target.closest("[data-notification-read]");
+      if (readButton) {
+        const ids = String(readButton.dataset.notificationIds || "")
+          .split(",")
+          .map((id) => id.trim())
+          .filter(Boolean);
+        this.markNotificationIdsRead(ids);
+        return;
+      }
+
+      const openButton = event.target.closest("[data-notification-open]");
+      if (openButton) {
+        const ids = String(openButton.dataset.notificationIds || "")
+          .split(",")
+          .map((id) => id.trim())
+          .filter(Boolean);
+        this.openNotificationFromIds(ids);
+      }
     });
 
     // Chat
@@ -3758,6 +4874,24 @@ this.elements.tabButtons.forEach((btn) => {
         event.currentTarget,
         "Rechazando...",
         () => this.handleRejectOffer()
+      );
+    });
+
+    document.addEventListener("click", (event) => {
+      const button = event.target?.closest?.("[data-offer-action][data-offer-id]");
+      if (!button) return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      const action = button.dataset.offerAction;
+      const offerId = button.dataset.offerId;
+      const loadingLabel = action === "accept" ? "Aceptando..." : "Rechazando...";
+
+      this.runProviderAction(
+        `offer-${action}-${offerId}`,
+        button,
+        loadingLabel,
+        () => this.handleOfferCardAction(action, offerId)
       );
     });
 
@@ -3857,10 +4991,23 @@ document.addEventListener("click", (event) => {
       this.handleProviderPayoutAccountSubmit(event);
     });
 
+    document.addEventListener("change", (event) => {
+      const control = event.target?.closest?.("#providerPayoutAccountForm [name='account_type']");
+      if (!control) return;
+      this.syncProviderPayoutAccountFields(control.closest("#providerPayoutAccountForm"), {
+        clearHidden: true
+      });
+    });
+
     document.addEventListener("click", (event) => {
       const refreshButton = event.target?.closest?.("[data-provider-wallet-refresh]");
-      if (!refreshButton) return;
+      const withdrawButton = event.target?.closest?.("[data-provider-wallet-withdraw]");
+      if (!refreshButton && !withdrawButton) return;
       event.preventDefault();
+      if (withdrawButton) {
+        this.handleProviderWalletWithdraw();
+        return;
+      }
       this.refreshProviderPayoutAccount();
     });
 
@@ -3889,12 +5036,21 @@ document.querySelectorAll("[data-camera-doc]").forEach((btn) => {
 document.addEventListener("click", (event) => {
   const cameraButton = event.target?.closest?.("[data-camera]");
   if (cameraButton) {
+    if (cameraButton.closest("[data-document-locked='true']")) {
+      this.showToast("Este documento ya está recibido o aprobado. Solo se habilita si el admin pide reenviarlo.", "info");
+      return;
+    }
     this.openCameraCapture(cameraButton.dataset.camera);
     return;
   }
 
   const uploadButton = event.target?.closest?.("[data-upload]");
   if (!uploadButton) return;
+
+  if (uploadButton.closest("[data-document-locked='true']")) {
+    this.showToast("Este documento ya está recibido o aprobado. Solo se habilita si el admin pide reenviarlo.", "info");
+    return;
+  }
 
   const input = document.querySelector(`[data-input="${uploadButton.dataset.upload}"]`);
   input?.click();
@@ -3903,6 +5059,10 @@ document.addEventListener("click", (event) => {
 document.addEventListener("change", (event) => {
   const input = event.target?.matches?.("[data-input]") ? event.target : null;
   if (!input?.files?.length) return;
+  if (input.closest("[data-document-locked='true']")) {
+    input.value = "";
+    return;
+  }
 
   this.uploadVerificationFile(input.dataset.input, input.files[0], input);
 });
@@ -3934,7 +5094,27 @@ document.addEventListener("submit", (event) => {
   }
 });
 
+document.addEventListener("input", (event) => {
+  const target = event.target;
+  if (target?.matches?.("[data-provider-guided-search]")) {
+    this.filterProviderGuidedTemplateList(target);
+  }
+  if (target?.form?.id === "providerBusinessForm" && target.form.querySelector("[data-provider-guided-draft-preview]")) {
+    this.refreshProviderGuidedDraftPreview(target.form);
+  }
+});
+
 document.addEventListener("click", (event) => {
+  const saveButton = event.target?.closest?.(".provider-save-button");
+  if (saveButton?.form?.id === "providerBusinessForm") {
+    this.primeProviderSaveButton(saveButton);
+  }
+
+  if (event.target?.matches?.("[data-provider-service-preview-overlay]")) {
+    this.closeProviderServicePreview();
+    return;
+  }
+
   const actionButton = event.target?.closest?.("[data-provider-business-action]");
   if (actionButton) {
     this.handleProviderBusinessAction(actionButton.dataset.providerBusinessAction, actionButton);
@@ -3963,8 +5143,14 @@ document.addEventListener("change", (event) => {
     target.dataset.touched = "1";
     this.applyProviderCategoryUiRules(target.closest("form"));
   }
+  if (target?.form?.id === "providerBusinessForm" && target.form.querySelector("[data-provider-guided-draft-preview]")) {
+    this.refreshProviderGuidedDraftPreview(target.form);
+  }
   if (target?.matches?.("[name='providerProvince']")) {
     this.updateProviderCityOptions(target);
+  }
+  if (target?.matches?.("[name='providerCity']")) {
+    this.toggleProviderCityOtherField(target.closest("form"));
   }
   if (target?.matches?.("[name='providerLegalGateAccepted']")) {
     const gate = target.closest("[data-provider-legal-gate]");
@@ -3975,6 +5161,7 @@ document.addEventListener("change", (event) => {
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
+        this.closeProviderServicePreview();
         if (this.state?.ui.drawerOpen) actions.closeDrawer();
         if (this.state?.ui.notificationDrawerOpen) actions.closeNotifications();
         if (this.state?.ui.chatDrawerOpen) actions.closeChat();
@@ -4382,7 +5569,11 @@ document.addEventListener("change", (event) => {
   /**
    * Switch tab
    */
-  switchTab(tab) {
+  switchTab(tab, options = {}) {
+    if (tab === "pricing" && !options.preserveServiceComposer) {
+      this.closeProviderServiceComposer();
+    }
+
     document.body.dataset.providerTab = tab;
 
     // Update buttons
@@ -4397,6 +5588,20 @@ document.addEventListener("change", (event) => {
     
     actions.setTab(tab);
     this.syncOnlineButtonVisibility();
+  }
+
+  closeProviderServiceComposer() {
+    const providerState = this.state?.provider ?? {};
+    if (!providerState.serviceComposerOpen && !providerState.editingOfferingId && !providerState.serviceComposerMode) return;
+
+    actions.updateState({
+      provider: {
+        ...providerState,
+        editingOfferingId: null,
+        serviceComposerOpen: false,
+        serviceComposerMode: null
+      }
+    });
   }
 
   syncOnlineButtonVisibility() {
@@ -4525,7 +5730,7 @@ async handleStatusToggle(status) {
 
   const providerId = this.state?.session?.providerId;
   if (!providerId) {
-    this.showToast("No se encontr tu perfil de prestador", "error");
+    this.showToast("No se encontró tu perfil de prestador", "error");
     return;
   }
 
@@ -4569,13 +5774,41 @@ providerHasPublishedService() {
   return Array.isArray(offerings) && offerings.some((item) => item?.active !== false && item?.title && item?.category_id);
 }
 
-openProviderBusinessSetup() {
-  this.switchTab("pricing");
+openProviderBusinessSetup(options = {}) {
+  const mode = options.mode || "new";
+  const guidedService = this.state.provider?.guidedService ?? this.providerGuidedServiceFallback();
+  actions.updateState({
+    provider: {
+      ...this.state.provider,
+      editingOfferingId: mode === "new" ? null : this.state.provider?.editingOfferingId ?? null,
+      serviceComposerOpen: true,
+      serviceComposerMode: mode,
+      guidedService: {
+        ...guidedService,
+        panelOpen: Boolean(options.guided && guidedService.enabled)
+      }
+    }
+  });
+
+  this.switchTab("pricing", { preserveServiceComposer: true });
   this.setBottomSheetState("expanded");
+  renderProviderScreen(this.state);
+  this.renderServicesAndPricing();
 
   setTimeout(() => {
+    if (mode === "new") {
+      const scrollParent = this.elements.sheetContent ?? document.querySelector(".sheet-content");
+      scrollParent?.scrollTo?.({ top: 0, behavior: "smooth" });
+      if (options.guided) {
+        document.querySelector("[data-provider-guided-search]")?.focus?.({ preventScroll: true });
+      }
+      return;
+    }
+
     const target =
+      document.querySelector("#providerBusinessPanel [name='offering:0:title']") ??
       document.querySelector("#providerBusinessPanel .provider-offering-card-v2 input[name$=':title']") ??
+      document.querySelector("#providerBusinessPanel [name='providerAiPrompt']") ??
       document.getElementById("providerBusinessPanel");
 
     target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
@@ -4588,7 +5821,21 @@ collectProviderBusinessPayload(form) {
   const categories = [];
   const pricing = [];
   const offerings = [];
+  const offeringAddons = [];
   const availability = [];
+  const fieldValue = (name, preferredSelector = "") => {
+    if (preferredSelector) {
+      const preferred = form.querySelector(preferredSelector);
+      if (preferred && !preferred.disabled && "value" in preferred) {
+        return preferred.value;
+      }
+    }
+    const selector = `[name="${String(name).replace(/"/g, '\\"')}"]`;
+    const fields = [...form.querySelectorAll(selector)]
+      .filter((field) => !field.disabled && "value" in field);
+    const visibleField = [...fields].reverse().find((field) => field.type !== "hidden");
+    return visibleField?.value ?? data.get(name) ?? "";
+  };
 
   // Recolectar IDs de offerings que el form está editando ahora.
   const formOfferingIds = new Set();
@@ -4633,35 +5880,67 @@ collectProviderBusinessPayload(form) {
   for (let index = 0; data.has(`offering:${index}:present`); index += 1) {
     if (!data.has(`offering:${index}:active`)) continue;
 
-    const title = String(data.get(`offering:${index}:title`) ?? "").trim();
-    const categoryId = String(data.get(`offering:${index}:categoryId`) ?? "").trim();
+    const title = String(fieldValue(
+      `offering:${index}:title`,
+      `[data-provider-public-title-input="${index}"]`
+    ) ?? "").trim();
+    const categoryId = String(fieldValue(`offering:${index}:categoryId`) ?? "").trim();
+    const serviceTemplateId = String(fieldValue(`offering:${index}:serviceTemplateId`) ?? "").trim();
+    const serviceTemplateVersionId = String(fieldValue(`offering:${index}:serviceTemplateVersionId`) ?? "").trim();
 
     if (!title || !categoryId) continue;
 
+    const offeringId = String(fieldValue(`offering:${index}:id`) ?? "").trim() || null;
     offerings.push({
-      id: String(data.get(`offering:${index}:id`) ?? "").trim() || null,
+      id: offeringId,
       categoryId,
       title,
-      description: data.get(`offering:${index}:description`) ?? "",
-      pricingModel: data.get(`offering:${index}:pricingModel`) ?? "HOURLY",
-      serviceMode: data.get(`offering:${index}:serviceMode`) ?? "IN_PERSON",
-      locationPolicy: data.get(`offering:${index}:locationPolicy`) ?? "CLIENT_ADDRESS",
-      publicSummary: data.get(`offering:${index}:publicSummary`) ?? "",
-      pricePerHour: data.get(`offering:${index}:pricePerHour`) ?? "",
-      baseVisitFee: data.get(`offering:${index}:baseVisitFee`) ?? "",
-      fixedPrice: data.get(`offering:${index}:fixedPrice`) ?? "",
-      unitName: data.get(`offering:${index}:unitName`) ?? "",
-      unitPrice: data.get(`offering:${index}:unitPrice`) ?? "",
-      minimumCharge: data.get(`offering:${index}:minimumCharge`) ?? 0,
-      minimumHours: data.get(`offering:${index}:minimumHours`) ?? "",
-      maximumHours: data.get(`offering:${index}:maximumHours`) ?? "",
-      durationMinutes: data.get(`offering:${index}:durationMinutes`) ?? "",
-      clientInstructions: data.get(`offering:${index}:clientInstructions`) ?? "",
+      description: fieldValue(`offering:${index}:description`) ?? "",
+      pricingModel: fieldValue(`offering:${index}:pricingModel`) ?? "HOURLY",
+      serviceMode: fieldValue(`offering:${index}:serviceMode`) ?? "IN_PERSON",
+      locationPolicy: fieldValue(`offering:${index}:locationPolicy`) ?? "CLIENT_ADDRESS",
+      publicSummary: fieldValue(`offering:${index}:publicSummary`) ?? "",
+      pricePerHour: fieldValue(`offering:${index}:pricePerHour`) ?? "",
+      baseVisitFee: fieldValue(`offering:${index}:baseVisitFee`) ?? "",
+      fixedPrice: fieldValue(`offering:${index}:fixedPrice`) ?? "",
+      unitName: fieldValue(`offering:${index}:unitName`) ?? "",
+      unitPrice: fieldValue(`offering:${index}:unitPrice`) ?? "",
+      minimumCharge: fieldValue(`offering:${index}:minimumCharge`) ?? 0,
+      minimumHours: fieldValue(`offering:${index}:minimumHours`) ?? "",
+      maximumHours: fieldValue(`offering:${index}:maximumHours`) ?? "",
+      durationMinutes: fieldValue(`offering:${index}:durationMinutes`) ?? "",
+      clientInstructions: fieldValue(`offering:${index}:clientInstructions`) ?? "",
       quoteRequired: data.has(`offering:${index}:quoteRequired`),
       metadata: {
-        coverage_radius_meters: Number(data.get("providerCoverageRadius") ?? 0) || null
+        coverage_radius_meters: Number(data.get("providerCoverageRadius") ?? 0) || null,
+        service_template_id: serviceTemplateId || null,
+        service_template_version_id: serviceTemplateVersionId || null,
+        guided_service_catalog: Boolean(serviceTemplateId)
       }
     });
+
+    if (offeringId) {
+      const addons = [];
+      for (let addonIndex = 0; data.has(`addon:${index}:${addonIndex}:present`); addonIndex += 1) {
+        const addonName = String(fieldValue(`addon:${index}:${addonIndex}:name`) ?? "").trim();
+        const addonId = String(fieldValue(`addon:${index}:${addonIndex}:id`) ?? "").trim() || null;
+        if (!addonName && !addonId) continue;
+
+        addons.push({
+          id: addonId,
+          name: addonName,
+          description: fieldValue(`addon:${index}:${addonIndex}:description`) ?? "",
+          price: fieldValue(`addon:${index}:${addonIndex}:price`) ?? "",
+          pricingModel: fieldValue(`addon:${index}:${addonIndex}:pricingModel`) ?? "FIXED",
+          unit: fieldValue(`addon:${index}:${addonIndex}:unit`) ?? "",
+          isActive: data.has(`addon:${index}:${addonIndex}:active`)
+        });
+      }
+
+      if (addons.length) {
+        offeringAddons.push({ offeringId, addons });
+      }
+    }
   }
 
 const availableCategories = this.getProviderCategories();
@@ -4734,16 +6013,32 @@ for (const category of availableCategories) {
     });
   }
 
+  const selectedCity = String(data.get("providerCity") ?? "").trim();
+  const cityOther = String(data.get("providerCityOther") ?? "").trim();
+  const finalCity = selectedCity === "Otra localidad" ? cityOther : selectedCity;
+  const optionalNumber = (value) => {
+    const raw = String(value ?? "").trim();
+    if (!raw) return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
   return {
     firstName: data.get("providerFirstName") ?? "",
     bio: data.get("providerBio") ?? "",
     publicHeadline: data.get("providerPublicHeadline") ?? "",
     professionalSummary: data.get("providerProfessionalSummary") ?? "",
     videoIntroUrl: data.get("providerVideoIntroUrl") ?? "",
-    city: data.get("providerCity") ?? "",
+    city: finalCity || "",
     province: data.get("providerProvince") ?? "",
     addressText: data.get("providerAddressText") ?? "",
     coverageRadiusMeters: Number(data.get("providerCoverageRadius") ?? 0) || null,
+    providerBaseLocation: {
+      lat: optionalNumber(data.get("providerLocationLat")),
+      lng: optionalNumber(data.get("providerLocationLng")),
+      accuracyM: optionalNumber(data.get("providerLocationAccuracy")),
+      source: data.get("providerLocationSource") ?? ""
+    },
     pricingMode: "HOURLY",
     acceptsImmediate: true,
     acceptsScheduled: true,
@@ -4751,6 +6046,7 @@ for (const category of availableCategories) {
     categories,
     pricing,
     offerings,
+    offeringAddons,
     availability
   };
 }
@@ -4758,16 +6054,42 @@ for (const category of availableCategories) {
 async handleProviderBusinessSubmit(event) {
   event.preventDefault();
 
+  const form = event.target;
+  const submitButton =
+    event.submitter?.matches?.(".provider-save-button")
+      ? event.submitter
+      : form?.querySelector?.(".provider-save-button");
   const providerId = this.state?.session?.providerId;
   if (!providerId) {
     this.showToast("No se encontro tu perfil de prestador", "error");
     return;
   }
 
-  const payload = this.collectProviderBusinessPayload(event.target);
+  const saveFeedbackStartedAt = Date.now();
+  const waitForSaveFeedback = async () => {
+    const remaining = Math.max(0, 800 - (Date.now() - saveFeedbackStartedAt));
+    if (remaining > 0) {
+      await new Promise((resolve) => window.setTimeout(resolve, remaining));
+    }
+  };
+  const stopSaveFeedback = () => {
+    form?.classList?.remove("is-saving");
+    form?.removeAttribute?.("aria-busy");
+    this.setButtonBusy(submitButton, false);
+    actions.setLoading(false);
+  };
+
+  actions.setLoading(true);
+  form?.classList?.add("is-saving");
+  form?.setAttribute?.("aria-busy", "true");
+  this.setButtonBusy(submitButton, true, "Guardando cambios...");
+
+  const payload = this.collectProviderBusinessPayload(form);
 
   if (!payload.categories.length) {
     this.showToast("Elegi al menos una profesion o categoria", "warning");
+    await waitForSaveFeedback();
+    stopSaveFeedback();
     return;
   }
 
@@ -4784,50 +6106,192 @@ async handleProviderBusinessSubmit(event) {
   });
 
   if (hasInvalidPricing) {
-    this.showToast("Cada rubro necesita un precio de referencia o marcar que requiere presupuesto", "warning");
+    this.showToast("Cada rubro necesita un precio de referencia o usar Cotizar antes de confirmar", "warning");
+    await waitForSaveFeedback();
+    stopSaveFeedback();
     return;
   }
 
   if (payload.offerings.some((item) => !item.title || !item.categoryId)) {
     this.showToast("Revisa los trabajos publicados: falta titulo o categoria", "warning");
+    await waitForSaveFeedback();
+    stopSaveFeedback();
     return;
   }
 
   if (!this.isProviderLegalAccepted()) {
     this.showToast("Aceptá las condiciones legales antes de publicar servicios", "warning");
+    await waitForSaveFeedback();
+    stopSaveFeedback();
     return;
   }
 
   try {
-    actions.setLoading(true);
-    const avatarFile = event.target?.querySelector?.("[name='providerAvatarFile']")?.files?.[0] ?? null;
-    if (avatarFile) {
-      await uploadProviderAvatar({ providerId, file: avatarFile });
-    }
     const wasEditing = Boolean(this.state?.provider?.editingOfferingId);
-    const workspace = await saveProviderWorkspace(providerId, payload);
+    let workspace = await saveProviderWorkspace(providerId, payload);
+    workspace = await this.confirmProviderWorkspaceSaved(providerId, payload, workspace);
+    if (Array.isArray(payload.offeringAddons) && payload.offeringAddons.length) {
+      for (const group of payload.offeringAddons) {
+        workspace = await saveProviderOfferingAddons(providerId, group.offeringId, group.addons);
+      }
+    }
+    await waitForSaveFeedback();
+    recordCriticalRiskEvent("provider_onboarding", {
+      actorRole: "provider",
+      source: wasEditing ? "provider_workspace_update" : "provider_workspace_submit",
+      providerId
+    });
     this.applyWorkspaceToState(workspace);
 
     // Si estábamos editando, limpiar el editingOfferingId para no quedar pegados
     // a ese offering en próximos renders (sino el form siempre lo precargaría).
-    if (wasEditing) {
-      actions.updateState({
-        provider: { ...this.state.provider, editingOfferingId: null }
-      });
-    }
+    actions.updateState({
+      provider: {
+        ...this.state.provider,
+        editingOfferingId: null,
+        serviceComposerOpen: false,
+        serviceComposerMode: null
+      }
+    });
 
-    this.switchTab("now");
-    this.setBottomSheetState("peek");
+    this.switchTab("pricing", { preserveServiceComposer: true });
+    this.setBottomSheetState("expanded");
     renderProviderScreen(this.state);
     this.renderServicesAndPricing();
     this.renderSheetSummary();
     this.showToast(wasEditing ? "Servicio actualizado correctamente." : "Servicio publicado. Ya podés ponerte online.", "success");
   } catch (err) {
+    await waitForSaveFeedback();
     console.error("[MIMI] Error guardando setup comercial:", err);
     this.showToast(err?.message ?? "No pudimos guardar tus servicios", "error");
   } finally {
-    actions.setLoading(false);
+    stopSaveFeedback();
   }
+}
+
+async confirmProviderWorkspaceSaved(providerId, payload = {}, workspace = {}) {
+  const expectedAddress = String(payload.addressText ?? "").trim();
+  const expectedBaseLocation = payload.providerBaseLocation || {};
+  const expectedLat = Number(expectedBaseLocation.lat);
+  const expectedLng = Number(expectedBaseLocation.lng);
+  const hasExpectedLocation = Number.isFinite(expectedLat) && Number.isFinite(expectedLng);
+  const expectedOfferings = Array.isArray(payload.offerings)
+    ? payload.offerings.filter((item) => item?.categoryId && item?.title)
+    : [];
+  const expectedPricing = Array.isArray(payload.pricing)
+    ? payload.pricing.filter((item) => item?.categoryId)
+    : [];
+  const normalizeText = (value) => String(value ?? "").replace(/\s+/g, " ").trim();
+  const normalizeUpper = (value, fallback = "") => normalizeText(value || fallback).toUpperCase();
+  const normalizeOptionalNumber = (value) => {
+    if (value === "" || value == null) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+  const sameOptionalNumber = (left, right) => {
+    const leftNumber = normalizeOptionalNumber(left);
+    const rightNumber = normalizeOptionalNumber(right);
+    if (leftNumber == null && rightNumber == null) return true;
+    return leftNumber != null && rightNumber != null && Math.abs(leftNumber - rightNumber) < 0.000001;
+  };
+  const matchesProfile = (candidate = {}) => {
+    const profile = candidate.profileDetail ?? candidate.profile ?? {};
+    const metadata = profile?.metadata_json || profile?.metadata || {};
+    const savedAddress = String(profile?.address_text ?? "").trim();
+    const savedLat = Number(metadata.provider_base_location_lat ?? metadata.provider_base_location?.lat);
+    const savedLng = Number(metadata.provider_base_location_lng ?? metadata.provider_base_location?.lng);
+    const addressOk = !expectedAddress || savedAddress === expectedAddress;
+    const locationOk = !hasExpectedLocation || (
+      Number.isFinite(savedLat) &&
+      Number.isFinite(savedLng) &&
+      Math.abs(savedLat - expectedLat) < 0.000001 &&
+      Math.abs(savedLng - expectedLng) < 0.000001
+    );
+
+    return addressOk && locationOk;
+  };
+
+  const offeringRowsFrom = (candidate = {}) => {
+    if (Array.isArray(candidate.offerings)) return candidate.offerings;
+    if (Array.isArray(candidate.business?.offerings)) return candidate.business.offerings;
+    return [];
+  };
+  const pricingRowsFrom = (candidate = {}) => {
+    if (Array.isArray(candidate.pricing)) return candidate.pricing;
+    if (Array.isArray(candidate.business?.pricing)) return candidate.business.pricing;
+    return [];
+  };
+  const matchesOfferings = (candidate = {}) => {
+    if (!expectedOfferings.length) return true;
+
+    const rows = offeringRowsFrom(candidate).filter((row) => row?.active !== false);
+
+    return expectedOfferings.every((expected) => {
+      const expectedId = normalizeText(expected.id);
+      const expectedCategoryId = normalizeText(expected.categoryId);
+      const expectedTitle = normalizeText(expected.title);
+      const expectedPricingModel = normalizeUpper(expected.pricingModel || "HOURLY");
+      const match = expectedId
+        ? rows.find((row) => normalizeText(row?.id) === expectedId)
+        : rows.find((row) =>
+            normalizeText(row?.category_id) === expectedCategoryId &&
+            normalizeText(row?.title) === expectedTitle &&
+            normalizeUpper(row?.pricing_model || "HOURLY") === expectedPricingModel
+          );
+
+      if (!match) return false;
+
+      return (
+        normalizeText(match.category_id) === expectedCategoryId &&
+        normalizeText(match.title) === expectedTitle &&
+        normalizeText(match.description) === normalizeText(expected.description) &&
+        normalizeUpper(match.pricing_model || "HOURLY") === expectedPricingModel &&
+        normalizeUpper(match.currency || "ARS") === normalizeUpper(expected.currency || "ARS") &&
+        sameOptionalNumber(match.price_per_hour, expected.pricePerHour) &&
+        sameOptionalNumber(match.base_visit_fee, expected.baseVisitFee) &&
+        sameOptionalNumber(match.fixed_price, expected.fixedPrice) &&
+        normalizeText(match.unit_name) === normalizeText(expected.unitName) &&
+        sameOptionalNumber(match.unit_price, expected.unitPrice) &&
+        sameOptionalNumber(match.minimum_charge, expected.minimumCharge ?? 0) &&
+        sameOptionalNumber(match.minimum_hours, expected.minimumHours) &&
+        sameOptionalNumber(match.maximum_hours, expected.maximumHours) &&
+        Boolean(match.quote_required) === Boolean(expected.quoteRequired) &&
+        normalizeUpper(match.service_mode || "IN_PERSON") === normalizeUpper(expected.serviceMode || "IN_PERSON") &&
+        sameOptionalNumber(match.duration_minutes, expected.durationMinutes) &&
+        normalizeUpper(match.location_policy || "CLIENT_ADDRESS") === normalizeUpper(expected.locationPolicy || "CLIENT_ADDRESS") &&
+        normalizeText(match.public_summary) === normalizeText(expected.publicSummary) &&
+        normalizeText(match.client_instructions) === normalizeText(expected.clientInstructions)
+      );
+    });
+  };
+  const matchesPricing = (candidate = {}) => {
+    if (!expectedPricing.length) return true;
+
+    const rows = pricingRowsFrom(candidate).filter((row) => row?.active !== false);
+
+    return expectedPricing.every((expected) => {
+      const match = rows.find((row) => normalizeText(row?.category_id) === normalizeText(expected.categoryId));
+      if (!match) return false;
+
+      return (
+        sameOptionalNumber(match.price_per_hour, expected.pricePerHour) &&
+        sameOptionalNumber(match.minimum_hours, expected.minimumHours ?? 1) &&
+        sameOptionalNumber(match.maximum_hours, expected.maximumHours ?? payload.maxHoursPerService ?? 8)
+      );
+    });
+  };
+  const matchesWorkspace = (candidate = {}) =>
+    matchesProfile(candidate) &&
+    matchesOfferings(candidate) &&
+    matchesPricing(candidate);
+
+  if (matchesWorkspace(workspace)) return workspace;
+
+  await new Promise((resolve) => window.setTimeout(resolve, 450));
+  const refreshed = await loadProviderWorkspace(providerId);
+  if (matchesWorkspace(refreshed)) return refreshed;
+
+  throw new Error("No pudimos confirmar que Supabase haya guardado tus servicios. Intenta nuevamente.");
 }
 
 getProviderLegalRequirements() {
@@ -4952,6 +6416,259 @@ async handleProviderLegalGateAccept(source = null) {
   }
 }
 
+findProviderGuidedTemplate(templateId) {
+  const templates = this.state?.provider?.guidedService?.templates ?? [];
+  return templates.find((template) => String(template?.id ?? "") === String(templateId ?? "")) ?? null;
+}
+
+providerGuidedTemplateTitle(template = {}) {
+  const version = template?.active_version ?? {};
+  return String(version.title || template?.name || "Servicio del catalogo").trim();
+}
+
+providerGuidedTemplateCategoryLabel(template = {}) {
+  return String(
+    template?.category?.name ||
+    template?.service_family ||
+    template?.macro_vertical ||
+    "Rubro del catalogo"
+  ).trim();
+}
+
+providerGuidedTemplateIsRegulated(template = {}) {
+  const requirements = Array.isArray(template?.regulated_requirements) ? template.regulated_requirements : [];
+  return (
+    requirements.length > 0 ||
+    Boolean(template?.requires_credentials) ||
+    Boolean(template?.requires_admin_approval) ||
+    !["none", "", "low"].includes(String(template?.regulated_level ?? "").toLowerCase()) ||
+    !["none", "", "low"].includes(String(template?.sensitive_level ?? "").toLowerCase())
+  );
+}
+
+providerGuidedTemplateBlocksAutoPricing(template = {}) {
+  const requirements = Array.isArray(template?.regulated_requirements) ? template.regulated_requirements : [];
+  return requirements.some((item) => item?.blocks_auto_pricing === true);
+}
+
+providerGuidedDefaultUnitName(pricingModel = "") {
+  const model = String(pricingModel || "").toUpperCase();
+  const labels = {
+    HOURLY: "hora",
+    BASE_VISIT: "visita",
+    FIXED: "trabajo",
+    UNIT: "servicio",
+    SQUARE_METER: "m2",
+    LINEAR_METER: "metro",
+    QUOTE: "cotizacion"
+  };
+  return labels[model] || "servicio";
+}
+
+providerGuidedDraftField(form, name) {
+  const field = form?.querySelector?.(`[name="${name}"]`);
+  if (!field) return "";
+  if (field.type === "checkbox") return field.checked;
+  return field.value ?? "";
+}
+
+providerGuidedDraftPriceLabel(form) {
+  const pricingModel = String(this.providerGuidedDraftField(form, "offering:0:pricingModel") || "HOURLY").toUpperCase();
+  const quoteRequired = Boolean(this.providerGuidedDraftField(form, "offering:0:quoteRequired")) || pricingModel === "QUOTE";
+  if (quoteRequired) return "Cotizar";
+
+  const unitPrice = Number(this.providerGuidedDraftField(form, "offering:0:unitPrice") || 0);
+  const fixedPrice = Number(this.providerGuidedDraftField(form, "offering:0:fixedPrice") || 0);
+  const pricePerHour = Number(this.providerGuidedDraftField(form, "offering:0:pricePerHour") || 0);
+  const baseVisitFee = Number(this.providerGuidedDraftField(form, "offering:0:baseVisitFee") || 0);
+  const unitName = String(this.providerGuidedDraftField(form, "offering:0:unitName") || this.providerGuidedDefaultUnitName(pricingModel));
+
+  if (unitPrice > 0) return `${this.formatMoney(unitPrice)} / ${unitName}`;
+  if (fixedPrice > 0) return this.formatMoney(fixedPrice);
+  if (pricePerHour > 0) return `${this.formatMoney(pricePerHour)} / hora`;
+  if (baseVisitFee > 0) return `${this.formatMoney(baseVisitFee)} visita`;
+  return "Precio o cotizacion pendiente";
+}
+
+providerGuidedDraftPreviewHtml(form, template = null) {
+  const title = String(this.providerGuidedDraftField(form, "offering:0:title") || this.providerGuidedTemplateTitle(template)).trim() || "Servicio a publicar";
+  const description = String(this.providerGuidedDraftField(form, "offering:0:description") || template?.description || template?.active_version?.description || "").trim();
+  const categoryLabel = template ? this.providerGuidedTemplateCategoryLabel(template) : "Rubro seleccionado";
+  const pricingModel = String(this.providerGuidedDraftField(form, "offering:0:pricingModel") || template?.active_version?.pricing_model || template?.default_pricing_model || "HOURLY").toUpperCase();
+  const serviceMode = String(this.providerGuidedDraftField(form, "offering:0:serviceMode") || "IN_PERSON").toUpperCase();
+  const isRegulated = template ? this.providerGuidedTemplateIsRegulated(template) : false;
+  const blocksAutoPricing = template ? this.providerGuidedTemplateBlocksAutoPricing(template) : false;
+  const serviceModeLabels = {
+    IN_PERSON: "Presencial",
+    ONLINE: "Online",
+    HYBRID: "Online y presencial"
+  };
+  const pricingLabels = {
+    QUOTE: "Cotizar",
+    FIXED: "Precio cerrado",
+    HOURLY: "Por hora",
+    BASE_VISIT: "Por visita",
+    UNIT: "Por unidad",
+    SQUARE_METER: "Por m2",
+    LINEAR_METER: "Por metro"
+  };
+
+  return `
+    <article class="provider-guided-draft-card is-ready" data-provider-guided-save-preview>
+      <div class="provider-guided-draft-card-head">
+        <div>
+          <span>Asi se vera para clientes</span>
+          <strong>${this.escapeHtml(title)}</strong>
+          <small>${this.escapeHtml(categoryLabel)} - ${this.escapeHtml(serviceModeLabels[serviceMode] || "Presencial")}</small>
+        </div>
+        <b>${this.escapeHtml(this.providerGuidedDraftPriceLabel(form))}</b>
+      </div>
+      <p>${this.escapeHtml(description || "Agrega una descripcion breve para que el cliente entienda mejor el alcance.")}</p>
+      <div class="provider-guided-draft-badges">
+        <span>Visible al publicar</span>
+        <span>${this.escapeHtml(pricingLabels[pricingModel] || pricingModel)}</span>
+        ${isRegulated ? "<span class=\"is-warning\">Requiere validacion</span>" : ""}
+        ${blocksAutoPricing ? "<span class=\"is-warning\">Cotizacion o revision</span>" : ""}
+      </div>
+    </article>
+  `;
+}
+
+refreshProviderGuidedDraftPreview(form = null, template = null) {
+  const targetForm = form ?? document.getElementById("providerBusinessForm");
+  const preview = targetForm?.querySelector?.("[data-provider-guided-draft-preview]");
+  if (!preview) return;
+
+  const selectedTemplate =
+    template ||
+    this.findProviderGuidedTemplate(this.providerGuidedDraftField(targetForm, "offering:0:serviceTemplateId"));
+  const card = preview.querySelector("[data-provider-guided-draft-card]");
+  if (card) {
+    card.outerHTML = this.providerGuidedDraftPreviewHtml(targetForm, selectedTemplate);
+  }
+}
+
+filterProviderGuidedTemplateList(input) {
+  const panel = input?.closest?.("[data-provider-guided-catalog]");
+  if (!panel) return;
+
+  const query = this.normalizeText(input.value ?? "");
+  const cards = [...panel.querySelectorAll("[data-provider-guided-template-id]")];
+  let visibleCount = 0;
+
+  for (const card of cards) {
+    const haystack = this.normalizeText(card.dataset.templateSearchValue ?? "");
+    const visible = !query || haystack.includes(query);
+    card.hidden = !visible;
+    if (visible) visibleCount += 1;
+  }
+
+  const empty = panel.querySelector("[data-provider-guided-empty]");
+  if (empty) {
+    empty.hidden = visibleCount > 0;
+  }
+}
+
+handleProviderGuidedTemplateSelect(source = null) {
+  const templateId = source?.dataset?.templateId;
+  const template = this.findProviderGuidedTemplate(templateId);
+  const form = source?.closest?.("form") ?? document.getElementById("providerBusinessForm");
+
+  if (!template || !form) {
+    this.showToast("No pudimos cargar ese servicio del catalogo.", "warning");
+    return;
+  }
+
+  const version = template.active_version ?? {};
+  const requirements = Array.isArray(template.regulated_requirements) ? template.regulated_requirements : [];
+  const quoteRequired =
+    Boolean(version.quote_required_default ?? template.default_quote_required) ||
+    requirements.some((item) => item?.blocks_auto_pricing === true);
+  const pricingModel = String(version.pricing_model || template.default_pricing_model || "HOURLY").toUpperCase();
+  const serviceTitle = String(version.title || template.name || "").trim();
+  const description = String(version.description || template.description || "").trim();
+  const categoryId = String(template.category_id || "").trim();
+  const setField = (selector, value) => {
+    const field = form.querySelector(selector);
+    if (!field) return;
+    field.value = value ?? "";
+    field.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+
+  setField("[name='offering:0:title']", serviceTitle);
+  setField("[name='offering:0:description']", description);
+  setField(
+    "[name='offering:0:publicSummary']",
+    description ? description.slice(0, 140) : serviceTitle
+  );
+
+  const pricingSelect = form.querySelector("[name='offering:0:pricingModel']");
+  if (pricingSelect?.querySelector?.(`option[value="${pricingModel}"]`)) {
+    pricingSelect.value = pricingModel;
+    pricingSelect.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  const unitNameField = form.querySelector("[name='offering:0:unitName']");
+  if (unitNameField && !String(unitNameField.value || "").trim()) {
+    unitNameField.value = this.providerGuidedDefaultUnitName(pricingModel);
+    unitNameField.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  if (categoryId) {
+    const categorySelect = form.querySelector("[name='offering:0:categoryId']");
+    if (categorySelect?.querySelector?.(`option[value="${categoryId}"]`)) {
+      categorySelect.value = categoryId;
+      categorySelect.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    form.querySelectorAll("[name^='categoryActive:']").forEach((input) => {
+      input.checked = input.name === `categoryActive:${categoryId}`;
+    });
+  }
+
+  const quoteInput = form.querySelector("[name='offering:0:quoteRequired']");
+  if (quoteInput) {
+    quoteInput.checked = quoteRequired || pricingModel === "QUOTE";
+  }
+
+  setField("[name='offering:0:serviceTemplateId']", template.id ?? "");
+  setField("[name='offering:0:serviceTemplateVersionId']", version.id ?? "");
+
+  const prompt = form.querySelector("[name='providerAiPrompt']");
+  if (prompt && !String(prompt.value || "").trim()) {
+    prompt.value = serviceTitle;
+  }
+
+  this.applyProviderCategoryUiRules(form);
+
+  actions.updateState({
+    provider: {
+      ...this.state.provider,
+      guidedService: {
+        ...(this.state.provider?.guidedService ?? {}),
+        selectedTemplateId: template.id
+      }
+    }
+  });
+
+  form.querySelectorAll("[data-provider-guided-template-id]").forEach((card) => {
+    const selected = card.dataset.templateId === String(template.id);
+    card.classList.toggle("is-selected", selected);
+    card.setAttribute("aria-pressed", String(selected));
+  });
+
+  const selectionSummary = form.querySelector("[data-provider-guided-selection-summary]");
+  if (selectionSummary) {
+    selectionSummary.innerHTML = renderProviderGuidedTemplateSelection(template);
+  }
+  this.refreshProviderGuidedDraftPreview(form, template);
+
+  const details = document.querySelector(".provider-flow-step-details");
+  details?.setAttribute("open", "");
+  document.getElementById("providerServiceDetails")?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  this.showToast(`Servicio "${serviceTitle || "del catalogo"}" precargado. Revisalo y publicalo cuando este listo.`, "success");
+}
+
 async handleProviderBusinessAction(action, source = null) {
   if (action === "accept-provider-legal-gate") {
     await this.handleProviderLegalGateAccept(source);
@@ -4990,7 +6707,69 @@ async handleProviderBusinessAction(action, source = null) {
   }
 
   if (action === "focus-offering-editor") {
-    this.openProviderBusinessSetup();
+    this.openProviderBusinessSetup({ mode: "new" });
+    return;
+  }
+
+  if (action === "add-provider-service") {
+    this.openProviderBusinessSetup({ mode: "new" });
+    return;
+  }
+
+  if (action === "add-provider-guided-service") {
+    const guidedEnabled = Boolean(this.state?.provider?.guidedService?.enabled);
+    this.openProviderBusinessSetup({ mode: "new", guided: guidedEnabled });
+    if (!guidedEnabled) {
+      this.showToast("La guia beta de catalogo todavia no esta activa.", "info");
+      return;
+    }
+    this.showToast("Busca un servicio del catalogo para precargar datos minimos.", "info");
+    return;
+  }
+
+  if (action === "close-provider-service-composer") {
+    this.closeProviderServicePreview({ restoreFocus: false });
+    this.closeProviderServiceComposer();
+    renderProviderScreen(this.state);
+    this.renderServicesAndPricing();
+    document.querySelector(".provider-services-home")?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  if (action === "filter-provider-services") {
+    this.applyProviderServicesFilter(source);
+    return;
+  }
+
+  if (action === "preview-offering") {
+    this.openProviderServicePreview(source?.dataset?.offeringId, source);
+    return;
+  }
+
+  if (action === "close-service-preview") {
+    this.closeProviderServicePreview();
+    return;
+  }
+
+  if (action === "select-guided-service-template") {
+    this.handleProviderGuidedTemplateSelect(source);
+    return;
+  }
+
+  if (action === "focus-new-service-addon") {
+    const editor = source?.closest?.(".provider-service-addons-editor");
+    const fields = editor ? [...editor.querySelectorAll("[name$=':name']")] : [];
+    const target = [...fields].reverse().find((field) => !String(field.value || "").trim()) ?? fields.at(-1);
+    target?.focus?.({ preventScroll: false });
+    return;
+  }
+
+  if (action === "focus-service-details") {
+    const titleInput = document.querySelector("#providerBusinessForm [name='offering:0:title']");
+    const details = titleInput?.closest?.("details") ?? document.querySelector("#providerServiceDetails")?.closest?.("details");
+    if (details) details.open = true;
+    (document.querySelector("#providerServiceDetails") ?? titleInput)?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    titleInput?.focus?.({ preventScroll: true });
     return;
   }
 
@@ -5009,9 +6788,15 @@ async handleProviderBusinessAction(action, source = null) {
     return;
   }
 
+  if (action === "use-provider-current-location") {
+    await this.useProviderCurrentLocation(source);
+    return;
+  }
+
   if (action === "edit-offering") {
     const offeringId = source?.dataset?.offeringId;
     if (!offeringId) return;
+    this.closeProviderServicePreview({ restoreFocus: false });
 
     // Verificar que el offering exista en el state actual
     const offerings = this.state?.provider?.business?.offerings ?? [];
@@ -5028,12 +6813,14 @@ async handleProviderBusinessAction(action, source = null) {
       provider: {
         ...this.state.provider,
         editingOfferingId: offeringId,
+        serviceComposerOpen: true,
+        serviceComposerMode: "edit"
       },
     });
 
     // 2) Cambiar a la pestaña "Servicios" — el panel se llama internamente "pricing"
     //    (data-tab="pricing" en el HTML, NO "services" — nombre histórico).
-    this.switchTab("pricing");
+    this.switchTab("pricing", { preserveServiceComposer: true });
 
     // 3) Re-render con el state actualizado (editingOfferingId define qué offering
     //    se carga como firstOffering en el form).
@@ -5065,8 +6852,30 @@ async handleProviderBusinessAction(action, source = null) {
   if (action === "delete-offering") {
     const offeringId = source?.dataset?.offeringId;
     if (!offeringId) return;
-    if (!window.confirm("¿Eliminar este servicio? El cliente ya no podrá solicitarlo.")) return;
-    await this.handleProviderOfferingDelete(offeringId);
+    if (!window.confirm("Este servicio dejara de aparecer en busquedas. Podes reactivarlo cuando quieras.")) return;
+    if (source?.dataset?.publicationBusy === "true") return;
+    this.setProviderPublicationActionLoading(source, true, "Pausando...");
+    try {
+      await this.handleProviderOfferingDelete(offeringId);
+      this.closeProviderServicePreview({ restoreFocus: false });
+    } finally {
+      this.setProviderPublicationActionLoading(source, false);
+    }
+    return;
+  }
+
+  if (action === "reactivate-offering") {
+    const offeringId = source?.dataset?.offeringId;
+    if (!offeringId) return;
+    if (!window.confirm("Este servicio volvera a aparecer para clientes.")) return;
+    if (source?.dataset?.publicationBusy === "true") return;
+    this.setProviderPublicationActionLoading(source, true, "Reactivando...");
+    try {
+      await this.handleProviderOfferingReactivate(offeringId);
+      this.closeProviderServicePreview({ restoreFocus: false });
+    } finally {
+      this.setProviderPublicationActionLoading(source, false);
+    }
     return;
   }
 
@@ -5152,13 +6961,187 @@ updateProviderCityOptions(provinceSelect) {
     .map((city) => city.trim())
     .filter(Boolean);
   const current = citySelect.value;
+  const otherInput = form?.querySelector?.("[name='providerCityOther']");
   citySelect.innerHTML = [
     `<option value="">${cities.length ? "Elegi ciudad" : "Primero elegi provincia"}</option>`,
     ...cities.map((city) => `<option value="${this.escapeHtml(city)}">${this.escapeHtml(city)}</option>`),
-    `<option value="Otra localidad">Otra localidad</option>`
+    `<option value="Otra localidad">Otra localidad / barrio</option>`
   ].join("");
   if (cities.includes(current) || current === "Otra localidad") {
     citySelect.value = current;
+  } else if (current) {
+    citySelect.value = "Otra localidad";
+    if (otherInput && !otherInput.value.trim()) otherInput.value = current;
+  }
+  this.toggleProviderCityOtherField(form);
+}
+
+toggleProviderCityOtherField(form = document.getElementById("providerBusinessForm")) {
+  if (!form) return;
+
+  const citySelect = form.querySelector("[name='providerCity']");
+  const field = form.querySelector("[data-provider-city-other-field]");
+  const input = form.querySelector("[name='providerCityOther']");
+  if (!citySelect || !field) return;
+
+  const visible = citySelect.value === "Otra localidad";
+  field.hidden = !visible;
+  field.classList.toggle("is-visible", visible);
+  if (input) {
+    input.required = visible;
+    if (!visible) input.value = "";
+  }
+}
+
+providerAddressComponent(address = {}, keys = []) {
+  if (!address || typeof address !== "object") return "";
+  for (const key of keys) {
+    const value = address[key];
+    if (value != null && String(value).trim()) return String(value).trim();
+  }
+  return "";
+}
+
+providerProvinceAlias(value) {
+  const normalized = this.normalizeText(value)
+    .replace(/^provincia de /, "")
+    .replace(/ province$/, "")
+    .trim();
+  const aliases = new Map([
+    ["capital federal", "CABA"],
+    ["ciudad autonoma de buenos aires", "CABA"],
+    ["caba", "CABA"],
+    ["cordoba", "Cordoba"],
+    ["entre rios", "Entre Rios"],
+    ["neuquen", "Neuquen"],
+    ["rio negro", "Rio Negro"],
+    ["tucuman", "Tucuman"]
+  ]);
+  return aliases.get(normalized) || value;
+}
+
+matchSelectOptionByText(select, value) {
+  const normalized = this.normalizeText(value);
+  if (!select || !normalized) return "";
+
+  const options = [...select.options]
+    .map((option) => option.value)
+    .filter(Boolean);
+
+  const exact = options.find((option) => this.normalizeText(option) === normalized);
+  if (exact) return exact;
+
+  return options.find((option) => {
+    const item = this.normalizeText(option);
+    return item && (item.includes(normalized) || normalized.includes(item));
+  }) || "";
+}
+
+applyProviderDetectedRegion(form, result = {}) {
+  const provinceSelect = form?.querySelector?.("[name='providerProvince']");
+  const citySelect = form?.querySelector?.("[name='providerCity']");
+  const otherInput = form?.querySelector?.("[name='providerCityOther']");
+  if (!provinceSelect || !citySelect) return;
+
+  const address = result.address || {};
+  const provinceRaw = this.providerAddressComponent(address, [
+    "state",
+    "province",
+    "region",
+    "state_district"
+  ]);
+  const cityRaw = this.providerAddressComponent(address, [
+    "city",
+    "town",
+    "village",
+    "municipality",
+    "city_district",
+    "suburb",
+    "county"
+  ]);
+
+  const provinceValue = this.matchSelectOptionByText(provinceSelect, this.providerProvinceAlias(provinceRaw));
+  if (provinceValue) {
+    provinceSelect.value = provinceValue;
+    this.updateProviderCityOptions(provinceSelect);
+  }
+
+  const cityValue = this.matchSelectOptionByText(citySelect, cityRaw);
+  if (cityValue && cityValue !== "Otra localidad") {
+    citySelect.value = cityValue;
+    if (otherInput) otherInput.value = "";
+  } else if (cityRaw) {
+    citySelect.value = "Otra localidad";
+    if (otherInput) otherInput.value = cityRaw;
+  }
+
+  this.toggleProviderCityOtherField(form);
+}
+
+async useProviderCurrentLocation(source = null) {
+  const form = source?.closest?.("form") || document.getElementById("providerBusinessForm");
+  const status = form?.querySelector?.("#providerAddressLocationStatus");
+  const setStatus = (message, tone = "info") => {
+    if (!status) return;
+    status.textContent = message;
+    status.dataset.tone = tone;
+  };
+
+  if (!form || !navigator.geolocation) {
+    setStatus("Tu navegador no permite obtener ubicacion actual.", "error");
+    this.showToast("Tu navegador no permite obtener ubicacion actual", "warning");
+    return;
+  }
+
+  try {
+    this.setButtonBusy(source, true, "Ubicando...");
+    setStatus("Buscando tu ubicacion actual...");
+
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 16000,
+        maximumAge: 20000
+      });
+    });
+
+    const lat = Number(position.coords.latitude);
+    const lng = Number(position.coords.longitude);
+    const accuracy = Number(position.coords.accuracy);
+    const resolved = await resolverDireccionActualServicio(lat, lng, { allowDirectFallback: true });
+    const addressLabel = String(
+      resolved?.short_label ||
+      resolved?.direccion ||
+      resolved?.display_name ||
+      "Ubicacion actual"
+    ).trim();
+
+    const addressInput = form.querySelector("[name='providerAddressText']");
+    const latInput = form.querySelector("[name='providerLocationLat']");
+    const lngInput = form.querySelector("[name='providerLocationLng']");
+    const accuracyInput = form.querySelector("[name='providerLocationAccuracy']");
+    const sourceInput = form.querySelector("[name='providerLocationSource']");
+
+    if (addressInput && addressLabel) {
+      addressInput.value = addressLabel.slice(0, 140);
+      addressInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    if (latInput) latInput.value = String(lat);
+    if (lngInput) lngInput.value = String(lng);
+    if (accuracyInput && Number.isFinite(accuracy)) accuracyInput.value = String(Math.round(accuracy));
+    if (sourceInput) sourceInput.value = resolved?.source || "browser_geolocation";
+
+    this.applyProviderDetectedRegion(form, resolved || {});
+
+    const accuracyText = Number.isFinite(accuracy) ? ` Precision aprox. ${Math.round(accuracy)} m.` : "";
+    setStatus(`Listo: usamos esta ubicacion como base operativa.${accuracyText}`, "success");
+    this.showToast("Ubicacion actual cargada en tu domicilio base", "success");
+  } catch (error) {
+    console.warn("[MIMI] provider current location failed", error);
+    setStatus("No pudimos tomar tu ubicacion. Podes cargar el domicilio manualmente.", "error");
+    this.showToast("No pudimos tomar tu ubicacion actual", "warning");
+  } finally {
+    this.setButtonBusy(source, false);
   }
 }
 
@@ -5276,7 +7259,7 @@ applyProviderCategoryUiRules(form = document.getElementById("providerBusinessFor
     CLIENT_ADDRESS: "Domicilio del cliente",
     PROVIDER_ADDRESS: "Base del prestador",
     ONLINE_ONLY: "Videollamada",
-    FLEXIBLE: "A coordinar"
+    FLEXIBLE: "Ubicacion flexible"
   };
   const selectedMode = serviceModeSelect.value || currentMode;
   const policies = selectedMode === "ONLINE"
@@ -5471,31 +7454,195 @@ revealProviderServiceDetails(form = document.getElementById("providerBusinessFor
   }, 120);
 }
 
+firstPreviewImageUrlFrom(...values) {
+  const pending = [...values];
+  while (pending.length) {
+    const value = pending.shift();
+    if (Array.isArray(value)) {
+      pending.push(...value);
+      continue;
+    }
+    const raw = String(value ?? "").trim();
+    if (/^https?:\/\//i.test(raw) || /^data:image\//i.test(raw)) return raw;
+  }
+  return "";
+}
+
+providerPreviewInitials(value = "PR") {
+  const parts = String(value || "PR").trim().split(/\s+/).filter(Boolean).slice(0, 2);
+  const initials = parts.map((part) => part[0]?.toUpperCase() || "").join("");
+  return initials || "PR";
+}
+
+providerPreviewAvatarUrl(documents = []) {
+  const profile = this.state?.provider?.profile ?? {};
+  const detail = this.state?.provider?.business?.profile ?? {};
+  const metadata = detail?.metadata_json && typeof detail.metadata_json === "object" ? detail.metadata_json : {};
+  return this.firstPreviewImageUrlFrom(
+    detail?.avatar_public_url,
+    metadata.avatar_public_url,
+    metadata.profile_photo_url,
+    metadata.public_url,
+    metadata.file_url,
+    metadata.signed_url,
+    metadata.preview_url,
+    metadata.image_url,
+    profile?.avatar_public_url,
+    profile?.avatar_url,
+    profile?.photo_url,
+    this.state?.session?.userAvatar,
+    documents.map((doc) => doc?.file_url),
+    documents.map((doc) => doc?.signed_url),
+    documents.map((doc) => doc?.public_url),
+    documents.map((doc) => doc?.preview_url)
+  );
+}
+
+openProviderServicePreview(offeringId, source = null) {
+  const offerings = this.state?.provider?.business?.offerings ?? [];
+  const offering = offerings.find((item) => String(item?.id ?? "") === String(offeringId ?? ""));
+  if (!offering) {
+    this.showToast("No encontre ese servicio. Recarga el panel e intenta de nuevo.", "error");
+    return;
+  }
+
+  const detail = this.state?.provider?.business?.profile ?? null;
+  const documents = [
+    ...(Array.isArray(this.state?.provider?.business?.documents) ? this.state.provider.business.documents : []),
+    ...(Array.isArray(this.state?.provider?.documents?.items) ? this.state.provider.documents.items : [])
+  ];
+  const providerName = String(
+    detail?.first_name ||
+    this.state?.provider?.profile?.full_name ||
+    this.state?.session?.userName ||
+    "Prestador MIMIGO"
+  ).trim();
+  const providerAvatarUrl = this.providerPreviewAvatarUrl(documents);
+
+  this.providerServicePreviewReturnFocus = source instanceof HTMLElement ? source : document.activeElement;
+  this.closeProviderServicePreview({ restoreFocus: false });
+
+  const host = document.createElement("div");
+  host.id = "providerServicePreviewHost";
+  host.innerHTML = renderProviderServicePreviewSheet({
+    offering,
+    detail,
+    providerName,
+    providerAvatarUrl,
+    providerInitials: this.providerPreviewInitials(providerName),
+    addonsEnabled: Boolean(this.state?.provider?.serviceAddons?.enabled)
+  });
+  document.body.appendChild(host);
+  document.body.classList.add("provider-service-preview-open");
+
+  window.setTimeout(() => {
+    host.querySelector("[data-provider-business-action='close-service-preview']")?.focus?.({ preventScroll: true });
+  }, 40);
+}
+
+closeProviderServicePreview({ restoreFocus = true } = {}) {
+  const host = document.getElementById("providerServicePreviewHost");
+  if (host) host.remove();
+  document.body.classList.remove("provider-service-preview-open");
+
+  if (restoreFocus && this.providerServicePreviewReturnFocus?.isConnected) {
+    this.providerServicePreviewReturnFocus.focus?.({ preventScroll: true });
+  }
+  this.providerServicePreviewReturnFocus = null;
+}
+
+applyProviderServicesFilter(source = null) {
+  const filter = String(source?.dataset?.providerServicesFilter || "all").toLowerCase();
+  const home = source?.closest?.(".provider-services-home");
+  if (!home) return;
+
+  const normalizedFilter = ["all", "active", "paused", "incomplete", "review"].includes(filter) ? filter : "all";
+  home.dataset.providerServicesFilter = normalizedFilter;
+
+  home.querySelectorAll("[data-provider-services-filter]").forEach((button) => {
+    const active = button.dataset.providerServicesFilter === normalizedFilter;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+
+  let visibleCount = 0;
+  home.querySelectorAll(".provider-service-list-card[data-provider-service-filter-tags]").forEach((card) => {
+    const tags = String(card.dataset.providerServiceFilterTags || "").split(/\s+/).filter(Boolean);
+    const visible = normalizedFilter === "all" || tags.includes(normalizedFilter);
+    card.hidden = !visible;
+    if (visible) visibleCount += 1;
+  });
+
+  const empty = home.querySelector("[data-provider-services-filter-empty]");
+  if (empty) empty.hidden = visibleCount > 0 || normalizedFilter === "all";
+}
+
+setProviderPublicationActionLoading(button, loading, label = "") {
+  if (!button) return;
+
+  const card = button.closest?.(".provider-service-list-card");
+  const actionButtons = card?.querySelectorAll?.(
+    "[data-provider-business-action='delete-offering'], [data-provider-business-action='reactivate-offering']"
+  ) || [button];
+
+  actionButtons.forEach((control) => {
+    if (!(control instanceof HTMLButtonElement)) return;
+
+    if (loading) {
+      if (!control.dataset.idleLabel) {
+        control.dataset.idleLabel = control.textContent.trim();
+      }
+      control.dataset.publicationBusy = "true";
+      control.disabled = true;
+      control.setAttribute("aria-busy", "true");
+      control.classList.add("is-loading");
+      if (control === button && label) {
+        control.textContent = label;
+      }
+      return;
+    }
+
+    control.dataset.publicationBusy = "false";
+    control.disabled = false;
+    control.removeAttribute("aria-busy");
+    control.classList.remove("is-loading");
+    if (control.dataset.idleLabel) {
+      control.textContent = control.dataset.idleLabel;
+    }
+  });
+}
+
 async handleProviderOfferingDelete(offeringId) {
   const providerId = this.state?.session?.providerId;
   if (!providerId || !offeringId) return;
 
   try {
-    const supabase = getSupabaseClient();
-    if (!supabase) throw new Error("Sin conexión con Supabase");
-
-    // Soft-delete: marcamos active=false para no perder histórico de requests asociados
-    const { error } = await supabase
-      .from("svc_provider_service_offerings")
-      .update({ active: false, updated_at: new Date().toISOString() })
-      .eq("id", offeringId)
-      .eq("provider_id", providerId);
-
-    if (error) throw error;
-
-    // Refrescar workspace para que desaparezca de la UI
-    const workspace = await loadProviderWorkspace(providerId);
+    const workspace = await deactivateProviderOffering(providerId, offeringId);
+    const canonicalOffering = (workspace?.offerings ?? []).find((item) => item?.id === offeringId);
+    if (canonicalOffering?.active !== false) throw new Error("canonical_deactivate_mismatch");
     this.applyWorkspaceToState(workspace);
     renderProviderScreen(this.state);
-    this.showToast("Servicio eliminado.", "success");
+    this.showToast("Servicio pausado. Ya no aparece en busquedas.", "success");
   } catch (error) {
     console.error("[MIMI] delete offering error:", error);
-    this.showToast(`No se pudo eliminar: ${error?.message || "error"}`, "error");
+    this.showToast(`No se pudo pausar: ${error?.message || "error"}`, "error");
+  }
+}
+
+async handleProviderOfferingReactivate(offeringId) {
+  const providerId = this.state?.session?.providerId;
+  if (!providerId || !offeringId) return;
+
+  try {
+    const workspace = await reactivateProviderOffering(providerId, offeringId);
+    const canonicalOffering = (workspace?.offerings ?? []).find((item) => item?.id === offeringId);
+    if (!canonicalOffering || canonicalOffering.active === false) throw new Error("canonical_reactivate_mismatch");
+    this.applyWorkspaceToState(workspace);
+    renderProviderScreen(this.state);
+    this.showToast("Servicio reactivado.", "success");
+  } catch (error) {
+    console.error("[MIMI] reactivate offering error:", error);
+    this.showToast(`No se pudo reactivar: ${error?.message || "error"}`, "error");
   }
 }
 
@@ -5514,23 +7661,34 @@ async handleProviderAvatarUpload(file) {
     if (status) status.textContent = "Formato no soportado. Subí JPG, PNG o WEBP.";
     return;
   }
-  if (file.size > 5 * 1024 * 1024) {
-    if (status) status.textContent = "La imagen supera 5 MB. Reducila antes de subir.";
+  if (file.size > 10 * 1024 * 1024) {
+    if (status) status.textContent = "La imagen supera 10 MB. Reducila antes de subir.";
     return;
   }
 
-  if (status) status.textContent = "Subiendo foto...";
+  if (status) status.textContent = "Optimizando foto...";
 
   try {
     const supabase = getSupabaseClient();
     if (!supabase) throw new Error("No hay conexión con Supabase");
 
-    const ext = file.type === "image/png" ? "png" : (file.type === "image/webp" ? "webp" : "jpg");
+    const optimized = await optimizeAvatarImageFile(file, {
+      size: 640,
+      quality: 0.86,
+      maxBytes: 240 * 1024
+    }).catch((error) => {
+      console.warn("[MIMI] avatar optimization fallback:", error?.message || error);
+      return { file, optimized: false, metadata: {} };
+    });
+    const uploadFile = optimized.file || file;
+    const ext = uploadFile.type === "image/png" ? "png" : (uploadFile.type === "image/webp" ? "webp" : "jpg");
     const path = `${providerId}/avatar-${Date.now()}.${ext}`;
+
+    if (status) status.textContent = "Subiendo foto optimizada...";
 
     const { error: uploadError } = await supabase.storage
       .from("provider-avatars")
-      .upload(path, file, { upsert: true, cacheControl: "3600", contentType: file.type });
+      .upload(path, uploadFile, { upsert: true, cacheControl: "86400", contentType: uploadFile.type || "image/jpeg" });
     if (uploadError) throw uploadError;
 
     const { data: pub } = supabase.storage.from("provider-avatars").getPublicUrl(path);
@@ -5569,6 +7727,7 @@ async handleProviderAvatarUpload(file) {
         },
       },
     });
+    this.renderDrawerProfile?.();
 
     if (status) status.textContent = "Foto actualizada.";
     this.showToast("Foto de perfil actualizada.", "success");
@@ -5619,6 +7778,7 @@ async handleProviderAvatarRemove() {
         },
       },
     });
+    this.renderDrawerProfile?.();
 
     if (status) status.textContent = "Foto eliminada.";
     this.showToast("Foto de perfil eliminada.", "info");
@@ -5639,7 +7799,7 @@ async handleProviderServiceSuggestion() {
   const emptyBox = form?.querySelector?.("#providerAiEmpty");
 
   if (text.length < 8) {
-    this.showToast("Contanos un poco mas que trabajos haces", "warning");
+    this.showToast("Contanos un poco más qué trabajos hacés", "warning");
     promptInput?.focus?.();
     return;
   }
@@ -5695,9 +7855,9 @@ async handleProviderServiceSuggestion() {
     if (!top) {
       this.showProviderSuggestionEmpty(
         form,
-        "No encontramos un rubro claro. Proba describirlo con mas detalle, por ejemplo: pinto casas, hago electricidad domiciliaria, cuido adultos mayores."
+        "No encontramos un rubro claro. Probá describirlo con más detalle, por ejemplo: pinto casas, hago electricidad domiciliaria, cuido adultos mayores."
       );
-      this.showToast("No encontramos una coincidencia clara. Proba con mas detalle.", "info");
+      this.showToast("No encontramos una coincidencia clara. Probá con más detalle.", "info");
       return;
     }
 
@@ -5716,8 +7876,8 @@ async handleProviderServiceSuggestion() {
     console.warn("[MIMI] Sugerencia provider fallback:", err);
     const matches = this.localProviderCategorySuggestions(text);
     if (!matches.length) {
-      this.showProviderSuggestionEmpty(form, "No encontramos un rubro claro. Proba describirlo con mas detalle, por ejemplo: pinto casas, hago electricidad domiciliaria, cuido adultos mayores.");
-      this.showToast("No pudimos sugerir rubros ahora. Proba con mas detalle.", "info");
+      this.showProviderSuggestionEmpty(form, "No encontramos un rubro claro. Probá describirlo con más detalle, por ejemplo: pinto casas, hago electricidad domiciliaria, cuido adultos mayores.");
+      this.showToast("No pudimos sugerir rubros ahora. Probá con más detalle.", "info");
       return;
     }
     this.renderProviderSuggestionCards(form, matches, text, { fallback: true });
@@ -5856,9 +8016,9 @@ startProviderDictation(source = null) {
   if (!SpeechRecognition || !input) {
     if (status) {
       status.hidden = false;
-      status.textContent = "Tu navegador no permite dictado por voz. Podes escribirlo.";
+      status.textContent = "Tu navegador no permite dictado por voz. Podés escribirlo.";
     }
-    this.showToast("Tu navegador no permite dictado por voz. Podes escribirlo.", "info");
+    this.showToast("Tu navegador no permite dictado por voz. Podés escribirlo.", "info");
     return;
   }
 
@@ -5881,8 +8041,8 @@ startProviderDictation(source = null) {
   };
 
   recognition.onerror = () => {
-    if (status) status.textContent = "No pudimos escuchar bien. Podes escribirlo.";
-    this.showToast("No pudimos escuchar bien. Podes escribirlo.", "warning");
+    if (status) status.textContent = "No pudimos escuchar bien. Podés escribirlo.";
+    this.showToast("No pudimos escuchar bien. Podés escribirlo.", "warning");
   };
 
   recognition.onend = () => {
@@ -5909,7 +8069,7 @@ improveProviderDescription(source = null) {
 
   const intro = selectedNames.length
     ? `Ofrezco servicios relacionados con ${selectedNames.join(", ")}.`
-    : "Ofrezco servicios a coordinar con cada cliente.";
+    : "Ofrezco servicios personalizados dentro de MIMIGO.";
   const body = base || prompt;
   const improved = `${intro} ${body}. Coordino previamente el alcance, la modalidad y los detalles necesarios para realizar el servicio de forma clara.`
     .replace(/\s+/g, " ")
@@ -5938,7 +8098,7 @@ useProviderDescription(source = null) {
   if (summary && description) {
     summary.value = description;
     summary.focus();
-    this.showToast("Descripcion aplicada. Podes editarla antes de guardar.", "success");
+    this.showToast("Descripción aplicada. Podés editarla antes de guardar.", "success");
   }
 }
 
@@ -6059,69 +8219,71 @@ startLocationTracking() {
   /**
    * Handle accept offer
    */
-  async handleAcceptOffer() {
-    const offer = this.state?.activeOffer;
+  async handleAcceptOffer(offerOverride = null) {
+    const offer = offerOverride ?? this.state?.activeOffer;
     if (!offer) return;
 
     try {
       actions.setLoading(true);
       this.showToast("Aceptando solicitud...", "info");
 
+      const offerId = offer.id ?? offer.raw?.id;
       const response = await invokeFunction("svc-provider-respond-offer", {
-        offer_id: offer.id,
+        offer_id: offerId,
         accepted: true
       });
 
       let service = response?.service ?? response?.request ?? response?.data ?? null;
 
       if (!service) {
-        throw new Error("La funcin no devolvi response.service");
+        throw new Error("La función no devolvió response.service");
       }
 
       const requestType = String(service.request_type ?? offer.mode ?? "IMMEDIATE").toUpperCase();
       const isImmediate = requestType !== "SCHEDULED";
+      const requestId = service.id ?? service.request_id ?? offer.requestId ?? offer.raw?.request_id;
+      recordCriticalRiskEvent("provider_offer_accepted", {
+        actorRole: "provider",
+        source: "provider_accept_offer",
+        providerId: this.state?.session?.providerId ?? null,
+        requestId,
+        offerId
+      });
 
       actions.setActiveService(this.normalizeServiceForState(service));
       actions.clearActiveOffer();
-      actions.setProviderStatus("BOOKED_UPCOMING");
+      this.removeOfferFromState(offerId);
+      actions.setProviderStatus(isImmediate ? "EN_ROUTE" : "BOOKED_UPCOMING");
+      this.subscribeActiveRequestRealtime(requestId);
 
       if (isImmediate) {
-        const freshRequest = await this.resyncActiveService("after_accept_payment_check");
-        const currentService = freshRequest ? this.normalizeServiceForState(freshRequest) : this.state.activeService;
-        if (!this.canAdvancePaidService(currentService)) {
-          this.showToast("Solicitud aceptada. Esperamos el pago confirmado del cliente para iniciar la ruta.", "warning");
-        } else {
-          this.showToast("Solicitud aceptada. Activando ruta...", "success");
+        this.showToast("Solicitud aceptada. Activando ruta...", "success");
+        try {
           const enRoute = await invokeFunction("svc-provider-en-route", {
-            request_id: service.id ?? service.request_id
+            request_id: requestId
           });
           service = enRoute?.service ?? enRoute?.request ?? service;
           actions.setActiveService(this.normalizeServiceForState(service));
-          actions.setProviderStatus("EN_ROUTE");
-          this.startLocationTracking();
-          this.showToast("Servicio aceptado. Ruta iniciada.", "success");
+        } catch (routeError) {
+          console.warn("[MIMI] Servicio aceptado, pero no se pudo iniciar ruta automática:", routeError);
+          this.showToast("Solicitud aceptada. Tocá 'Llegué al domicilio' cuando corresponda.", "warning");
         }
       }
-
-      this.subscribeActiveRequestRealtime(service.id ?? service.request_id);
 
       if (this.offerTimer) {
         clearInterval(this.offerTimer);
         this.offerTimer = null;
       }
 
-      if (!isImmediate) {
+      if (isImmediate) {
+        this.startLocationTracking();
+        this.showToast("Servicio aceptado. Ruta iniciada.", "success");
+      } else {
         this.showToast("Servicio programado aceptado.", "success");
       }
     } catch (err) {
       console.error("[MIMI] Error accepting offer:", err);
-      const code = String(err?.code || err?.message || "");
-      this.showToast(
-        code.includes("payment_not_approved")
-          ? "Solicitud aceptada. Falta que el cliente confirme el pago para avanzar."
-          : "Error aceptando servicio",
-        code.includes("payment_not_approved") ? "warning" : "error"
-      );
+      this.showToast("Error aceptando servicio", "error");
     } finally {
       actions.setLoading(false);
     }
@@ -6130,16 +8292,25 @@ startLocationTracking() {
   /**
    * Handle reject offer
    */
-  async handleRejectOffer() {
-    const offer = this.state?.activeOffer;
+  async handleRejectOffer(offerOverride = null) {
+    const offer = offerOverride ?? this.state?.activeOffer;
 
     try {
       this.showToast("Rechazando solicitud...", "info");
-      if (offer?.id) {
+      const offerId = offer?.id ?? offer?.raw?.id;
+      if (offerId) {
         await invokeFunction("svc-provider-respond-offer", {
-          offer_id: offer.id,
+          offer_id: offerId,
           accepted: false
         });
+        recordCriticalRiskEvent("provider_offer_rejected", {
+          actorRole: "provider",
+          source: "provider_reject_offer",
+          providerId: this.state?.session?.providerId ?? null,
+          requestId: offer?.requestId ?? offer?.raw?.request_id ?? null,
+          offerId
+        });
+        this.removeOfferFromState(offerId);
       }
 
       actions.clearActiveOffer();
@@ -6164,11 +8335,6 @@ startLocationTracking() {
 
     try {
       actions.setLoading(true);
-      if (!this.canAdvancePaidService(service)) {
-        this.showToast("El cliente debe confirmar el pago antes de avanzar el servicio.", "warning");
-        await this.resyncActiveService("payment_required_before_action");
-        return;
-      }
 
       switch (this.normalizeRequestStatus(service.status)) {
         case "ACCEPTED":
@@ -6240,22 +8406,20 @@ startLocationTracking() {
         code.includes("request_id_invalid")
           ? "No pudimos identificar esta solicitud. Actualizamos el estado desde el backend."
           : code.includes("pin_incorrect")
-          ? "El codigo no coincide. Pedile al cliente que lo revise e intenta de nuevo."
+          ? "El código no coincide. Pedile al cliente que lo revise e intentá de nuevo."
           : code.includes("pin_temporarily_locked")
-            ? "Hay demasiados intentos incorrectos. Espera unos minutos antes de volver a probar."
+            ? "Hay demasiados intentos incorrectos. Esperá unos minutos antes de volver a probar."
             : code.includes("pin_expired")
-              ? "El codigo vencio. Actualiza el servicio o contacta a soporte."
+              ? "El código venció. Actualizá el servicio o contactá a soporte."
               : code.includes("pin_not_ready")
-                ? "El codigo todavia no esta disponible para esta solicitud."
+                ? "El código todavía no está disponible para esta solicitud."
                 : code.includes("pin_already_used")
-                  ? "Este codigo ya fue usado. Actualizamos el estado del servicio."
+                  ? "Este código ya fue usado. Actualizamos el estado del servicio."
                   : code.includes("invalid_request_status")
                     ? "El estado del servicio cambio. Actualiza la pantalla e intenta de nuevo."
                     : code.includes("request_forbidden")
                       ? "Esta solicitud no corresponde a tu perfil de prestador."
-                      : code.includes("payment_not_approved")
-                        ? "El cliente debe confirmar el pago antes de avanzar el servicio."
-                : "No pudimos actualizar el servicio. Revisa la conexion e intenta otra vez.";
+                : "No pudimos actualizar el servicio. Revisá la conexión e intentá otra vez.";
       this.showToast(message, "error");
     } finally {
       actions.setLoading(false);
@@ -6295,7 +8459,7 @@ startLocationTracking() {
     try {
       const conversation = await loadConversationForRequest(requestId);
       if (!conversation?.id) {
-        this.showToast("La conversacion todavia no esta creada para este servicio", "warning");
+        this.showToast("La conversación todavía no está creada para este servicio", "warning");
         return null;
       }
 
@@ -6452,6 +8616,8 @@ startLocationTracking() {
   }
 
   subscribeChatMessages(conversationId) {
+    if (!MIMI_REALTIME_ENABLED) return;
+
     const supabase = getSupabaseClient();
     if (!supabase || !conversationId) return;
 
@@ -6524,6 +8690,15 @@ startLocationTracking() {
 
     try {
       const message = await sendMessage({ conversationId, body: text });
+      if (this.currentChatMode === "support") {
+        recordCriticalRiskEvent("support_message_sent", {
+          actorRole: "provider",
+          source: "provider_support_chat",
+          providerId: this.state?.session?.providerId ?? null,
+          conversationId,
+          messageId: message?.id ?? null
+        });
+      }
       input.value = "";
       if (message?.id) this.upsertChatMessage(message);
     } catch (error) {
@@ -6621,7 +8796,7 @@ renderVerificationStatus() {
   const statusEl = this.elements.verificationStatus;
   const btn = this.elements.verificationBtn;
   const accountApproved = Boolean(this.state?.provider?.profile?.approved);
-  
+
   if (!card || !statusEl || !btn) return;
 
   card.classList.toggle("verified", status === "approved");
@@ -6673,7 +8848,7 @@ renderVerificationStatus() {
     if (this.elements.statOffers) {
       this.elements.statOffers.textContent = stats.totalOffers;
     }
-    
+
     // Drawer stats
     if (this.elements.drawerRating) {
       this.elements.drawerRating.textContent = (Number(stats.rating ?? 0) || 0).toFixed(1);
@@ -6686,6 +8861,343 @@ if (this.elements.drawerEarnings) {
   this.elements.drawerEarnings.textContent = `$${Number(dashboardEarnings).toLocaleString("es-AR")}`;
 }
   }
+
+providerPayoutErrorMessage(code) {
+  const value = String(code || "").trim();
+  const messages = {
+    AUTH_REQUIRED: "Inicia sesion para configurar tu Wallet.",
+    CBU_REQUIRED: "Ingresa un CBU de 22 digitos.",
+    CVU_REQUIRED: "Ingresa un CVU de 22 digitos.",
+    CBU_INVALID_LENGTH: "El CBU debe tener 22 digitos.",
+    CVU_INVALID_LENGTH: "El CVU debe tener 22 digitos.",
+    ALIAS_REQUIRED: "El alias debe tener al menos 6 caracteres.",
+    BANK_ACCOUNT_IDENTIFIER_REQUIRED: "Carga CBU, CVU o alias para identificar la cuenta.",
+    PAYOUT_ACCOUNT_TYPE_INVALID: "Selecciona un tipo de cuenta valido.",
+    PAYOUT_ACCOUNT_HASH_SALT_MISSING: "Wallet no disponible: falta configuracion segura del backend.",
+    PAYOUT_ACCOUNT_ENCRYPTION_KEY_MISSING: "Falta configurar cifrado para datos de cobro.",
+    payout_account_unavailable: "No pudimos recuperar tus datos de Wallet."
+  };
+  return messages[value] || "No pudimos procesar tus datos de Wallet.";
+}
+
+payoutMethodUiMeta(accountType) {
+  const map = {
+    cbu: {
+      title: "CBU",
+      copy: "Cuenta bancaria tradicional de 22 digitos."
+    },
+    cvu: {
+      title: "CVU",
+      copy: "Billetera virtual con CVU de 22 digitos."
+    },
+    alias: {
+      title: "Alias",
+      copy: "Alias de CBU/CVU, facil de recordar."
+    },
+    bank_account: {
+      title: "Cuenta bancaria",
+      copy: "Cuenta bancaria con CBU y datos del titular."
+    }
+  };
+  return map[accountType] || map.cbu;
+}
+
+syncProviderPayoutAccountFields(form, { clearHidden = false } = {}) {
+  if (!form) return;
+
+  const selected =
+    form.querySelector("[name='account_type']:checked")?.value ||
+    form.querySelector("[name='account_type']")?.value ||
+    "cbu";
+  const accountType = ["cbu", "cvu", "alias", "bank_account"].includes(selected)
+    ? selected
+    : "cbu";
+  const walletBusy = form.dataset.walletBusy === "true" || form.getAttribute("aria-busy") === "true";
+  form.dataset.accountType = accountType;
+
+  form.querySelectorAll("[data-payout-field]").forEach((field) => {
+    const visibleFor = String(field.dataset.visibleFor || "")
+      .split(/\s+/)
+      .filter(Boolean);
+    const visible = visibleFor.includes(accountType);
+    field.hidden = !visible;
+    field.setAttribute("aria-hidden", String(!visible));
+
+    field.querySelectorAll("input, select, textarea").forEach((control) => {
+      control.disabled = walletBusy || !visible;
+      const requiredFor = String(control.dataset.requiredFor || "")
+        .split(/\s+/)
+        .filter(Boolean);
+      control.required = visible && requiredFor.includes(accountType);
+      if (!visible && clearHidden && ["cbu", "cvu", "alias"].includes(control.name)) {
+        control.value = "";
+      }
+    });
+  });
+
+  const meta = this.payoutMethodUiMeta(accountType);
+  const title = form.querySelector("[data-payout-mode-title]");
+  const copy = form.querySelector("[data-payout-mode-copy]");
+  if (title) title.textContent = meta.title;
+  if (copy) copy.textContent = meta.copy;
+}
+
+handleProviderWalletWithdraw() {
+  const account = this.state?.provider?.payoutAccount ?? null;
+  const panel = document.getElementById("providerPayoutAccountPanel");
+
+  if (!account) {
+    panel?.setAttribute?.("open", "");
+    panel?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    const firstInput = panel?.querySelector?.("[name='account_type']:checked")
+      || panel?.querySelector?.("[name='account_type']");
+    firstInput?.focus?.({ preventScroll: true });
+    this.showToast("Primero carga CBU, CVU o alias para preparar retiros.", "warning");
+    return;
+  }
+
+  const status = String(account.status || "").toLowerCase();
+  const ownershipStatus = String(account.ownership_verification_status || "").toLowerCase();
+  const verified = status === "verified" || ownershipStatus === "ownership_verified";
+
+  if (!verified) {
+    this.showToast("Tu metodo de cobro esta en revision. El retiro se habilita cuando quede verificado.", "info");
+    return;
+  }
+
+  this.showToast("Retiro real todavia en modo test. Cuando activemos pagos reales, este boton inicia el payout.", "info");
+}
+
+async refreshProviderPayoutAccount({ silent = false } = {}) {
+  const actionKey = "provider-payout-account-refresh";
+  if (this.pendingActions.has(actionKey)) return;
+
+  if (!this.state?.session?.isAuthenticated) {
+    if (!silent) this.showToast("Inicia sesion para ver tu Wallet.", "warning");
+    return;
+  }
+
+  this.pendingActions.add(actionKey);
+  actions.updateState({
+    provider: {
+      ...(this.state?.provider ?? {}),
+      walletLoading: true,
+      payoutAccountError: null
+    }
+  });
+
+  try {
+    const result = await getProviderPayoutAccount();
+    const errorCode = result?.ok === false ? result?.error : null;
+    actions.updateState({
+      provider: {
+        ...(this.state?.provider ?? {}),
+        payoutAccount: result?.account ?? null,
+        walletLoading: false,
+        payoutAccountError: errorCode ? this.providerPayoutErrorMessage(errorCode) : null
+      }
+    });
+
+    if (!silent && !errorCode) {
+      this.showToast("Wallet actualizada.", "success");
+    }
+  } catch (error) {
+    const code = error?.details?.error || error?.code || error?.message;
+    const message = this.providerPayoutErrorMessage(code);
+    actions.updateState({
+      provider: {
+        ...(this.state?.provider ?? {}),
+        walletLoading: false,
+        payoutAccountError: message
+      }
+    });
+    if (!silent) this.showToast(message, "error");
+    console.warn("[MIMI] No pudimos refrescar datos de cobro:", error);
+  } finally {
+    this.pendingActions.delete(actionKey);
+  }
+}
+
+async handleProviderPayoutAccountSubmit(event) {
+  event.preventDefault();
+  const form = event.target?.closest?.("#providerPayoutAccountForm");
+  if (!form) return;
+
+  if (!this.state?.session?.isAuthenticated) {
+    this.showToast("Inicia sesion para configurar tu Wallet.", "warning");
+    return;
+  }
+
+  const actionKey = "provider-payout-account-submit";
+  if (this.pendingActions.has(actionKey)) return;
+
+  const submitButton = form?.querySelector?.("button[type='submit']");
+  const originalLabel = submitButton?.textContent;
+  this.syncProviderPayoutAccountFields(form);
+  const formData = new FormData(form);
+  const accountType = String(formData.get("account_type") || "cbu").trim().toLowerCase();
+  const cbu = String(formData.get("cbu") || "").replace(/\D/g, "");
+  const cvu = String(formData.get("cvu") || "").replace(/\D/g, "");
+  const alias = String(formData.get("alias") || "").trim().toLowerCase();
+  const changeReason = String(formData.get("change_reason") || "").trim();
+  const focusField = (name) => {
+    const target = name === "account_type"
+      ? form.querySelector(`[name='${name}']:checked`) || form.querySelector(`[name='${name}']`)
+      : form.querySelector(`[name='${name}']:not(:disabled)`) || form.querySelector(`[name='${name}']`);
+    target?.focus?.();
+  };
+
+  if (!["cbu", "cvu", "alias", "bank_account"].includes(accountType)) {
+    this.showToast("Selecciona un tipo de cuenta valido.", "warning");
+    focusField("account_type");
+    return;
+  }
+
+  if (accountType === "cbu" && cbu.length !== 22) {
+    this.showToast("El CBU debe tener 22 digitos.", "warning");
+    focusField("cbu");
+    return;
+  }
+
+  if (accountType === "cvu" && cvu.length !== 22) {
+    this.showToast("El CVU debe tener 22 digitos.", "warning");
+    focusField("cvu");
+    return;
+  }
+
+  if (accountType === "alias" && alias.length < 6) {
+    this.showToast("El alias debe tener al menos 6 caracteres.", "warning");
+    focusField("alias");
+    return;
+  }
+
+  if (accountType === "bank_account") {
+    if (!cbu && !cvu && alias.length < 6) {
+      this.showToast("Carga CBU, CVU o alias para identificar la cuenta.", "warning");
+      focusField("cbu");
+      return;
+    }
+    if (cbu && cbu.length !== 22) {
+      this.showToast("El CBU debe tener 22 digitos.", "warning");
+      focusField("cbu");
+      return;
+    }
+    if (cvu && cvu.length !== 22) {
+      this.showToast("El CVU debe tener 22 digitos.", "warning");
+      focusField("cvu");
+      return;
+    }
+  }
+
+  if (changeReason.length < 10) {
+    this.showToast("Agrega un motivo breve para auditar el cambio.", "warning");
+    focusField("change_reason");
+    return;
+  }
+
+  this.pendingActions.add(actionKey);
+  actions.updateState({
+    provider: {
+      ...(this.state?.provider ?? {}),
+      walletLoading: true,
+      payoutAccountError: null
+    }
+  });
+
+  try {
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Enviando...";
+    }
+
+    recordCriticalRiskEvent("provider_change_bank_account", {
+      actorRole: "provider",
+      source: "provider_wallet_form",
+      providerId: this.state?.session?.providerId ?? null,
+      accountType,
+      hasCbu: Boolean(cbu),
+      hasCvu: Boolean(cvu),
+      hasAlias: Boolean(alias)
+    });
+
+    const result = await submitProviderPayoutAccount({
+      account_type: accountType,
+      cbu,
+      cvu,
+      alias,
+      bank_name: formData.get("bank_name"),
+      holder_name: formData.get("holder_name"),
+      holder_tax_id: formData.get("holder_tax_id"),
+      change_reason: changeReason
+    });
+
+    actions.updateState({
+      provider: {
+        ...(this.state?.provider ?? {}),
+        payoutAccount: result?.account ?? null,
+        walletLoading: false,
+        payoutAccountError: null
+      }
+    });
+
+    this.showToast("Datos de cobro enviados a revision.", "success");
+    form.reset();
+  } catch (error) {
+    console.error("[MIMI] Error enviando datos de cobro:", error);
+    const code = error?.details?.error || error?.code || error?.message;
+    const message = this.providerPayoutErrorMessage(code);
+    actions.updateState({
+      provider: {
+        ...(this.state?.provider ?? {}),
+        walletLoading: false,
+        payoutAccountError: message
+      }
+    });
+    this.showToast(message, "error");
+  } finally {
+    this.pendingActions.delete(actionKey);
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = originalLabel || "Enviar a revision";
+    }
+  }
+}
+
+  applyKycNotificationToState(item = {}) {
+    const data = this.notificationData(item);
+    const action = String(data?.action || "").toLowerCase();
+    const reviewStatus = String(data?.review_status || data?.kyc_status || "").toLowerCase();
+    const approved = action === "approve" || reviewStatus === "approved";
+    const blocked = action === "block" || reviewStatus === "blocked";
+    const needsFix = ["needs_resubmission", "request_document_correction", "reject"].includes(action) ||
+      ["needs_resubmission", "rejected"].includes(reviewStatus);
+
+    if (approved) {
+      actions.setVerified(true);
+      actions.setVerificationStatus("approved");
+      actions.setProviderStatus("OFFLINE");
+    } else if (blocked) {
+      actions.setVerified(false);
+      actions.setVerificationStatus("blocked");
+      actions.setProviderStatus("BLOCKED");
+    } else if (needsFix) {
+      actions.setVerified(false);
+      actions.setVerificationStatus("rejected");
+    }
+
+    const providerId = this.state?.session?.providerId;
+    if (providerId) {
+      window.setTimeout(async () => {
+        try {
+          const workspace = await loadProviderWorkspace(providerId);
+          this.applyWorkspaceToState(workspace);
+        } catch (error) {
+          if (window.MIMI_DEBUG_NOTIFICATIONS) console.warn("[MIMI][KYC] refresh after notification skipped:", error);
+        }
+      }, 300);
+    }
+  }
+
 renderServicesAndPricing() {
   const categories = this.state?.provider?.categories ?? [];
   const pricing = this.state?.provider?.pricing ?? {};
@@ -6703,7 +9215,7 @@ renderServicesAndPricing() {
     if (!offering) return "";
 
     const model = String(offering.pricing_model ?? "HOURLY").toUpperCase();
-    if (model === "QUOTE" || offering.quote_required) return "A presupuestar";
+    if (model === "QUOTE" || offering.quote_required) return QUOTE_PRICING_LABEL;
     if (model === "UNIT") {
       const amount = money(offering.unit_price);
       return amount ? `${amount} / ${offering.unit_name || "sesion"}` : "";
@@ -6736,8 +9248,11 @@ renderServicesAndPricing() {
             model === "BASE_VISIT" ? offering.base_visit_fee :
             ["UNIT", "SQUARE_METER", "LINEAR_METER"].includes(model) ? offering.unit_price :
             offering.price_per_hour;
-          const priceText = !amount || amount <= 0
-            ? "A coordinar"
+          const requiresQuote = model === "QUOTE" || offering.quote_required;
+          const priceText = requiresQuote
+            ? QUOTE_PRICING_LABEL
+            : !amount || amount <= 0
+            ? "Sin precio publicado"
             : model === "SQUARE_METER" ? `$${Number(amount).toLocaleString("es-AR")} / m²`
             : model === "LINEAR_METER" ? `$${Number(amount).toLocaleString("es-AR")} / m`
             : model === "UNIT" ? `$${Number(amount).toLocaleString("es-AR")} / ${offering.unit_name || "sesión"}`
@@ -6754,7 +9269,8 @@ renderServicesAndPricing() {
               </div>
               <div class="provider-service-mini-actions">
                 <button type="button" class="btn-secondary" data-provider-business-action="edit-offering" data-offering-id="${this.escapeHtml(offeringId)}">Editar</button>
-                <button type="button" class="btn-link-danger" data-provider-business-action="delete-offering" data-offering-id="${this.escapeHtml(offeringId)}">Eliminar</button>
+                <button type="button" class="btn-secondary" data-provider-business-action="preview-offering" data-offering-id="${this.escapeHtml(offeringId)}">Ver como cliente</button>
+                <button type="button" class="btn-link-danger" data-provider-business-action="delete-offering" data-offering-id="${this.escapeHtml(offeringId)}">Pausar</button>
               </div>
             </article>
           `;
@@ -6819,7 +9335,7 @@ renderSheetSummary() {
       model === "UNIT"
         ? `Por ${primaryOffering?.unit_name || "sesion"}`
         : model === "QUOTE"
-          ? "A presupuestar"
+          ? QUOTE_PRICING_LABEL
           : pricing.mode === "job"
             ? "Por trabajo"
             : "Por hora";
@@ -6851,14 +9367,17 @@ render() {
   this.renderActiveService();
   this.renderBottomSheet();
   this.renderDrawer();
+  renderProviderScreen(this.state);
   this.renderNotifications();
   this.renderChat();
   this.renderModal();
-  renderProviderScreen(this.state);
   this.renderServicesAndPricing();
   this.renderSheetSummary();
   this.renderDrawerProfile();
   this.renderKycAdminNotice();
+  this.renderNotificationUrgencyBanner();
+  this.renderProviderPushStatus();
+  this.updateAppBadge(this.state.notifications?.unreadCount || 0);
 }
   /**
    * Render header
@@ -7025,7 +9544,7 @@ renderOnlineButton() {
       if (this.elements.offerPrice) {
         this.elements.offerPrice.textContent = offer.priceLabel || (offer.price
           ? this.formatMoney(offer.price, offer.details?.currency || "ARS")
-          : 'Precio a convenir');
+          : QUOTE_PRICING_LABEL);
       }
       if (this.elements.offerDetails) {
         const rows = Array.isArray(offer.detailRows) ? offer.detailRows : [];
@@ -7117,19 +9636,19 @@ renderOnlineButton() {
         this.elements.activeServiceClient.textContent = service.clientName;
       }
       if (this.elements.activeServicePayment) {
-        this.elements.activeServicePayment.textContent = this.providerPaymentStatusLabel(service.paymentStatus ?? service.payment?.status);
+        this.elements.activeServicePayment.textContent = this.paymentStatusLabel(service.paymentStatus ?? service.raw?.payment_status ?? service.raw?.payment?.status);
       }
       
       // Button text
       const buttonLabels = {
-        'ACCEPTED': 'Llegue al domicilio',
-        'PROVIDER_EN_ROUTE': 'Llegue al domicilio',
+        'ACCEPTED': 'Iniciar ruta',
+        'PROVIDER_EN_ROUTE': 'Llegué al domicilio',
         'PROVIDER_ARRIVED': 'Iniciar servicio',
         'IN_PROGRESS': 'Finalizar servicio'
       };
       
       if (this.elements.serviceActionBtn) {
-        this.elements.serviceActionBtn.textContent = buttonLabels[serviceStatus] || 'Accion';
+        this.elements.serviceActionBtn.textContent = buttonLabels[serviceStatus] || 'Acción';
       }
     }
 
@@ -7168,6 +9687,17 @@ renderOnlineButton() {
     if (this.elements.notificationBadge) {
       this.elements.notificationBadge.textContent = this.state.notifications.unreadCount;
       this.elements.notificationBadge.hidden = this.state.notifications.unreadCount === 0;
+      this.elements.notificationBadge.classList.toggle("has-attention", this.state.notifications.unreadCount > 0);
+    }
+
+    if (this.elements.sheetNotificationBadge) {
+      const unreadCount = this.state.notifications.unreadCount || 0;
+      this.elements.sheetNotificationBadge.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
+      this.elements.sheetNotificationBadge.hidden = unreadCount === 0;
+    }
+
+    if (this.elements.sheetNotificationBell) {
+      this.elements.sheetNotificationBell.classList.toggle("has-unread", (this.state.notifications.unreadCount || 0) > 0);
     }
     
     if (this.elements.chatBadge) {
@@ -7249,32 +9779,211 @@ if (this.elements.drawerInitials) {
     const isOpen = this.state.ui.notificationDrawerOpen;
     
     if (this.elements.notificationsDrawer) {
-      this.elements.notificationsDrawer.classList.toggle('open', isOpen);
-      this.elements.notificationsDrawer.setAttribute('aria-hidden', !isOpen);
-    }
+      if (!isOpen && this.elements.notificationsDrawer.contains(document.activeElement)) {
+        document.activeElement.blur();
+      }
 
-    // Render list
-    const items = this.state.notifications.items || [];
-    if (this.elements.notificationsList) {
-      if (items.length === 0) {
-        this.elements.notificationsList.innerHTML = `
-          <div class="empty-state">
-            <p>No tenes notificaciones</p>
-          </div>
-        `;
+      this.elements.notificationsDrawer.classList.toggle('open', isOpen);
+      this.elements.notificationsDrawer.setAttribute('aria-hidden', String(!isOpen));
+
+      if (isOpen) {
+        this.elements.notificationsDrawer.removeAttribute("inert");
       } else {
-        this.elements.notificationsList.innerHTML = items.map(item => `
-          <div class="notification-item ${item.unread ? 'unread' : ''}">
-            <div class="notification-icon">${item.icon || ''}</div>
-            <div class="notification-content">
-              <div class="notification-title">${item.title}</div>
-              <div class="notification-text">${item.text}</div>
-              <div class="notification-time">${new Date(item.timestamp).toLocaleString('es-AR')}</div>
-            </div>
-          </div>
-        `).join('');
+        this.elements.notificationsDrawer.setAttribute("inert", "");
       }
     }
+
+    const items = this.compactNotificationItems(this.state.notifications.items || []);
+    if (this.elements.notificationsList) {
+      const filters = this.notificationFilterOptions(items);
+      if (!filters.some((filter) => filter.id === this.notificationFilter)) {
+        this.notificationFilter = "all";
+      }
+
+      const selectedFilter = this.notificationFilter || "all";
+      const visibleItems = selectedFilter === "all"
+        ? items
+        : items.filter((item) => this.notificationSemantic(item).category === selectedFilter);
+
+      if (items.length === 0) {
+        this.elements.notificationsList.innerHTML = `
+          ${this.renderNotificationFilters(filters)}
+          ${this.renderEmptyNotificationState("Sin notificaciones", "Cuando MIMIGO tenga algo importante para contarte, va a aparecer acá.")}
+        `;
+      } else if (visibleItems.length === 0) {
+        const empty = this.notificationSemantic({ type: selectedFilter });
+        this.elements.notificationsList.innerHTML = `
+          ${this.renderNotificationFilters(filters)}
+          ${this.renderEmptyNotificationState(empty.emptyTitle, empty.emptyText)}
+        `;
+      } else {
+        this.elements.notificationsList.innerHTML = `
+          ${this.renderNotificationFilters(filters)}
+          ${this.renderNotificationSectionHeading(selectedFilter, visibleItems.length)}
+          <div class="notification-card-stack">
+            ${visibleItems.map((item) => this.renderNotificationCard(item)).join("")}
+          </div>
+        `;
+      }
+    }
+
+    if (this.elements.markAllRead) {
+      const unreadCount = this.state.notifications.unreadCount || 0;
+      this.elements.markAllRead.textContent = unreadCount > 0 ? `Marcar ${unreadCount} leídas` : "Todo leído";
+      this.elements.markAllRead.disabled = unreadCount === 0;
+    }
+  }
+
+  notificationFilterOptions(items = []) {
+    const counts = items.reduce((acc, item) => {
+      const category = this.notificationSemantic(item).category;
+      acc.all += 1;
+      acc[category] = (acc[category] || 0) + 1;
+      return acc;
+    }, { all: 0, service: 0, system: 0, marketing: 0 });
+
+    return [
+      { id: "all", label: "Todas", count: counts.all, icon: "bell" },
+      { id: "service", label: "Servicios", count: counts.service, icon: "briefcase" },
+      { id: "system", label: "Sistema", count: counts.system, icon: "shield-alert" },
+      { id: "marketing", label: "Promos", count: counts.marketing, icon: "sparkles" }
+    ];
+  }
+
+  renderNotificationSectionHeading(filterId = "all", count = 0) {
+    const title = {
+      all: "Recientes",
+      service: "Mensajes de servicio",
+      system: "Avisos del sistema",
+      marketing: "Promos y novedades"
+    }[filterId] || "Recientes";
+
+    const detail = count === 1 ? "1 aviso" : `${count} avisos`;
+
+    return `
+      <div class="notification-section-heading">
+        <strong>${this.escapeHtml(title)}</strong>
+        <span>${this.escapeHtml(detail)}</span>
+      </div>
+    `;
+  }
+
+  renderNotificationFilters(filters = []) {
+    return `
+      <section class="notification-center-summary" aria-label="Filtros de notificaciones">
+        <div class="notification-center-copy">
+          <span>Mensajes organizados</span>
+          <strong>${this.state.notifications.unreadCount || 0} sin leer</strong>
+        </div>
+        <div class="notification-filter-row" role="tablist" aria-label="Categorías de notificaciones">
+          ${filters.map((filter) => `
+            <button
+              class="notification-filter-chip ${this.notificationFilter === filter.id ? "is-active" : ""}"
+              type="button"
+              role="tab"
+              aria-selected="${this.notificationFilter === filter.id ? "true" : "false"}"
+              data-notification-filter="${this.escapeHtml(filter.id)}"
+            >
+              <span class="notification-filter-icon">${this.notificationIconSvg(filter.icon)}</span>
+              <span>${this.escapeHtml(filter.label)}</span>
+              <b>${filter.count > 99 ? "99+" : filter.count}</b>
+            </button>
+          `).join("")}
+        </div>
+      </section>
+    `;
+  }
+
+  renderEmptyNotificationState(title, text) {
+    return `
+      <div class="notification-empty-state">
+        <span>${this.notificationIconSvg("bell")}</span>
+        <strong>${this.escapeHtml(title || "Sin notificaciones")}</strong>
+        <p>${this.escapeHtml(text || "Las novedades van a aparecer acá.")}</p>
+      </div>
+    `;
+  }
+
+  renderNotificationCard(item = {}) {
+    const semantic = this.notificationSemantic(item);
+    const ids = this.notificationIds(item);
+    const idsAttr = this.escapeHtml(ids.join(","));
+    const unreadLabel = item.unreadCount > 1 ? `${item.unreadCount} sin leer` : "Sin leer";
+    const countLabel = item.count > 1 ? `${item.count} avisos agrupados` : semantic.actionLabel;
+    const title = item.title || "Notificación";
+    const text = item.text || "Tenés una novedad pendiente.";
+
+    return `
+      <article class="notification-card notification-card--${this.escapeHtml(semantic.category)} notification-card--${this.escapeHtml(semantic.tone)} ${item.unread ? "is-unread" : "is-read"}">
+        <button class="notification-card-main" type="button" data-notification-open data-notification-ids="${idsAttr}">
+          <span class="notification-card-icon">${this.notificationIconSvg(semantic.icon)}</span>
+          <span class="notification-card-content">
+            <span class="notification-card-kicker">
+              <b>${this.escapeHtml(semantic.label)}</b>
+              <time>${this.escapeHtml(this.notificationTimeLabel(item.timestamp))}</time>
+            </span>
+            <strong class="notification-card-title">${this.escapeHtml(title)}</strong>
+            <span class="notification-card-text">${this.escapeHtml(text)}</span>
+            <span class="notification-card-meta">
+              ${item.unread ? `<em>${this.escapeHtml(unreadLabel)}</em>` : `<em class="is-muted">Leida</em>`}
+              <small>${this.escapeHtml(countLabel)}</small>
+            </span>
+          </span>
+          <span class="notification-card-chevron" aria-hidden="true">&rsaquo;</span>
+        </button>
+        <div class="notification-card-controls">
+          ${item.unread
+            ? `<button class="notification-card-read" type="button" data-notification-read data-notification-ids="${idsAttr}">${this.notificationIconSvg("check")} Marcar leída</button>`
+            : `<span class="notification-card-read is-done">${this.notificationIconSvg("check")} Leida</span>`}
+        </div>
+      </article>
+    `;
+  }
+
+  notificationTimeLabel(timestamp) {
+    const value = new Date(timestamp || Date.now()).getTime();
+    const diffMinutes = Math.max(0, Math.round((Date.now() - value) / 60000));
+    if (diffMinutes < 1) return "Ahora";
+    if (diffMinutes < 60) return `Hace ${diffMinutes} min`;
+    if (diffMinutes < 1440) return `Hace ${Math.round(diffMinutes / 60)} h`;
+    return new Date(value).toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
+  }
+
+  compactNotificationItems(items = []) {
+    const buckets = new Map();
+    for (const item of items) {
+      const data = this.notificationData(item);
+      const key = [
+        item.title || "",
+        data.action || "",
+        data.document_type || "",
+        this.isKycReviewNotification(item) ? "kyc" : item.type || ""
+      ].join("|");
+      const current = buckets.get(key);
+      if (!current) {
+        buckets.set(key, {
+          ...item,
+          count: 1,
+          unreadCount: item.unread ? 1 : 0,
+          ids: this.notificationIds(item)
+        });
+        continue;
+      }
+      current.count += 1;
+      current.ids = Array.from(new Set([...(current.ids || []), ...this.notificationIds(item)]));
+      current.unreadCount += item.unread ? 1 : 0;
+      current.unread = current.unread || item.unread;
+      if (new Date(item.timestamp || 0) > new Date(current.timestamp || 0)) {
+        current.timestamp = item.timestamp;
+        current.text = item.text || current.text;
+        current.raw = item.raw || current.raw;
+        current.type = item.type || current.type;
+        current.data = item.data || current.data;
+      }
+    }
+    return Array.from(buckets.values())
+      .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0))
+      .slice(0, 30);
   }
 
   /**
@@ -7310,6 +10019,8 @@ if (this.elements.drawerInitials) {
   }
   subscribeRealtime() {
     try {
+      if (!MIMI_REALTIME_ENABLED) return;
+
       const supabase = getSupabaseClient();
       const userId = this.state?.session?.userId;
       const providerId = this.state?.session?.providerId;
@@ -7341,8 +10052,15 @@ if (this.elements.drawerInitials) {
           )
           .subscribe((status) => {
             if (window.MIMI_DEBUG_REALTIME) console.log("[MIMI] Notifications realtime:", status);
+            if (status === "SUBSCRIBED") {
+              this.notificationRealtimeHealthy = true;
+              this.scheduleNotificationSync();
+            } else if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
+              this.notificationRealtimeHealthy = false;
+              this.scheduleNotificationSync({ delay: MIMI_PROVIDER_NOTIFICATION_SYNC_MS });
+            }
           }),
-          { pauseWhenHidden: true }
+          { critical: true }
         );
       }
 
@@ -7383,11 +10101,19 @@ if (this.elements.drawerInitials) {
 
     const normalized = this.normalizeNotifications([notif])[0];
     actions.addNotification(normalized);
+    this.markNotificationIdsReceived([normalized.id], { silent: true });
+    this.requestNotificationSync({
+      delay: MIMI_PROVIDER_NOTIFICATION_REALTIME_RECONCILE_MS,
+      minAgeMs: MIMI_PROVIDER_NOTIFICATION_MIN_GAP_MS
+    });
 
-    if (this.isKycReviewNotification(normalized)) {
+    if (this.isReviewReceivedNotification(normalized)) {
+      if (normalized.id) this.reviewNotificationToastSeen.add(String(normalized.id));
+      this.showReviewNotificationToast(normalized);
+    } else if (this.isKycReviewNotification(normalized)) {
       this.showKycRealtimeAlert(normalized);
     } else {
-      this.showToast(normalized.title || "Nueva notificacion", "info");
+      this.showToast(normalized.title || "Nueva notificación", "info");
       this.playNotificationSound("info");
     }
 
@@ -7400,10 +10126,12 @@ if (this.elements.drawerInitials) {
       const registration = await navigator.serviceWorker?.ready;
       const options = {
         body: body || "",
-        icon: "./assets/icons/mimigo-partners-icon-192.png",
-        badge: "./assets/icons/mimigo-partners-icon-32.png",
+        icon: "/mimi-servicios/assets/icons/mimigo-pro-icon-v10-192.png",
+        badge: "/mimi-servicios/assets/icons/mimigo-pro-badge-v11-96.png",
         tag: `mimi-service-${data?.request_id || data?.offer_id || Date.now()}`,
         renotify: true,
+        silent: false,
+        vibrate: [180, 80, 180],
         data: {
           ...(data || {}),
           url: data?.url || "/mimi-servicios/prestador"
@@ -7519,9 +10247,9 @@ if (this.elements.drawerInitials) {
     toast.className = `toast ${type}`;
     toast.dataset.message = normalized;
     toast.textContent = normalized;
-    
+
     container.appendChild(toast);
-    
+
     // Remove after 3 seconds
     setTimeout(() => {
       toast.style.opacity = '0';
@@ -7529,214 +10257,6 @@ if (this.elements.drawerInitials) {
       setTimeout(() => toast.remove(), 300);
     }, 3000);
   }
-
-providerPayoutErrorMessage(code) {
-  const value = String(code || "").trim();
-  const messages = {
-    AUTH_REQUIRED: "Inicia sesion para configurar tu Wallet.",
-    PROVIDER_NOT_FOUND: "No encontramos tu perfil de prestador.",
-    CBU_REQUIRED: "Carga un CBU valido.",
-    CVU_REQUIRED: "Carga un CVU valido.",
-    ALIAS_REQUIRED: "Carga un alias valido.",
-    CBU_INVALID_LENGTH: "El CBU debe tener 22 digitos.",
-    CVU_INVALID_LENGTH: "El CVU debe tener 22 digitos.",
-    BANK_ACCOUNT_IDENTIFIER_REQUIRED: "Carga CBU, CVU o alias para identificar la cuenta.",
-    PAYOUT_ACCOUNT_TYPE_INVALID: "Selecciona un tipo de cuenta valido.",
-    PAYOUT_ACCOUNT_HASH_SALT_MISSING: "Wallet no disponible: falta configuracion segura del backend.",
-    PAYOUT_ACCOUNT_ENCRYPTION_KEY_MISSING: "Falta configurar cifrado para datos de cobro.",
-    payout_account_unavailable: "No pudimos recuperar tus datos de Wallet."
-  };
-  return messages[value] || "No pudimos procesar tus datos de Wallet.";
-}
-
-async refreshProviderPayoutAccount({ silent = false } = {}) {
-  const actionKey = "provider-payout-account-refresh";
-  if (this.pendingActions.has(actionKey)) return;
-
-  if (!this.state?.session?.isAuthenticated) {
-    if (!silent) this.showToast("Inicia sesion para ver tu Wallet.", "warning");
-    return;
-  }
-
-  this.pendingActions.add(actionKey);
-  actions.updateState({
-    provider: {
-      ...(this.state?.provider ?? {}),
-      walletLoading: true,
-      payoutAccountError: null
-    }
-  });
-
-  try {
-    const result = await getProviderPayoutAccount();
-    const errorCode = result?.ok === false ? result?.error : null;
-    actions.updateState({
-      provider: {
-        ...(this.state?.provider ?? {}),
-        payoutAccount: result?.account ?? null,
-        walletLoading: false,
-        payoutAccountError: errorCode ? this.providerPayoutErrorMessage(errorCode) : null
-      }
-    });
-
-    if (!silent && !errorCode) {
-      this.showToast("Wallet actualizada.", "success");
-    }
-  } catch (error) {
-    const code = error?.details?.error || error?.code || error?.message;
-    const message = this.providerPayoutErrorMessage(code);
-    actions.updateState({
-      provider: {
-        ...(this.state?.provider ?? {}),
-        walletLoading: false,
-        payoutAccountError: message
-      }
-    });
-    if (!silent) this.showToast(message, "error");
-    console.warn("[MIMI] No pudimos refrescar datos de cobro:", error);
-  } finally {
-    this.pendingActions.delete(actionKey);
-  }
-}
-
-async handleProviderPayoutAccountSubmit(event) {
-  event.preventDefault();
-  const form = event.target?.closest?.("#providerPayoutAccountForm");
-  if (!form) return;
-
-  if (!this.state?.session?.isAuthenticated) {
-    this.showToast("Inicia sesion para configurar tu Wallet.", "warning");
-    return;
-  }
-
-  const actionKey = "provider-payout-account-submit";
-  if (this.pendingActions.has(actionKey)) return;
-
-  const submitButton = form?.querySelector?.("button[type='submit']");
-  const originalLabel = submitButton?.textContent;
-  const formData = new FormData(form);
-  const accountType = String(formData.get("account_type") || "cbu").trim().toLowerCase();
-  const cbu = String(formData.get("cbu") || "").replace(/\D/g, "");
-  const cvu = String(formData.get("cvu") || "").replace(/\D/g, "");
-  const alias = String(formData.get("alias") || "").trim().toLowerCase();
-  const changeReason = String(formData.get("change_reason") || "").trim();
-  const focusField = (name) => form.querySelector(`[name='${name}']`)?.focus?.();
-
-  if (!["cbu", "cvu", "alias", "bank_account"].includes(accountType)) {
-    this.showToast("Selecciona un tipo de cuenta valido.", "warning");
-    focusField("account_type");
-    return;
-  }
-
-  if (accountType === "cbu" && cbu.length !== 22) {
-    this.showToast("El CBU debe tener 22 digitos.", "warning");
-    focusField("cbu");
-    return;
-  }
-
-  if (accountType === "cvu" && cvu.length !== 22) {
-    this.showToast("El CVU debe tener 22 digitos.", "warning");
-    focusField("cvu");
-    return;
-  }
-
-  if (accountType === "alias" && alias.length < 6) {
-    this.showToast("El alias debe tener al menos 6 caracteres.", "warning");
-    focusField("alias");
-    return;
-  }
-
-  if (accountType === "bank_account") {
-    if (!cbu && !cvu && alias.length < 6) {
-      this.showToast("Carga CBU, CVU o alias para identificar la cuenta.", "warning");
-      focusField("cbu");
-      return;
-    }
-    if (cbu && cbu.length !== 22) {
-      this.showToast("El CBU debe tener 22 digitos.", "warning");
-      focusField("cbu");
-      return;
-    }
-    if (cvu && cvu.length !== 22) {
-      this.showToast("El CVU debe tener 22 digitos.", "warning");
-      focusField("cvu");
-      return;
-    }
-  }
-
-  if (changeReason.length < 10) {
-    this.showToast("Agrega un motivo breve para auditar el cambio.", "warning");
-    focusField("change_reason");
-    return;
-  }
-
-  this.pendingActions.add(actionKey);
-  actions.updateState({
-    provider: {
-      ...(this.state?.provider ?? {}),
-      walletLoading: true,
-      payoutAccountError: null
-    }
-  });
-
-  try {
-    if (submitButton) {
-      submitButton.disabled = true;
-      submitButton.textContent = "Enviando...";
-    }
-
-    recordCriticalRiskEvent("provider_change_bank_account", {
-      actorRole: "provider",
-      source: "provider_wallet_form",
-      providerId: this.state?.session?.providerId ?? null,
-      accountType,
-      hasCbu: Boolean(cbu),
-      hasCvu: Boolean(cvu),
-      hasAlias: Boolean(alias)
-    });
-
-    const result = await submitProviderPayoutAccount({
-      account_type: accountType,
-      cbu,
-      cvu,
-      alias,
-      bank_name: formData.get("bank_name"),
-      holder_name: formData.get("holder_name"),
-      holder_tax_id: formData.get("holder_tax_id"),
-      change_reason: changeReason
-    });
-
-    actions.updateState({
-      provider: {
-        ...(this.state?.provider ?? {}),
-        payoutAccount: result?.account ?? null,
-        walletLoading: false,
-        payoutAccountError: null
-      }
-    });
-
-    this.showToast("Datos de cobro enviados a revision.", "success");
-    form.reset();
-  } catch (error) {
-    console.error("[MIMI] Error enviando datos de cobro:", error);
-    const code = error?.details?.error || error?.code || error?.message;
-    const message = this.providerPayoutErrorMessage(code);
-    actions.updateState({
-      provider: {
-        ...(this.state?.provider ?? {}),
-        walletLoading: false,
-        payoutAccountError: message
-      }
-    });
-    this.showToast(message, "error");
-  } finally {
-    this.pendingActions.delete(actionKey);
-    if (submitButton) {
-      submitButton.disabled = false;
-      submitButton.textContent = originalLabel || "Enviar a revision";
-    }
-  }
-}
 
 async handleSecurityChallengeAction(sourceUrl = window.location.href) {
   let url;
@@ -7805,8 +10325,7 @@ isMobileAndroidBrowser() {
 }
 
 isInstallDismissed() {
-  const dismissedUntil = Number(localStorage.getItem(PARTNER_INSTALL_DISMISSED_KEY) || 0);
-  return Number.isFinite(dismissedUntil) && dismissedUntil > Date.now();
+  return false;
 }
 
 hideInstallBanner() {
@@ -7869,6 +10388,29 @@ async cleanupProviderCachesForUpdate() {
   );
 }
 
+async warmProviderVisualAssetsForUpdate() {
+  const stamp = Date.now();
+  await Promise.allSettled(
+    MIMI_PROVIDER_UPDATE_ASSETS.map((asset) => {
+      const url = new URL(asset, window.location.origin);
+      url.searchParams.set("mimi_icon_revision", MIMI_PROVIDER_ICON_REVISION);
+      url.searchParams.set("t", String(stamp));
+      return fetch(url.toString(), {
+        cache: "reload",
+        credentials: "same-origin"
+      });
+    })
+  );
+}
+
+hideProviderUpdateBanner() {
+  const banner = document.getElementById("mimiProviderUpdateBanner");
+  if (!banner) return;
+  banner.hidden = true;
+  banner.setAttribute("aria-hidden", "true");
+  banner.dataset.updating = "false";
+}
+
 async applyProviderUpdate() {
   const button = document.getElementById("mimiProviderUpdateButton");
   const banner = document.getElementById("mimiProviderUpdateBanner");
@@ -7879,19 +10421,31 @@ async applyProviderUpdate() {
 
   if (banner) {
     banner.dataset.updating = "true";
+    banner.hidden = true;
+    banner.setAttribute("aria-hidden", "true");
   }
 
   try {
     sessionStorage.setItem("mimi_provider_apply_update", "1");
-    const registration = await navigator.serviceWorker?.getRegistration?.("/prestador");
-    await registration?.update?.();
-    const worker = registration?.waiting || registration?.installing || registration?.active;
-    worker?.postMessage?.({ type: "SKIP_WAITING" });
+    const registrations = await navigator.serviceWorker?.getRegistrations?.();
+    if (Array.isArray(registrations) && registrations.length) {
+      await Promise.allSettled(registrations.map((registration) => registration.update?.()));
+      registrations.forEach((registration) => {
+        const worker = registration?.waiting || registration?.installing || registration?.active;
+        worker?.postMessage?.({ type: "SKIP_WAITING" });
+      });
+    } else {
+      const registration = await navigator.serviceWorker?.getRegistration?.("/prestador");
+      await registration?.update?.();
+      const worker = registration?.waiting || registration?.installing || registration?.active;
+      worker?.postMessage?.({ type: "SKIP_WAITING" });
+    }
     await this.cleanupProviderCachesForUpdate();
+    await this.warmProviderVisualAssetsForUpdate();
   } catch (error) {
     console.warn("[MIMI Provider] No se pudo preparar actualización:", error);
   } finally {
-    const url = new URL(window.location.href);
+    const url = new URL("/prestador", window.location.origin);
     url.searchParams.set("provider_refresh", String(Date.now()));
     window.location.replace(url.toString());
   }
@@ -7917,20 +10471,28 @@ async checkProviderAppVersion() {
     const payload = await response.json();
     const remote = payload?.provider;
     const remoteVersion = String(remote?.version || "");
-    if (remoteVersion && remoteVersion !== MIMI_PROVIDER_BUILD) {
-      const minSupported = String(remote?.min_supported_version || "");
+    const minSupported = String(remote?.min_supported_version || "");
+    const isBelowMinimum =
+      remote?.force_update &&
+      minSupported &&
+      this.compareBuildVersions(MIMI_PROVIDER_BUILD, minSupported) < 0;
+    const remoteIsNewer =
+      remoteVersion &&
+      this.compareBuildVersions(remoteVersion, MIMI_PROVIDER_BUILD) > 0;
+
+    if (remoteVersion && (remoteIsNewer || isBelowMinimum)) {
+      if (sessionStorage.getItem("mimi_provider_apply_update") === "1") {
+        this.hideProviderUpdateBanner();
+        return;
+      }
       const forceUpdate = Boolean(
         appConfig.securityFlags?.ENABLE_FORCE_UPDATE ||
-        (remote?.force_update && minSupported && this.compareBuildVersions(MIMI_PROVIDER_BUILD, minSupported) < 0)
+        isBelowMinimum
       );
       this.showProviderUpdateBanner({ critical: forceUpdate || Boolean(remote?.critical) });
     } else {
-      const banner = document.getElementById("mimiProviderUpdateBanner");
-      if (banner) {
-        banner.hidden = true;
-        banner.setAttribute("aria-hidden", "true");
-        banner.dataset.updating = "false";
-      }
+      sessionStorage.removeItem("mimi_provider_apply_update");
+      this.hideProviderUpdateBanner();
     }
   } catch (error) {
     console.warn("[MIMI Provider] No se pudo revisar versión:", error);
@@ -7971,10 +10533,6 @@ setupProviderUpdateManager() {
 
 showInstallBanner({ sessionEntry = false } = {}) {
   const banner = this.elements?.installBanner;
-  if (!PROVIDER_INSTALL_PROMPT_ENABLED) {
-    this.hideInstallBanner();
-    return;
-  }
   if (!banner || this.isRunningAsInstalledPwa()) return;
 
   const hasInstallPrompt = Boolean(this.deferredInstallPrompt || window.deferredInstallPrompt);
@@ -7995,11 +10553,11 @@ showInstallBanner({ sessionEntry = false } = {}) {
 
   const text = banner.querySelector(".install-text");
   if (text) {
-    text.textContent = "Instalá MIMI GO Pro para abrir tu panel más rápido";
+    text.textContent = "Instalá la app de prestadores para abrir tu panel más rápido";
   }
 
   if (this.elements.installBtn) {
-    this.elements.installBtn.textContent = "Instalar MIMI GO Pro";
+    this.elements.installBtn.textContent = "Instalar app";
   }
 
   banner.hidden = false;
@@ -8013,7 +10571,6 @@ showInstallBanner({ sessionEntry = false } = {}) {
 setupInstallPrompt() {
   if (this.installPromptSetupDone) return;
   this.installPromptSetupDone = true;
-  this.hideInstallBanner();
 
   if (this.isRunningAsInstalledPwa()) {
     this.deferredInstallPrompt = null;
@@ -8023,15 +10580,13 @@ setupInstallPrompt() {
     return;
   }
 
-  window.addEventListener("beforeinstallprompt", (e) => {
-    if (!PROVIDER_INSTALL_PROMPT_ENABLED) {
-      e.preventDefault();
-      this.deferredInstallPrompt = null;
-      window.deferredInstallPrompt = null;
-      this.hideInstallBanner();
-      return;
-    }
+  try {
+    localStorage.removeItem(PARTNER_PWA_INSTALLED_KEY);
+  } catch (_) {}
 
+  this.hideInstallBanner();
+
+  window.addEventListener("beforeinstallprompt", (e) => {
     if (this.isRunningAsInstalledPwa()) {
       e.preventDefault();
       this.hideInstallBanner();
@@ -8063,6 +10618,9 @@ setupInstallPrompt() {
       localStorage.setItem(PARTNER_PWA_INSTALLED_KEY, "true");
       this.hideInstallBanner();
     } else if (this.deferredInstallPrompt || window.deferredInstallPrompt) {
+      try {
+        localStorage.removeItem(PARTNER_PWA_INSTALLED_KEY);
+      } catch (_) {}
       this.showInstallBanner({ sessionEntry: false });
     }
   });
@@ -8108,7 +10666,7 @@ async handleInstall() {
     } else {
       this.showToast("Instalación cancelada", "info");
       try {
-        localStorage.setItem(PARTNER_INSTALL_DISMISSED_KEY, String(Date.now() + 30 * 24 * 60 * 60 * 1000));
+        localStorage.removeItem(PARTNER_INSTALL_DISMISSED_KEY);
       } catch (_) {}
     }
   } catch (err) {
@@ -8121,7 +10679,7 @@ async handleInstall() {
    * Start background sync
    */
   startBackgroundSync() {
-// Produccin: las ofertas llegan por realtime / backend.
+// Producción: las ofertas llegan por realtime / backend.
 // No simulamos ofertas locales.
 
     
@@ -8264,9 +10822,10 @@ providerCameraConstraints(isSelfie) {
     audio: false,
     video: {
       facingMode: isSelfie ? { ideal: "user" } : { ideal: "environment" },
-      width: { ideal: 1920, min: 1280 },
-      height: { ideal: 1080, min: 720 },
+      width: { ideal: isSelfie ? 1920 : 3840, min: 1280 },
+      height: { ideal: isSelfie ? 2560 : 2160, min: 720 },
       aspectRatio: { ideal: isSelfie ? 3 / 4 : 16 / 9 },
+      resizeMode: { ideal: "none" },
       frameRate: { ideal: 30, max: 30 }
     }
   };
@@ -8281,6 +10840,75 @@ providerCameraFallbackConstraints(isSelfie) {
       height: { ideal: 720 }
     }
   };
+}
+
+kycCaptureTarget(documentType = "dni_front") {
+  if (documentType === "selfie") {
+    return { width: 1440, height: 1920, kind: "portrait_selfie" };
+  }
+
+  return { width: 2560, height: 1620, kind: "document_landscape" };
+}
+
+async tuneCameraTrackForKyc(track, isSelfie) {
+  if (!track?.getCapabilities || !track?.applyConstraints) return;
+
+  try {
+    const capabilities = track.getCapabilities();
+    const advanced = [];
+
+    if (Array.isArray(capabilities.focusMode) && capabilities.focusMode.includes("continuous")) {
+      advanced.push({ focusMode: "continuous" });
+    }
+
+    if (!isSelfie && Array.isArray(capabilities.exposureMode) && capabilities.exposureMode.includes("continuous")) {
+      advanced.push({ exposureMode: "continuous" });
+    }
+
+    if (!isSelfie && typeof capabilities.zoom?.max === "number") {
+      const zoom = Math.min(Math.max(Number(capabilities.zoom.min || 1), 1), Number(capabilities.zoom.max || 1));
+      if (zoom > 1) advanced.push({ zoom });
+    }
+
+    if (advanced.length) {
+      await track.applyConstraints({ advanced }).catch(() => {});
+    }
+  } catch (error) {
+    if (window.MIMI_DEBUG_KYC) console.warn("[MIMI][KYC] camera tune skipped:", error);
+  }
+}
+
+async capturePhotoBlobFromTrack(documentType) {
+  if (documentType === "selfie") return null;
+  const track = this.cameraStream?.getVideoTracks?.()[0];
+  if (!track || typeof window.ImageCapture !== "function") return null;
+
+  try {
+    const capture = new ImageCapture(track);
+    const photoCapabilities = await capture.getPhotoCapabilities?.().catch(() => null);
+    const settings = {};
+
+    if (photoCapabilities?.imageWidth) {
+      settings.imageWidth = Math.min(
+        Number(photoCapabilities.imageWidth.max || 0) || 3840,
+        Math.max(Number(photoCapabilities.imageWidth.min || 0) || 0, 3840)
+      );
+    }
+
+    if (photoCapabilities?.imageHeight) {
+      settings.imageHeight = Math.min(
+        Number(photoCapabilities.imageHeight.max || 0) || 2160,
+        Math.max(Number(photoCapabilities.imageHeight.min || 0) || 0, 2160)
+      );
+    }
+
+    const blob = await capture.takePhoto(settings).catch(() => capture.takePhoto());
+    if (blob?.size > 40 * 1024) return blob;
+  } catch (error) {
+    if (window.MIMI_DEBUG_KYC) console.warn("[MIMI][KYC] ImageCapture fallback:", error);
+  }
+
+  return null;
 }
 
 getObjectFitCoverCrop(video, targetWidth, targetHeight) {
@@ -8305,7 +10933,7 @@ analyzeCapturedCanvas(canvas) {
   const height = canvas.height || 0;
 
   if (width < 720 || height < 720) {
-    return { ok: false, message: "La camara entrego una imagen muy chica. Proba con mejor luz o desde Chrome." };
+    return { ok: false, message: "La cámara entregó una imagen muy chica. Probá con mejor luz o desde Chrome." };
   }
 
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
@@ -8326,7 +10954,7 @@ analyzeCapturedCanvas(canvas) {
   brightness = brightness / (image.data.length / 4);
 
   if (brightness < 38) {
-    return { ok: false, message: "La foto esta muy oscura. Busca mas luz de frente y repetila." };
+    return { ok: false, message: "La foto está muy oscura. Buscá más luz de frente y repetila." };
   }
 
   if (brightness > 238) {
@@ -8340,12 +10968,12 @@ analyzeCapturedCanvas(canvas) {
   const providerId = this.state?.session?.providerId;
 
   if (!providerId) {
-    this.showToast("No se encontr tu perfil de prestador", "error");
+    this.showToast("No se encontró tu perfil de prestador", "error");
     return;
   }
 
   if (!navigator.mediaDevices?.getUserMedia) {
-    this.showToast("Tu navegador no permite cmara. Prob desde Chrome o instal la PWA.", "error");
+    this.showToast("Tu navegador no permite cámara. Probá desde Chrome o instalá la PWA.", "error");
     return;
   }
 
@@ -8383,9 +11011,11 @@ analyzeCapturedCanvas(canvas) {
     try {
       this.cameraStream = await navigator.mediaDevices.getUserMedia(this.providerCameraConstraints(isSelfie));
     } catch (highResError) {
-      console.warn("[MIMI][KYC] Camara alta resolucion no disponible, usando fallback:", highResError?.name || highResError?.message);
+      console.warn("[MIMI][KYC] Cámara de alta resolución no disponible, usando fallback:", highResError?.name || highResError?.message);
       this.cameraStream = await navigator.mediaDevices.getUserMedia(this.providerCameraFallbackConstraints(isSelfie));
     }
+
+    await this.tuneCameraTrackForKyc(this.cameraStream?.getVideoTracks?.()[0], isSelfie);
 
 const video = this.elements.cameraVideo;
 
@@ -8404,21 +11034,21 @@ await new Promise((resolve, reject) => {
 });
 
 await video.play();
-    this.setCameraStatus(isSelfie ? "Centrate dentro de la silueta. Buena luz." : "Ubica el documento completo dentro de la guia.", "success");
+    this.setCameraStatus(isSelfie ? "Centrate dentro de la silueta. Buena luz." : "Ubicá el documento completo dentro de la guía.", "success");
   } catch (err) {
-    console.error("[MIMI] Error abriendo cmara:", err);
+    console.error("[MIMI] Error abriendo cámara:", err);
     this.closeCameraCapture();
-    this.showToast("No pudimos abrir la cmara. Revis permisos del navegador.", "error");
+    this.showToast("No pudimos abrir la cámara. Revisá permisos del navegador.", "error");
     this.openProviderSection("support");
   }
 }
-captureCameraFrame() {
+async captureCameraFrame() {
   const video = this.elements.cameraVideo;
   const canvas = this.elements.cameraCanvas;
   const captureButton = this.elements.cameraCaptureBtn;
 
   if (!video || !canvas || !video.videoWidth) {
-    this.showToast("La cmara todava no est lista", "warning");
+    this.showToast("La cámara todavía no está lista", "warning");
     return;
   }
 
@@ -8426,22 +11056,24 @@ captureCameraFrame() {
   if (this.elements.cameraBusyOverlay) this.elements.cameraBusyOverlay.hidden = false;
   if (this.elements.cameraStatus) this.elements.cameraStatus.textContent = "Capturando imagen...";
 
-  const wrapRect = video.getBoundingClientRect();
-  const targetWidth = Math.min(1600, Math.max(720, Math.round(wrapRect.width * window.devicePixelRatio)));
-  const targetHeight = Math.min(2000, Math.max(720, Math.round(wrapRect.height * window.devicePixelRatio)));
+  const documentType = this.cameraCapture?.documentType || "dni_front";
+  const highResPhotoBlob = await this.capturePhotoBlobFromTrack(documentType);
+  const target = this.kycCaptureTarget(documentType);
+  const targetWidth = target.width;
+  const targetHeight = target.height;
   const crop = this.getObjectFitCoverCrop(video, targetWidth, targetHeight);
 
   if (!crop) {
     this.setButtonBusy(captureButton, false);
     if (this.elements.cameraBusyOverlay) this.elements.cameraBusyOverlay.hidden = true;
-    this.showToast("No pudimos leer el encuadre de la camara", "error");
+    this.showToast("No pudimos leer el encuadre de la cámara", "error");
     return;
   }
 
   canvas.width = targetWidth;
   canvas.height = targetHeight;
 
-  const ctx = canvas.getContext("2d", { alpha: false });
+  const ctx = canvas.getContext("2d", { alpha: false, willReadFrequently: true });
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, targetWidth, targetHeight);
@@ -8455,27 +11087,66 @@ captureCameraFrame() {
     return;
   }
 
-  canvas.toBlob((blob) => {
+  canvas.toBlob(async (canvasBlob) => {
+    const blob = highResPhotoBlob || canvasBlob;
     if (!blob || blob.size < 10 * 1024) {
       this.setButtonBusy(captureButton, false);
       if (this.elements.cameraBusyOverlay) this.elements.cameraBusyOverlay.hidden = true;
-      this.showToast("No pudimos capturar una imagen valida", "error");
+      this.showToast("No pudimos capturar una imagen válida", "error");
       return;
     }
 
-    const documentType = this.cameraCapture.documentType;
     const fileName = `${documentType}-${Date.now()}.jpg`;
+    const rawFile = new File([blob], fileName, { type: blob.type || "image/jpeg" });
+    let optimized;
+    try {
+      optimized = appConfig.securityFlags?.ENABLE_DOCUMENT_AUTO_OPTIMIZATION === false
+        ? {
+            file: rawFile,
+            optimized: false,
+            previewUrl: URL.createObjectURL(blob),
+            quality: { ok: true, status: "review", score: 70, warnings: ["optimization_disabled"], errors: [] },
+            metadata: { original_size_bytes: rawFile.size || null }
+          }
+        : await optimizeDocumentImageFile(rawFile, {
+            documentType,
+            quality: 0.97
+          });
+    } catch (error) {
+      console.warn("[MIMI][KYC] Optimización de documento no disponible, usando captura original:", error?.message || error);
+      optimized = {
+        file: rawFile,
+        optimized: false,
+        previewUrl: URL.createObjectURL(blob),
+        quality: { ok: true, status: "review", warnings: ["optimization_fallback"], errors: [] },
+        metadata: {}
+      };
+    }
 
-    const previewUrl = URL.createObjectURL(blob);
+    const previewUrl = optimized.previewUrl || URL.createObjectURL(blob);
     if (this.cameraCapture.previewUrl) {
       URL.revokeObjectURL(this.cameraCapture.previewUrl);
     }
 
-    this.cameraCapture.blob = blob;
+    this.cameraCapture.blob = optimized.file;
     this.cameraCapture.previewUrl = previewUrl;
-    this.cameraCapture.file = new File([blob], fileName, { type: "image/jpeg" });
-    this.cameraCapture.width = canvas.width;
-    this.cameraCapture.height = canvas.height;
+    this.cameraCapture.file = optimized.file;
+    this.cameraCapture.width = optimized.metadata?.optimized_width || canvas.width;
+    this.cameraCapture.height = optimized.metadata?.optimized_height || canvas.height;
+    this.cameraCapture.sourceWidth = video.videoWidth || null;
+    this.cameraCapture.sourceHeight = video.videoHeight || null;
+    this.cameraCapture.captureKind = target.kind;
+    this.cameraCapture.captureQuality = highResPhotoBlob ? 0.98 : 0.96;
+    this.cameraCapture.quality = optimized.quality;
+    this.cameraCapture.optimizationMetadata = optimized.metadata || {};
+    const qualityWarnings = optimized.quality?.warnings || [];
+    const qualityErrors = optimized.quality?.errors || [];
+    const mustRetake =
+      documentType !== "selfie" &&
+      (optimized.quality?.status === "rejected" ||
+        qualityWarnings.includes("possible_blur") ||
+        qualityErrors.includes("too_bright") ||
+        qualityErrors.includes("too_dark"));
 
     if (this.elements.cameraStillPreview) {
       this.elements.cameraStillPreview.src = previewUrl;
@@ -8488,9 +11159,16 @@ captureCameraFrame() {
     if (this.elements.cameraBusyOverlay) this.elements.cameraBusyOverlay.hidden = true;
     if (this.elements.cameraCaptureBtn) this.elements.cameraCaptureBtn.hidden = true;
     if (this.elements.cameraRetakeBtn) this.elements.cameraRetakeBtn.hidden = false;
-    if (this.elements.cameraUseBtn) this.elements.cameraUseBtn.hidden = false;
-    this.setCameraStatus("Foto capturada. Confirmala o repetila.", "success");
-  }, "image/jpeg", 0.95);
+    if (this.elements.cameraUseBtn) this.elements.cameraUseBtn.hidden = mustRetake;
+    this.showCameraSupportAction(mustRetake);
+    const qualityState = optimized.quality?.ok === false ? "warning" : optimized.quality?.status === "review" ? "warning" : "success";
+    this.setCameraStatus(
+      mustRetake
+        ? `${qualityMessage(optimized.quality)} Se ve borrosa o con reflejo: repetila antes de enviarla.`
+        : `${qualityMessage(optimized.quality)} Confirmala o repetila.`,
+      qualityState
+    );
+  }, "image/jpeg", 0.98);
 }
 
 resetCameraPreview() {
@@ -8517,7 +11195,7 @@ resetCameraPreview() {
   if (this.elements.cameraCaptureBtn) this.elements.cameraCaptureBtn.hidden = false;
   if (this.elements.cameraRetakeBtn) this.elements.cameraRetakeBtn.hidden = true;
   if (this.elements.cameraUseBtn) this.elements.cameraUseBtn.hidden = true;
-  this.setCameraStatus("Camara lista", "info");
+  this.setCameraStatus("Cámara lista", "info");
 }
 
 async confirmCameraCapture() {
@@ -8533,6 +11211,7 @@ async confirmCameraCapture() {
   }
 
   try {
+    this.registerProviderPushToken({ prompt: true }).catch(() => {});
     this.cameraCapture.uploading = true;
     actions.setLoading(true);
     this.setButtonBusy(this.elements.cameraUseBtn, true, "Subiendo imagen segura...");
@@ -8546,7 +11225,23 @@ async confirmCameraCapture() {
 const uploadedDocument = await uploadProviderDocument({
   providerId,
   documentType,
-  file
+  file,
+  metadata: {
+    capture_source: "provider_camera",
+    capture_kind: this.cameraCapture.captureKind || null,
+    capture_width: this.cameraCapture.width || null,
+    capture_height: this.cameraCapture.height || null,
+    source_width: this.cameraCapture.sourceWidth || null,
+    source_height: this.cameraCapture.sourceHeight || null,
+    camera_facing_mode: documentType === "selfie" ? "user" : "environment",
+    capture_quality: this.cameraCapture.captureQuality || 0.96,
+    admin_optimized: true,
+    quality_status: this.cameraCapture.quality?.status || null,
+    quality_score: this.cameraCapture.quality?.score ?? null,
+    quality_warnings: this.cameraCapture.quality?.warnings || [],
+    quality_errors: this.cameraCapture.quality?.errors || [],
+    ...(this.cameraCapture.optimizationMetadata || {})
+  }
 });
 
 console.info("[MIMI][KYC] Documento recibido", {
@@ -8582,9 +11277,21 @@ console.info("[MIMI][KYC] Documento recibido", {
 
     this.showToast("Analizando identidad...", "info");
     this.setCameraStatus("Analizando identidad...", "info");
-    await invokeFunction("svc-verify-provider-identity", {
-  provider_id: providerId
-});
+    recordCriticalRiskEvent("provider_kyc", {
+      actorRole: "provider",
+      source: "provider_camera_kyc_submit",
+      providerId,
+      documentType
+    });
+    let automaticVerificationUnavailable = false;
+    try {
+      await invokeFunction("svc-verify-provider-identity", {
+        provider_id: providerId
+      });
+    } catch (verifyError) {
+      automaticVerificationUnavailable = true;
+      console.warn("[MIMI][KYC] Verificación automática no disponible; continuamos con revisión manual:", verifyError?.message || verifyError);
+    }
 
 
     const workspace = await loadProviderWorkspace(providerId);
@@ -8596,21 +11303,23 @@ const status = String(
 ).toUpperCase();
 
     
-    if (["REVIEW", "PENDING", "PENDING_DOCUMENTS"].includes(status)) {
-      this.showToast("Revisin en curso. Te avisamos cuando est aprobada.", "success");
+    if (automaticVerificationUnavailable) {
+      this.showToast("Recibimos tus documentos. Si la validación automática no responde, quedan en revisión manual segura.", "warning");
+    } else if (["REVIEW", "PENDING", "PENDING_DOCUMENTS", "MANUAL_REVIEW"].includes(status)) {
+      this.showToast("Revisión en curso. Te avisamos cuando esté aprobada.", "success");
     } else if (status === "NEEDS_RESUBMISSION") {
       this.showToast("Necesitamos que repitas una foto con mejor calidad.", "warning");
     } else if (status === "REJECTED") {
-      this.showToast("No pudimos validar la identidad. Contact soporte.", "error");
+      this.showToast("No pudimos validar la identidad. Contactá soporte.", "error");
       this.showCameraSupportAction(true);
     } else {
-      this.showToast("Verificacin enviada correctamente.", "success");
+      this.showToast("Verificación enviada correctamente.", "success");
     }
 
     this.showWizardStep(5);
   } catch (err) {
-    console.error("[MIMI] Error en verificacion por camara:", err?.code || err?.message || err);
-    const message = err?.details?.message || err?.message || "No pudimos completar la verificacion. Podes repetir la foto e intentar de nuevo.";
+    console.error("[MIMI] Error en verificación por cámara:", err?.code || err?.message || err);
+    const message = err?.details?.message || err?.message || "No pudimos completar la verificación. Podés repetir la foto e intentar de nuevo.";
     this.showToast(message, "error");
     this.setCameraStatus(message, "error");
     this.showCameraSupportAction(true);
@@ -8634,6 +11343,7 @@ async uploadVerificationFile(documentType, file, input = null) {
   const trigger = document.querySelector(`[data-upload="${documentType}"]`);
 
   try {
+    this.registerProviderPushToken({ prompt: true }).catch(() => {});
     actions.setLoading(true);
     this.setButtonBusy(trigger, true, "Subiendo...");
 
@@ -8641,10 +11351,45 @@ async uploadVerificationFile(documentType, file, input = null) {
       this.elements.criminalRecordStatus.textContent = "Subiendo certificado...";
     }
 
-    await uploadProviderDocument({ providerId, documentType, file });
+    const optimized = appConfig.securityFlags?.ENABLE_DOCUMENT_AUTO_OPTIMIZATION === false
+      ? { file, optimized: false, quality: { ok: true, status: "review", warnings: ["optimization_disabled"], errors: [] }, metadata: {} }
+      : await optimizeDocumentImageFile(file, {
+        documentType,
+        quality: documentType === "selfie" ? 0.94 : 0.97
+      }).catch((error) => {
+      console.warn("[MIMI][KYC] No se pudo optimizar archivo de galeria:", error?.message || error);
+      return { file, optimized: false, quality: { ok: true, status: "review", warnings: ["optimization_fallback"], errors: [] }, metadata: {} };
+      });
+
+    if (optimized.quality?.status === "rejected") {
+      this.showToast(qualityMessage(optimized.quality), "warning");
+      return;
+    }
+
+    await uploadProviderDocument({
+      providerId,
+      documentType,
+      file: optimized.file,
+      metadata: {
+        capture_source: "file_picker",
+        file_last_modified: file.lastModified || null,
+        admin_optimized: Boolean(optimized.optimized),
+        quality_status: optimized.quality?.status || null,
+        quality_score: optimized.quality?.score ?? null,
+        quality_warnings: optimized.quality?.warnings || [],
+        quality_errors: optimized.quality?.errors || [],
+        ...(optimized.metadata || {})
+      }
+    });
 
     if (documentType === "selfie") {
       this.showToast("Analizando identidad...", "info");
+      recordCriticalRiskEvent("provider_kyc", {
+        actorRole: "provider",
+        source: "provider_file_kyc_submit",
+        providerId,
+        documentType
+      });
       await invokeFunction("svc-verify-provider-identity", {
         provider_id: providerId
       });

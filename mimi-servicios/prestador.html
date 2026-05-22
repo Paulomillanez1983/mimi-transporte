@@ -3,43 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <base href="/mimi-servicios/">
-  <title>MIMI GO Pro</title>
+  <title>MIMIGO Prestadores | Prestadores independientes</title>
   <meta name="description" content="Recibi solicitudes de clientes y administra tus servicios desde tu panel MIMIGO.">
   <meta name="theme-color" content="#f8fafc">
   <link rel="canonical" href="https://mimigo.com.ar/prestador">
 
   <!-- Social Preview / Open Graph -->
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="MIMI GO Pro">
+  <meta property="og:site_name" content="MIMIGO Prestadores">
   <meta property="og:locale" content="es_AR">
-  <meta property="og:title" content="MIMI GO Pro | Prestadores independientes">
+  <meta property="og:title" content="MIMIGO Prestadores | Prestadores independientes">
   <meta property="og:description" content="Recibi solicitudes de clientes y administra tus servicios desde tu panel MIMIGO.">
   <meta property="og:url" content="https://mimigo.com.ar/prestador">
-  <meta property="og:image" content="https://mimigo.com.ar/assets/og/og-mimigo-partners-whatsapp-v5.jpg">
-  <meta property="og:image:secure_url" content="https://mimigo.com.ar/assets/og/og-mimigo-partners-whatsapp-v5.jpg">
-  <meta property="og:image:type" content="image/jpeg">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
+  <meta property="og:image" content="https://mimigo.com.ar/mimi-servicios/assets/og/mimigo-pro-app-icon-share-v1.png">
+  <meta property="og:image:secure_url" content="https://mimigo.com.ar/mimi-servicios/assets/og/mimigo-pro-app-icon-share-v1.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:image:alt" content="Logo de MIMIGO PRO">
+  <meta name="thumbnail" content="https://mimigo.com.ar/mimi-servicios/assets/og/mimigo-pro-app-icon-share-v1.png">
+  <link rel="image_src" href="https://mimigo.com.ar/mimi-servicios/assets/og/mimigo-pro-app-icon-share-v1.png">
 
   <!-- X / Twitter Cards -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="MIMI GO Pro | Prestadores independientes">
+  <meta name="twitter:title" content="MIMIGO Prestadores | Prestadores independientes">
   <meta name="twitter:description" content="Recibi solicitudes de clientes y administra tus servicios desde tu panel MIMIGO.">
-  <meta name="twitter:image" content="https://mimigo.com.ar/assets/og/og-mimigo-partners-whatsapp-v5.jpg">
+  <meta name="twitter:image" content="https://mimigo.com.ar/mimi-servicios/assets/og/mimigo-pro-app-icon-share-v1.png">
+  <meta name="twitter:image:alt" content="Logo de MIMIGO PRO">
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="MIMI GO Pro">
-  <meta name="application-name" content="MIMI GO Pro">
 
-  <link rel="icon" type="image/png" sizes="32x32" href="./assets/icons/mimigo-partners-icon-32.png?v=2026.05.14.2">
-  <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/mimigo-partners-icon-16.png?v=2026.05.14.2">
-  <link rel="apple-touch-icon" href="./assets/icons/mimigo-partners-apple-touch-icon.png?v=2026.05.14.2">
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/icons/mimigo-pro-icon-v10-32.png?v=mimigo-visual-v10">
+  <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/mimigo-pro-icon-v10-16.png?v=mimigo-visual-v10">
+  <link rel="apple-touch-icon" href="./assets/icons/mimigo-pro-apple-touch-icon-v10.png?v=mimigo-visual-v10">
 
   <!-- PWA -->
-  <link rel="manifest" href="./manifest-prestador.json?v=2026.05.18.4">
+  <link rel="manifest" href="/manifest-partners.json?v=mimigo-status-badge-v11">
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -47,9 +49,9 @@
   <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Styles -->
-  <link rel="stylesheet" href="./styles/app.css?v=2026.05.14.2">
-  <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.14.2">
-  <link rel="stylesheet" href="./styles/provider.css?v=2026.05.21.map1">
+  <link rel="stylesheet" href="/mimi-servicios/styles/app.css?v=2026.05.20.14">
+  <link rel="stylesheet" href="/mimi-servicios/styles/map-ui.css?v=2026.05.20.14">
+  <link rel="stylesheet" href="/mimi-servicios/styles/provider.css?v=2026.05.21.map1">
 
   <!-- Provider map theme: light, clean, professional -->
   <script>
@@ -67,20 +69,24 @@
   <!-- App Shell -->
   <div id="app" class="app-container">
     <section class="provider-boot-loader" id="providerBootLoader" role="status" aria-live="polite">
-      <div class="provider-boot-card">
+        <div class="provider-boot-card">
         <div class="provider-boot-brand">MIMIGO</div>
-        <div class="provider-boot-shimmer" aria-hidden="true"></div>
+        <div class="provider-boot-visual" aria-hidden="true">
+          <div class="provider-boot-sync-module">
+            <span class="provider-boot-sync-mark">M</span>
+            <span class="provider-boot-sync-line line-a"></span>
+            <span class="provider-boot-sync-line line-b"></span>
+            <span class="provider-boot-sync-line line-c"></span>
+            <span class="provider-boot-sync-dot dot-a"></span>
+            <span class="provider-boot-sync-dot dot-b"></span>
+          </div>
+        </div>
         <h1 id="providerBootTitle">Preparando tu panel</h1>
         <p id="providerBootSubtitle">Sincronizando tu cuenta...</p>
+        <div class="provider-boot-progress" aria-hidden="true"><span></span></div>
         <article class="provider-boot-marketing is-visible" id="providerBootMarketing" aria-live="polite">
           <span class="provider-boot-marketing-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path d="M13.5 4.8c2.4-.9 4.3-.7 5.1-.5.2.8.4 2.7-.5 5.1-.7 1.9-2.1 3.8-4.2 5.8l-3.1-3.1c2-2.1 3.9-3.5 5.8-4.2Z"/>
-              <path d="M10.8 12.1 7 11.5 5.3 13.2l3.2 1.2"/>
-              <path d="m11.9 13.2.6 3.8-1.7 1.7-1.2-3.2"/>
-              <path d="M8.6 15.4 6.2 17.8"/>
-              <path d="M15.2 8.8h.01"/>
-            </svg>
+            <span class="provider-boot-rocket-emoji">🚀</span>
           </span>
           <div class="provider-boot-marketing-copy">
             <small id="providerBootMarketingEyebrow">Más libertad</small>
@@ -239,7 +245,7 @@
           <p class="service-return-copy">Cuando llegues, volv&eacute; a MIMIGO y toc&aacute; 'Llegu&eacute;' para pedir el PIN e iniciar el servicio.</p>
           <div class="service-step-list" id="serviceStepList"></div>
           <div class="service-nav-actions">
-            <button class="service-nav-btn" id="openExternalNavigation" type="button" aria-label="Navegar con Google Maps al domicilio del cliente" title="Navegar con Google Maps">Navegar</button>
+            <button class="service-nav-btn" id="openExternalNavigation" type="button" aria-label="Navegar con Google Maps al domicilio del cliente" title="Navegar al domicilio">Navegar</button>
           </div>
           <div class="service-nav-actions service-nav-actions--secondary">
             <button class="service-nav-btn nav-follow" id="toggleInAppNavigation" type="button">Seguir en app</button>
@@ -257,8 +263,8 @@
       <section class="provider-pin-sheet" role="dialog" aria-modal="true" aria-labelledby="providerPinTitle">
         <button class="provider-pin-close" id="providerPinClose" type="button" aria-label="Cerrar">×</button>
         <span class="provider-pin-eyebrow">Validar servicio</span>
-        <h2 id="providerPinTitle">Ingresa el codigo del cliente</h2>
-        <p>Pedile al cliente el PIN de 4 digitos para iniciar el servicio.</p>
+        <h2 id="providerPinTitle">Ingresá el código del cliente</h2>
+        <p>Pedile al cliente el PIN de 4 dígitos para iniciar el servicio.</p>
         <div class="provider-pin-inputs" id="providerPinInputs">
           <input inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="one-time-code" aria-label="Digito 1">
           <input inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Digito 2">
@@ -349,13 +355,22 @@
           <span class="upcoming-label">Próximo:</span>
           <span class="upcoming-time" id="sheetUpcomingTime">Sin agenda</span>
         </div>
+        <button class="sheet-notification-bell" id="sheetNotificationBell" type="button" aria-label="Abrir notificaciones">
+          <span aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.27 21a2 2 0 0 0 3.46 0"></path>
+              <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path>
+            </svg>
+          </span>
+          <b id="sheetNotificationBadge" hidden>0</b>
+        </button>
       </div>
 
       <div class="sheet-content" id="sheetContent">
         <div class="sheet-tabs">
           <button class="tab-btn active" type="button" data-tab="now">Ahora</button>
-          <button class="tab-btn" type="button" data-tab="scheduled">Agenda</button>
           <button class="tab-btn" type="button" data-tab="wallet">Wallet</button>
+          <button class="tab-btn" type="button" data-tab="scheduled">Agenda</button>
           <button class="tab-btn" type="button" data-tab="pricing">Servicios</button>
           <button class="tab-btn" type="button" data-tab="account">Cuenta</button>
         </div>
@@ -474,7 +489,7 @@
                 <span class="support-kicker">MIMIGO soporte</span>
                 <strong>Contactarnos</strong>
                 <p class="provider-support-copy">Tu chat con MIMIGO para cuenta, servicios y pagos.</p>
-                <p>Usalo para cuenta, verificaciÃ³n, servicios, pagos o problemas con una solicitud.</p>
+                <p>Usalo para cuenta, verificación, servicios, pagos o problemas con una solicitud.</p>
               </div>
               <button class="provider-support-chat-btn" id="providerSupportChatBtn" type="button">Abrir chat</button>
             </div>
@@ -588,8 +603,14 @@
     <div class="notifications-drawer" id="notificationsDrawer" aria-hidden="true">
       <div class="drawer-handle"></div>
       <div class="notifications-header">
-        <h3>Notificaciones</h3>
-        <button class="mark-read-btn" id="markAllRead" type="button">Marcar leídas</button>
+        <div>
+          <span class="notifications-eyebrow">Centro de avisos</span>
+          <h3>Notificaciones</h3>
+        </div>
+        <div class="notifications-header-actions">
+          <button class="mark-read-btn" id="markAllRead" type="button">Marcar leídas</button>
+          <button class="notifications-close-btn" id="notificationsClose" type="button" aria-label="Cerrar notificaciones">&times;</button>
+        </div>
       </div>
       <div class="notifications-list" id="notificationsList">
         <!-- Notifications injected via JS -->
@@ -613,7 +634,7 @@
       <div class="chat-quick-replies" id="chatQuickReplies">
         <button type="button" data-chat-quick="Estoy en camino.">Estoy en camino</button>
         <button type="button" data-chat-quick="Llegue al domicilio.">Llegue</button>
-        <button type="button" data-chat-quick="Necesito un dato mas para coordinar.">Necesito datos</button>
+        <button type="button" data-chat-quick="Necesito un dato más para coordinar.">Necesito datos</button>
       </div>
       <div class="chat-messages" id="chatMessages"></div>
       <div class="chat-input-area">
@@ -757,10 +778,10 @@
 
     <!-- Install Prompt -->
     <div class="install-banner" id="installBanner" hidden>
-      <div class="install-text">Instalá MIMI GO Pro para gestionar servicios más rápido</div>
+      <div class="install-text">Instalá la app de prestadores para gestionar servicios más rápido</div>
 
       <button class="install-btn" id="installBtn" type="button">
-        Instalar MIMI GO Pro
+        Instalar
       </button>
 
       <button class="install-dismiss" id="installDismiss" type="button" aria-label="Cerrar">
@@ -770,9 +791,9 @@
   </div>
 
   <!-- Scripts -->
-  <script src="./env.js"></script>
+  <script src="/mimi-servicios/env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Push notifications are initialized from src/services/push.js. -->
-  <script type="module" src="./src/main-provider.js?v=2026.05.21.map1"></script>
+  <script type="module" src="/mimi-servicios/src/main-provider.js?v=2026.05.21.map1"></script>
 </body>
 </html>
