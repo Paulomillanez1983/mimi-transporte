@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-18-mimigo-pro-provider-wallet-48";
+const APP_VERSION = "2026-05-21-mimigo-pro-provider-map1";
 const CACHE_PREFIX = "mimi-go-partner-";
 const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 const LEGACY_CACHE_PREFIXES = ["mimi-servicios-provider-"];
@@ -20,6 +20,7 @@ const APP_ASSETS = [
   "/mimi-servicios/src/config.js",
   "/mimi-servicios/src/main-provider.js",
   "/mimi-servicios/src/services/map.js",
+  "/mimi-servicios/src/services/provider-navigation.js",
   "/mimi-servicios/src/services/realtime-manager.js",
   "/mimi-servicios/src/services/runtime-config.js",
   "/mimi-servicios/src/services/observability.js",

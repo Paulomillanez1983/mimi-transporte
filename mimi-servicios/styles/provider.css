@@ -13834,6 +13834,14 @@ body.provider-auth-required .notification-container {
   line-height: 1.35;
 }
 
+.service-return-copy {
+  margin: -2px 2px 0;
+  color: var(--text-secondary);
+  font-size: .78rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
 .service-step-list {
   display: grid;
   gap: 7px;
