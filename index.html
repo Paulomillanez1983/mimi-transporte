@@ -23,7 +23,7 @@
 
   <link rel="icon" type="image/png" sizes="32x32" href="./assets/icons/mimigo-client-icon-32.png?v=landing-v1">
   <link rel="apple-touch-icon" href="./assets/icons/mimigo-client-apple-touch-icon.png?v=landing-v1">
-  <link rel="stylesheet" href="./landing.css?v=2026.05.22-copy-transition-v1">
+  <link rel="stylesheet" href="./landing.css?v=2026.05.22-stable-hero-v1">
 </head>
 <body>
   <a class="skip-link" href="#main">Saltar al contenido</a>
@@ -44,7 +44,7 @@
 
   <main id="main">
     <section class="hero" id="inicio" aria-labelledby="hero-title">
-      <div class="hero-copy" data-hero-copy>
+      <div class="hero-copy" data-hero-copy data-hero-mode="Cliente">
         <p class="eyebrow" data-hero-eyebrow>Servicios reales, cuando los necesit&aacute;s</p>
         <h1 id="hero-title" data-hero-title>Ped&iacute; el servicio<br>que quer&eacute;s<br><span>cuando lo necesit&aacute;s.</span></h1>
         <p class="hero-lead" data-hero-lead>Encontr&aacute; prestadores verificados y resolv&eacute; lo que necesit&aacute;s <strong>r&aacute;pido y seguro.</strong></p>
@@ -107,8 +107,8 @@
               <img src="./assets/landing/mimigo-client-servicios-preview-v1.png" width="390" height="844" alt="Captura de MIMIGO Cliente Servicios">
             </figure>
             <figure class="preview-slide preview-slide--provider-home" data-preview-label="Prestador">
-              <img class="preview-backdrop" src="./assets/landing/mimigo-prestadores-login-preview-v1.png" width="390" height="844" alt="" aria-hidden="true">
-              <img class="preview-foreground" src="./assets/landing/mimigo-prestadores-login-preview-v1.png" width="390" height="844" alt="Pantalla de acceso de MIMIGO Prestadores">
+              <img class="preview-backdrop" src="./assets/landing/mimigo-prestadores-login-preview-v2.png" width="390" height="844" alt="" aria-hidden="true">
+              <img class="preview-foreground" src="./assets/landing/mimigo-prestadores-login-preview-v2.png" width="390" height="844" alt="Pantalla de acceso de MIMIGO Prestadores">
             </figure>
             <div class="preview-fallback" role="img" aria-label="Vista estatica de MIMIGO">
               <strong>MIMIGO</strong>
@@ -271,6 +271,7 @@
           if (heroEyebrow) heroEyebrow.textContent = nextState.eyebrow;
           if (heroTitle) heroTitle.innerHTML = nextState.title;
           if (heroLead) heroLead.innerHTML = nextState.lead;
+          if (heroCopy) heroCopy.dataset.heroMode = label;
           nextState.points.forEach(([title, text], index) => {
             if (heroPointTitles[index]) heroPointTitles[index].textContent = title;
             if (heroPointTexts[index]) heroPointTexts[index].textContent = text;

@@ -1530,6 +1530,61 @@ h1 span {
   }
 }
 
+@media (max-width: 640px) {
+  .hero {
+    height: clamp(460px, 56svh, 496px);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .hero-copy {
+    min-height: 0 !important;
+  }
+
+  .hero-copy[data-hero-mode="Prestador"] {
+    gap: 6px;
+  }
+
+  .hero-copy[data-hero-mode="Prestador"] h1 {
+    font-size: clamp(18px, 5.5vw, 23px);
+    line-height: 1.02;
+  }
+
+  .hero-copy[data-hero-mode="Prestador"] .hero-lead {
+    font-size: clamp(10px, 2.85vw, 11px);
+  }
+
+  .hero-copy[data-hero-mode="Prestador"] .hero-points {
+    gap: 4px;
+  }
+
+  .hero-copy[data-hero-mode="Prestador"] .hero-point strong {
+    font-size: 8.8px;
+  }
+
+  .hero-copy[data-hero-mode="Prestador"] .hero-point small {
+    font-size: 7px;
+  }
+
+  .join-band {
+    width: auto;
+    max-width: none;
+    margin: 16px 10px 18px;
+  }
+}
+
+@media (max-width: 640px) and (max-height: 760px) {
+  .hero {
+    height: 428px;
+  }
+}
+
+@media (max-width: 340px) {
+  .hero {
+    height: 414px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
