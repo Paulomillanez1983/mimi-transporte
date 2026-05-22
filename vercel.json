@@ -3,17 +3,27 @@
   "trailingSlash": false,
   "redirects": [
     {
-      "source": "/",
-      "destination": "/servicios",
-      "permanent": false
-    },
-    {
       "source": "/cliente",
       "destination": "/servicios",
       "permanent": false
     },
     {
+      "source": "/hub",
+      "destination": "/servicios",
+      "permanent": false
+    },
+    {
+      "source": "/hub.html",
+      "destination": "/servicios",
+      "permanent": false
+    },
+    {
       "source": "/hub-clientes",
+      "destination": "/servicios",
+      "permanent": false
+    },
+    {
+      "source": "/hub-clientes.html",
       "destination": "/servicios",
       "permanent": false
     },
@@ -39,7 +49,7 @@
     },
     {
       "source": "/index.html",
-      "destination": "/servicios",
+      "destination": "/",
       "permanent": false
     },
     {
@@ -86,15 +96,7 @@
   "rewrites": [
     {
       "source": "/",
-      "destination": "/hub-clientes.html"
-    },
-    {
-      "source": "/hub-clientes",
-      "destination": "/hub-clientes.html"
-    },
-    {
-      "source": "/cliente",
-      "destination": "/hub-clientes.html"
+      "destination": "/landing.html"
     },
     {
       "source": "/viaje",

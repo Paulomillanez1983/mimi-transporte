@@ -4,13 +4,13 @@ const APP_BASE_PATH = (() => {
   return path.endsWith('/') ? path : path.replace(/[^/]*$/, '');
 })();
 const STATIC_ASSETS = [
-  `${APP_BASE_PATH}hub-clientes.html`,
+  `${APP_BASE_PATH}landing.html`,
   `${APP_BASE_PATH}mimi-servicios/cliente.html`,
   `${APP_BASE_PATH}reset-password.html`,
   `${APP_BASE_PATH}manifest.json`,
   `${APP_BASE_PATH}manifest-clientes.json`,
   `${APP_BASE_PATH}libs/supabase-js.js`,
-  `${APP_BASE_PATH}hub-clientes.css`,
+  `${APP_BASE_PATH}landing.css`,
   `${APP_BASE_PATH}mimi-servicios/styles/app.css`,
   `${APP_BASE_PATH}mimi-servicios/styles/client.css`
 ];
@@ -82,9 +82,9 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(requestUrl);
   const isServicesShellAsset =
-    url.pathname.endsWith('/hub-clientes.html') ||
+    url.pathname.endsWith('/landing.html') ||
     url.pathname.endsWith('/mimi-servicios/cliente.html') ||
-    url.pathname.endsWith('/hub-clientes.css') ||
+    url.pathname.endsWith('/landing.css') ||
     url.pathname.includes('/mimi-servicios/src/') ||
     url.pathname.includes('/mimi-servicios/styles/');
 

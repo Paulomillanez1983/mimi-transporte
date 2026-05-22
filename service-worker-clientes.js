@@ -4,18 +4,18 @@
    Scope esperado: /
    ========================================================================== */
 
-const SW_VERSION = "mimi-clientes-v2026.05.10-branding-v3-icons";
+const SW_VERSION = "mimi-clientes-v2026.05.19-checkout-cancel-v1";
 const STATIC_CACHE = `${SW_VERSION}-static`;
 const RUNTIME_CACHE = `${SW_VERSION}-runtime`;
 const IMAGE_CACHE = `${SW_VERSION}-images`;
 
 /* --------------------------------------------------------------------------
-   App Shell (Hub Cliente)
+   App Shell (Landing Cliente)
    -------------------------------------------------------------------------- */
 const APP_SHELL = [
   "/",
-  "/hub-clientes.html",
-  "/hub-clientes.css",
+  "/landing.html",
+  "/landing.css",
   "/manifest-clientes.json",
 
   // verticales
@@ -29,6 +29,8 @@ const APP_SHELL = [
   "/assets/brand/mimigo-client-splash-1536x1024.png",
   "/assets/brand/mimigo-client-wordmark.png",
   "/assets/og/og-mimigo-client-branding-v3.png",
+  "/assets/landing/mimigo-client-servicios-preview-v1.png",
+  "/assets/landing/mimigo-prestadores-home-preview-v1.png",
 
   // personas reales (card inferior)
 "/assets/ui/clarity-card-compact.png",
@@ -37,7 +39,8 @@ const APP_SHELL = [
   // icons PWA
   "/assets/icons/mimigo-client-icon-192.png",
   "/assets/icons/mimigo-client-icon-512.png",
-  "/assets/icons/mimigo-client-icon-512-maskable.png"
+  "/assets/icons/mimigo-client-icon-512-maskable.png",
+  "/assets/icons/mimigo-client-badge-96.png"
 ];
 
 /* --------------------------------------------------------------------------
@@ -151,7 +154,7 @@ async function networkFirst(request) {
     return fresh;
   } catch (err) {
     const cached = await cache.match(request);
-    return cached || caches.match("/hub-clientes.html");
+    return cached || caches.match("/landing.html");
   }
 }
 
