@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.20.14";
+const MIMI_PROVIDER_BUILD = "2026.05.22.map-hotfix1";
 const MIMI_PROVIDER_ICON_REVISION = "mimigo-status-badge-v11";
 const QUOTE_PRICING_LABEL = "Cotizar antes de confirmar";
 const MIMI_PROVIDER_NOTIFICATION_SYNC_MS = providerRuntimeNumber(
@@ -749,6 +749,7 @@ if (!canBootProviderPanel) {
   return;
   }
   this.initUI();
+  this.ensureProviderMapLoaded("provider-panel-ready");
 
   this.setupEventListeners();
   this.setupBottomSheetGestures();
