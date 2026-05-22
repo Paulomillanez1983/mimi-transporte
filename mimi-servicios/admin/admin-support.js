@@ -158,9 +158,9 @@ function normalizeSupportRole(role) {
   const normalized = String(role || "").trim().toLowerCase();
 
   switch (normalized) {
-    case "driver":
-    case "chofer":
-      return "chofer";
+    case "provider":
+    case "prestador":
+      return "prestador";
     case "admin":
       return "admin";
     default:
@@ -170,8 +170,8 @@ function normalizeSupportRole(role) {
 
 function supportRoleLabel(role) {
   switch (normalizeSupportRole(role)) {
-    case "chofer":
-      return "Chofer";
+    case "prestador":
+      return "Prestador";
     case "admin":
       return "Admin";
     default:
@@ -184,8 +184,8 @@ function getConversationEmail(item) {
     item?.email ||
     item?.user_email ||
     item?.cliente_email ||
-    item?.driver_email ||
-    item?.chofer_email ||
+    item?.provider_email ||
+    item?.prestador_email ||
     item?.participant_email ||
     item?.metadata?.email ||
     ""

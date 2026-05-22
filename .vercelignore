@@ -1,0 +1,10 @@
+/.git/
+/.github/
+/docs/
+/qa/
+/scripts/
+/supabase/
+/mimi-servicios/docs/
+/mimi-servicios/qa/
+/mimi-servicios/supabase/
+*.log

@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.21.map1";
+const MIMI_PROVIDER_BUILD = "2026.05.20.14";
 const MIMI_PROVIDER_ICON_REVISION = "mimigo-status-badge-v11";
 const QUOTE_PRICING_LABEL = "Cotizar antes de confirmar";
 const MIMI_PROVIDER_NOTIFICATION_SYNC_MS = providerRuntimeNumber(
@@ -193,6 +193,7 @@ import { initObservability, markPerformance } from "./services/observability.js"
 import { recordCriticalRiskEvent } from "./security/risk-events.js";
 import {
   disconnectRealtime as disconnectManagedRealtime,
+  removeScopedChannel,
   subscribeScopedChannel
 } from "./services/realtime-manager.js";
 import { ensureMapLibreAssets } from "./services/map.js";
@@ -204,8 +205,184 @@ import {
   normalizeNavigationAddress
 } from "./services/provider-navigation.js";
 
+const PROVIDER_BOOT_RESOURCE_LABELS = Object.freeze({
+  categorias: "categories",
+  workspace: "workspace",
+  notificaciones: "notifications",
+  ofertas: "offers",
+  "servicio activo": "activeRequest",
+  wallet: "payoutAccount",
+  "catalogo guiado de servicios": "guidedServiceCatalog",
+  "adicionales de servicios": "serviceAddonsConfig"
+});
+const PROVIDER_BOOT_DEBUG_SESSION_KEY = "mimi_debug_provider_boot";
+const PROVIDER_BOOT_BUDGETS_MS = Object.freeze({
+  "provider.module.loaded": 100,
+  init: 3000,
+  "bootstrapSession.1": 1000,
+  loadCategories: 1500,
+  loadInitialData: 3000,
+  "bootstrapSession.2": 1000,
+  "boot.resource.categories": 800,
+  "boot.resource.workspace": 2500,
+  "boot.resource.notifications": 2500,
+  "boot.resource.offers": 2000,
+  "boot.resource.activeRequest": 1500,
+  "boot.resource.payoutAccount": 2500,
+  "boot.resource.guidedServiceCatalog": 2500,
+  "boot.resource.serviceAddonsConfig": 2500,
+  firstProviderStateRender: 2000,
+  "bootLoader.hidden": 2500,
+  "providerAuthenticated.applied": 3000,
+  "realtime.start": 3500,
+  "notificationSync.scheduled": 3500,
+  "pushRegistration.scheduled": 3500,
+  "phoneTrust.scheduled": 3500
+});
+
+function isProviderBootDebugEnabled() {
+  if (typeof window === "undefined") return false;
+
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const queryValue = params.get("debug_provider_boot");
+
+    if (queryValue === "1") {
+      sessionStorage.setItem(PROVIDER_BOOT_DEBUG_SESSION_KEY, "1");
+    } else if (queryValue === "0") {
+      sessionStorage.removeItem(PROVIDER_BOOT_DEBUG_SESSION_KEY);
+    }
+
+    return Boolean(
+      window.MIMI_DEBUG_PROVIDER_BOOT === true ||
+      sessionStorage.getItem(PROVIDER_BOOT_DEBUG_SESSION_KEY) === "1"
+    );
+  } catch (_) {
+    return Boolean(window.MIMI_DEBUG_PROVIDER_BOOT === true);
+  }
+}
+
+function sanitizeProviderBootError(error) {
+  if (!error) return null;
+  const errorType = error?.name || error?.code || "Error";
+  return String(errorType).replace(/[^a-zA-Z0-9_.:-]/g, "_").slice(0, 80) || "Error";
+}
+
+function markProviderBoot(name) {
+  if (!isProviderBootDebugEnabled()) return;
+  if (typeof performance === "undefined" || typeof performance.mark !== "function") return;
+
+  try {
+    performance.mark(`mimi.provider.${name}`);
+  } catch (_) {
+    // No romper nunca el boot por instrumentacion.
+  }
+}
+
+function measureProviderBoot(label, start, end, status = "ok", error = null) {
+  if (!isProviderBootDebugEnabled()) return;
+  if (typeof performance === "undefined" || typeof performance.measure !== "function") return;
+
+  try {
+    const measureName = `mimi.provider.${label}`;
+    performance.measure(
+      measureName,
+      `mimi.provider.${start}`,
+      `mimi.provider.${end}`
+    );
+
+    const entries = performance.getEntriesByName(measureName);
+    const last = entries[entries.length - 1];
+
+    window.__MIMI_PROVIDER_BOOT_METRICS__ =
+      window.__MIMI_PROVIDER_BOOT_METRICS__ || [];
+
+    window.__MIMI_PROVIDER_BOOT_METRICS__.push({
+      step: label,
+      status: status === "error" ? "error" : "ok",
+      durationMs: last ? Math.round(last.duration) : null,
+      errorType: sanitizeProviderBootError(error)
+    });
+  } catch (_) {
+    // No romper nunca el boot por instrumentacion.
+  }
+}
+
+function measureProviderBootPoint(label, start = "init.start") {
+  markProviderBoot(label);
+  measureProviderBoot(label, start, label);
+}
+
+function printProviderBootMetrics() {
+  if (!isProviderBootDebugEnabled()) return;
+
+  try {
+    const metrics = window.__MIMI_PROVIDER_BOOT_METRICS__ || [];
+    console.table(metrics);
+
+    const budgetRows = metrics.map((metric) => {
+      const budgetMs = PROVIDER_BOOT_BUDGETS_MS[metric.step] ?? null;
+      const durationMs = Number.isFinite(Number(metric.durationMs))
+        ? Number(metric.durationMs)
+        : null;
+      const overBudgetMs = budgetMs !== null && durationMs !== null
+        ? Math.max(0, durationMs - budgetMs)
+        : null;
+
+      return {
+        step: metric.step,
+        status: metric.status,
+        durationMs,
+        budgetMs,
+        overBudgetMs,
+        rating: metric.status === "error"
+          ? "error"
+          : budgetMs !== null && durationMs !== null && durationMs > budgetMs
+            ? "slow"
+            : "ok",
+        errorType: metric.errorType
+      };
+    });
+
+    console.table(budgetRows);
+
+    const slowRows = budgetRows
+      .filter((row) => row.rating === "slow" || row.rating === "error")
+      .sort((a, b) => (b.overBudgetMs ?? 0) - (a.overBudgetMs ?? 0));
+
+    if (slowRows.length) {
+      console.warn("[MIMI provider boot] Pasos fuera de presupuesto:", slowRows);
+    }
+  } catch (_) {
+    // No-op.
+  }
+}
+
+function providerBootResourceMetricLabel(label) {
+  const safeLabel =
+    PROVIDER_BOOT_RESOURCE_LABELS[String(label || "").trim().toLowerCase()] || "unknown";
+  return `boot.resource.${safeLabel}`;
+}
+
 initObservability("provider");
 markPerformance("provider_module_loaded");
+markProviderBoot("provider.module.loaded.start");
+markProviderBoot("provider.module.loaded.end");
+measureProviderBoot(
+  "provider.module.loaded",
+  "provider.module.loaded.start",
+  "provider.module.loaded.end"
+);
+
+function recordProviderPerfCounter(name, meta = {}) {
+  if (!window.MIMI_DEBUG_PERF && !window.MIMI_PERF_COUNTERS) return;
+  const counters = window.MIMI_PERF_COUNTERS || {};
+  counters[name] = (counters[name] || 0) + 1;
+  window.MIMI_PERF_COUNTERS = counters;
+  if (window.MIMI_DEBUG_PERF) {
+    console.debug("[MIMI perf]", name, { count: counters[name], ...meta });
+  }
+}
 
 async function removeConflictingServiceWorkers(expectedScopePath) {
   if (!("serviceWorker" in navigator) || !navigator.serviceWorker.getRegistrations) return;
@@ -369,6 +546,7 @@ class MimiProviderApp {
     this.state = null;
     this.unsubscribe = null;
     this.map = null;
+    this.providerMapInitPromise = null;
     this.markers = {};
     this.routeSourceId = "provider-service-route";
     this.routeLayerId = "provider-service-route-line";
@@ -382,6 +560,8 @@ class MimiProviderApp {
     this.partnerLoadingRenderTimeout = null;
     this.partnerLoadingSlideIndex = 0;
     this.notificationsInterval = null;
+    this.backgroundSyncInterval = null;
+    this.providerUpdateInterval = null;
     this.syncingNotifications = false;
     this.notificationLastSyncAt = 0;
     this.notificationSyncFailures = 0;
@@ -394,6 +574,7 @@ class MimiProviderApp {
     this.offerRealtimeChannel = null;
     this.notificationRealtimeChannel = null;
     this.chatRealtimeChannel = null;
+    this.chatRealtimeKey = null;
     this.currentChatMode = "client";
     this.supportConversationId = null;
     this.lastRoadRouteKey = null;
@@ -444,6 +625,8 @@ class MimiProviderApp {
    * Initialize the app
    */
 async init() {
+  markProviderBoot("init.start");
+  try {
   console.log("[MIMI] Initializing Provider App 2026...");
 
   document.body.classList.add("provider-auth-loading");
@@ -464,9 +647,20 @@ async init() {
   this.setupInstallPrompt();
 
   let earlySession = null;
+  markProviderBoot("bootstrapSession.1.start");
   try {
     earlySession = await bootstrapSession();
+    markProviderBoot("bootstrapSession.1.end");
+    measureProviderBoot("bootstrapSession.1", "bootstrapSession.1.start", "bootstrapSession.1.end");
   } catch (err) {
+    markProviderBoot("bootstrapSession.1.error");
+    measureProviderBoot(
+      "bootstrapSession.1",
+      "bootstrapSession.1.start",
+      "bootstrapSession.1.error",
+      "error",
+      err
+    );
     console.warn("[MIMI] Provider early auth check failed; showing login gate:", err?.message ?? err);
   }
 
@@ -484,15 +678,21 @@ async init() {
     this.showProviderLoginGate();
     actions.setLoading(false);
     console.log("[MIMI] Provider auth gate active");
+    markProviderBoot("init.end");
+    measureProviderBoot("init", "init.start", "init.end");
+    printProviderBootMetrics();
     return;
   }
 
   // Cargar categorías — si la DB devuelve vacío o falla, usar el catálogo local de config.js
   clearAuthRedirectIntent();
 
+  markProviderBoot("loadCategories.start");
   try {
     console.log("[MIMI] Loading categories...");
     const cats = await loadCategories();
+    markProviderBoot("loadCategories.end");
+    measureProviderBoot("loadCategories", "loadCategories.start", "loadCategories.end");
     // Fallback: si DB devolvió 0 categorías, usar appConfig.categories (catálogo local)
     const sourceCats = (Array.isArray(cats) && cats.length > 0) ? cats : (appConfig.categories ?? []);
 
@@ -512,6 +712,14 @@ async init() {
     console.log(`[MIMI] Categories loaded: ${normalizedCategories.length} items (DB: ${cats?.length ?? 0}, fallback: ${normalizedCategories.length - (cats?.length ?? 0)})`);
     this.loadProviderCmsVisuals(normalizedCategories);
   } catch (catErr) {
+    markProviderBoot("loadCategories.error");
+    measureProviderBoot(
+      "loadCategories",
+      "loadCategories.start",
+      "loadCategories.error",
+      "error",
+      catErr
+    );
     console.error("[MIMI] loadCategories failed:", catErr.message);
     // En error: igual cargar el catálogo local para que la UI nunca quede vacía
     const fallbackCats = appConfig.categories ?? [];
@@ -535,21 +743,22 @@ const canBootProviderPanel = await this.loadInitialData();
   
 if (!canBootProviderPanel) {
   console.log("[MIMI] Provider auth gate active");
+  markProviderBoot("init.end");
+  measureProviderBoot("init", "init.start", "init.end");
+  printProviderBootMetrics();
   return;
-}
+  }
   this.initUI();
-  this.initMap().catch((err) => {
-    console.warn("[MIMI] Map init deferred failed:", err?.message ?? err);
-    this.showMapFallback();
-  });
 
   this.setupEventListeners();
   this.setupBottomSheetGestures();
   this.checkLocationPermission();
   this.startBackgroundSync();
   if (MIMI_REALTIME_ENABLED) {
+    measureProviderBootPoint("realtime.start");
     this.subscribeRealtime();
   }
+  measureProviderBootPoint("notificationSync.scheduled");
   this.startNotificationSync();
 
   // Push notifications: si Firebase Messaging logró obtener token FCM,
@@ -557,10 +766,20 @@ if (!canBootProviderPanel) {
   // pushes cuando entre una solicitud nueva (incluso con la app cerrada).
   if (MIMI_BOOT_PUSH_REGISTRATION_ENABLED) {
     this.setupProviderPushAutoRefresh();
+    measureProviderBootPoint("pushRegistration.scheduled");
     this.registerProviderPushToken({ prompt: false });
   }
 
+  markProviderBoot("init.end");
+  measureProviderBoot("init", "init.start", "init.end");
+  printProviderBootMetrics();
   console.log("[MIMI] App initialized");
+  } catch (err) {
+    markProviderBoot("init.error");
+    measureProviderBoot("init", "init.start", "init.error", "error", err);
+    printProviderBootMetrics();
+    throw err;
+  }
 }
 
 setupProviderPushAutoRefresh() {
@@ -844,6 +1063,34 @@ verificationResultList: document.getElementById("verificationResultList"),
     renderProviderScreen(this.state);
   }
 
+  ensureProviderMapLoaded(reason = "unknown") {
+    if (this.map) {
+      window.setTimeout(() => {
+        try {
+          this.map?.resize?.();
+        } catch (_) {}
+      }, 80);
+      return Promise.resolve(this.map);
+    }
+
+    if (this.providerMapInitPromise) {
+      return this.providerMapInitPromise;
+    }
+
+    recordProviderPerfCounter("provider_map_init_requested", { reason });
+    this.providerMapInitPromise = this.initMap()
+      .catch((err) => {
+        console.warn("[MIMI] Map init deferred failed:", err?.message ?? err);
+        this.showMapFallback();
+        return null;
+      })
+      .finally(() => {
+        this.providerMapInitPromise = null;
+      });
+
+    return this.providerMapInitPromise;
+  }
+
   /**
    * Initialize map
    */
@@ -888,6 +1135,8 @@ async initMap() {
     this.showMapFallback();
     return;
   }
+
+  recordProviderPerfCounter("provider_map_init_count");
 
   mapEl.hidden = false;
   mapEl.style.display = "block";
@@ -1583,7 +1832,7 @@ setTimeout(() => {
     }
   }
 
-  toggleInAppNavigation() {
+  async toggleInAppNavigation() {
     this.navigationMode = !this.navigationMode;
     this.navigationCameraFollowing = this.navigationMode;
     document.body.classList.toggle("provider-navigation-active", this.navigationMode);
@@ -1595,6 +1844,8 @@ setTimeout(() => {
 
     if (this.navigationMode) {
       this.setBottomSheetState("collapsed");
+      await this.ensureProviderMapLoaded("in-app-navigation");
+      this.updateMapToCurrentPosition();
       this.recenterNavigationCamera();
       this.showToast("Guia in-app activada", "success");
     } else {
@@ -1603,6 +1854,12 @@ setTimeout(() => {
   }
 
   recenterNavigationCamera() {
+    if (!this.map) {
+      this.ensureProviderMapLoaded("recenter-navigation")
+        .then(() => this.recenterNavigationCamera());
+      return;
+    }
+
     const providerPosition = this.state?.location?.current;
     const servicePosition = this.servicePositionFromState();
     this.followProviderNavigationCamera({
@@ -1673,7 +1930,7 @@ setTimeout(() => {
     }
     if (this.elements.serviceNextStep) {
       const statusHints = {
-        ACCEPTED: "Toca En camino cuando salgas hacia el domicilio.",
+        ACCEPTED: "Tocá 'En camino' cuando salgas hacia el domicilio.",
         PROVIDER_EN_ROUTE: this.routeInstructionText(route ?? this.lastRoadRouteData),
         PROVIDER_ARRIVED: "Ya estas en el domicilio. Confirma llegada o inicia el servicio.",
         IN_PROGRESS: "Servicio en curso. Finalizalo cuando termines el trabajo."
@@ -1714,7 +1971,7 @@ setTimeout(() => {
     }
 
     markProviderExternalNavigationStarted();
-    this.showToast("Cuando llegues, volv\u00e9 a MIMIGO y toc\u00e1 'Llegu\u00e9' para continuar.", "info");
+    this.showToast("Cuando llegues, volvé a MIMIGO y tocá 'Llegué' para continuar.", "info");
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
@@ -1737,7 +1994,7 @@ setTimeout(() => {
 
       const status = this.normalizeRequestStatus(this.state?.activeService?.status);
       if (["ACCEPTED", "SCHEDULED", "PROVIDER_EN_ROUTE"].includes(status)) {
-        this.showToast("\u00bfYa llegaste? Toc\u00e1 'Llegu\u00e9' para continuar con el PIN.", "info");
+        this.showToast("¿Ya llegaste? Tocá 'Llegué' para continuar con el PIN.", "info");
       } else if (status === "PROVIDER_ARRIVED") {
         this.showToast("Pedile el PIN al cliente para iniciar el servicio.", "info");
       }
@@ -2185,6 +2442,7 @@ hideProviderBootLoader() {
 
   loader.hidden = true;
   loader.setAttribute("aria-hidden", "true");
+  measureProviderBootPoint("bootLoader.hidden");
 }
 
 renderPartnerLoadingMarketing(index = 0) {
@@ -2350,6 +2608,8 @@ normalizeProviderServiceAddons(config = {}) {
     enabled: Boolean(config.enabled),
     source: config.source ?? "default_false",
     flagKey: config.flagKey ?? "MIMI_PROVIDER_SERVICE_ADDONS_ENABLED",
+    providerId: config.providerId ?? previous.providerId ?? null,
+    flag: config.flag ?? previous.flag ?? null,
     loadedAt: config.loadedAt ?? previous.loadedAt ?? null,
     error: config.error ?? null
   };
@@ -2365,16 +2625,36 @@ providerPayoutFallback(error) {
 
 async loadProviderBootResource(label, loader, fallback, warnings = []) {
   let failure = null;
+  let failed = false;
+  const metricLabel = providerBootResourceMetricLabel(label);
+  markProviderBoot(`${metricLabel}.start`);
   try {
     const value = await loader();
-    if (value !== undefined && value !== null) return value;
+    if (value !== undefined && value !== null) {
+      markProviderBoot(`${metricLabel}.end`);
+      measureProviderBoot(metricLabel, `${metricLabel}.start`, `${metricLabel}.end`);
+      return value;
+    }
   } catch (error) {
     failure = error;
+    failed = true;
+    markProviderBoot(`${metricLabel}.error`);
+    measureProviderBoot(
+      metricLabel,
+      `${metricLabel}.start`,
+      `${metricLabel}.error`,
+      "error",
+      error
+    );
     const code = error?.details?.error || error?.code || error?.message || String(error || "unknown_error");
     warnings.push({ label, code });
     console.warn(`[MIMI Provider] ${label} no disponible durante el arranque:`, error);
   }
 
+  if (!failed) {
+    markProviderBoot(`${metricLabel}.end`);
+    measureProviderBoot(metricLabel, `${metricLabel}.start`, `${metricLabel}.end`);
+  }
   return typeof fallback === "function" ? fallback(failure) : fallback;
 }
   
@@ -2383,11 +2663,28 @@ async loadProviderBootResource(label, loader, fallback, warnings = []) {
    * This replaces every previous demo fallback with backend-driven state.
    */
 async loadInitialData() {
+  markProviderBoot("loadInitialData.start");
   try {
     actions.setLoading(true);
     actions.clearError?.();
 
-    const session = await bootstrapSession();
+    let session = null;
+    markProviderBoot("bootstrapSession.2.start");
+    try {
+      session = await bootstrapSession();
+      markProviderBoot("bootstrapSession.2.end");
+      measureProviderBoot("bootstrapSession.2", "bootstrapSession.2.start", "bootstrapSession.2.end");
+    } catch (sessionError) {
+      markProviderBoot("bootstrapSession.2.error");
+      measureProviderBoot(
+        "bootstrapSession.2",
+        "bootstrapSession.2.start",
+        "bootstrapSession.2.error",
+        "error",
+        sessionError
+      );
+      throw sessionError;
+    }
 
     actions.setSession({
       userId: session?.userId ?? null,
@@ -2405,6 +2702,8 @@ async loadInitialData() {
       document.body.classList.add("provider-auth-required");
 
       this.showProviderLoginGate();
+      markProviderBoot("loadInitialData.end");
+      measureProviderBoot("loadInitialData", "loadInitialData.start", "loadInitialData.end");
       return false;
     }
 
@@ -2432,6 +2731,8 @@ async loadInitialData() {
     if (!session?.providerId) {
       this.showToast("No se encontró un perfil de prestador para esta cuenta", "error");
       this.showProviderLoginGate();
+      markProviderBoot("loadInitialData.end");
+      measureProviderBoot("loadInitialData", "loadInitialData.start", "loadInitialData.end");
       return false;
     }
 
@@ -2443,12 +2744,7 @@ async loadInitialData() {
 const [
   categories,
   workspace,
-  notifications,
-  offers,
-  activeRequest,
-  payoutAccountResult,
-  guidedServiceCatalog,
-  serviceAddonsConfig
+  activeRequest
 ] = await Promise.all([
   // Reusar categorías ya cargadas en init(); si están vacías, recargar
   this.loadProviderBootResource(
@@ -2466,46 +2762,12 @@ const [
     bootWarnings
   ),
   this.loadProviderBootResource(
-    "notificaciones",
-    () => loadNotifications(session.userId),
-    () => [],
-    bootWarnings
-  ),
-  this.loadProviderBootResource(
-    "ofertas",
-    () => loadOffers(session.providerId),
-    () => [],
-    bootWarnings
-  ),
-  this.loadProviderBootResource(
     "servicio activo",
     () => loadActiveRequest({ providerId: session.providerId }),
     () => null,
     bootWarnings
-  ),
-  this.loadProviderBootResource(
-    "wallet",
-    () => getProviderPayoutAccount(),
-    () => this.providerPayoutFallback(),
-    bootWarnings
-  ),
-  this.loadProviderBootResource(
-    "catalogo guiado de servicios",
-    () => loadProviderGuidedServiceCatalog({ limit: 80 }),
-    (error) => this.providerGuidedServiceFallback(error),
-    bootWarnings
-  ),
-  this.loadProviderBootResource(
-    "adicionales de servicios",
-    () => loadProviderServiceAddonsConfig({ providerId: session.providerId }),
-    (error) => this.providerServiceAddonsFallback(error),
-    bootWarnings
   )
 ]);
-
-const payoutAccountError = payoutAccountResult?.ok === false && payoutAccountResult?.error
-  ? this.providerPayoutErrorMessage(payoutAccountResult.error)
-  : null;
 
 if (bootWarnings.length) {
   const affected = bootWarnings.map((item) => item.label).join(", ");
@@ -2523,56 +2785,15 @@ if (Array.isArray(categories) && categories.length) {
     }
   });
 }
-setTimeout(async () => {
-  try {
-    const freshDashboard = await getProviderDashboard(session.providerId);
-
-    actions.updateState({
-      provider: {
-        ...(this.state?.provider ?? {}),
-        dashboard: freshDashboard,
-        payoutAccount: payoutAccountResult?.account ?? this.state?.provider?.payoutAccount ?? null,
-        payoutAccountError: payoutAccountError ?? this.state?.provider?.payoutAccountError ?? null
-      }
-    });
-  } catch (err) {
-    console.warn("[MIMI] Dashboard diferido no disponible:", err);
-  }
-}, 800);    
     this.applyWorkspaceToState(workspace);
 
     actions.updateState({
       provider: {
         ...(this.state?.provider ?? {}),
-        payoutAccount: payoutAccountResult?.account ?? null,
-        payoutAccountError,
-        walletLoading: false,
-        guidedService: this.normalizeProviderGuidedService(guidedServiceCatalog),
-        serviceAddons: this.normalizeProviderServiceAddons(serviceAddonsConfig)
+        walletLoading: true,
+        payoutAccountError: null
       }
     });
-
-    actions.updateState({
-      provider: {
-        ...(this.state?.provider ?? {}),
-        offers: this.filterUsableOffers(offers)
-      }
-    });
-
-    actions.updateState({
-      notifications: {
-        items: this.normalizeNotifications(notifications),
-        unreadCount: (notifications ?? []).filter((item) => !item.read_at).length
-      }
-    });
-    this.ackNotificationReceipts(notifications, { silent: true });
-
-    const firstOffer = this.filterUsableOffers(offers)[0] ?? null;
-    if (firstOffer) {
-      actions.setActiveOffer(this.normalizeOfferForState(firstOffer));
-    } else {
-      actions.clearActiveOffer();
-    }
 
     if (activeRequest) {
       actions.setActiveService(this.normalizeServiceForState(activeRequest));
@@ -2586,11 +2807,13 @@ setTimeout(async () => {
       disconnectManagedRealtime("provider-app:job:");
     }
 
+    this.scheduleProviderSecondaryBootResources(session);
     this.renderDrawerProfile();
     this.hideProviderBootLoader();
 
     document.body.classList.remove("provider-auth-loading", "provider-auth-required");
     document.body.classList.add("provider-authenticated");
+    measureProviderBootPoint("providerAuthenticated.applied");
     this.ensureProviderBackGuard();
     this.checkProviderAppVersion();
 
@@ -2608,14 +2831,19 @@ setTimeout(async () => {
       this.hideInstallBanner();
     }
 
+    measureProviderBootPoint("phoneTrust.scheduled");
     window.setTimeout(() => {
       this.setupProviderPhoneTrust().catch((err) => {
         console.warn("[MIMI Provider] phone trust skipped:", err?.message ?? err);
       });
     }, 0);
 
+    markProviderBoot("loadInitialData.end");
+    measureProviderBoot("loadInitialData", "loadInitialData.start", "loadInitialData.end");
     return true;
   } catch (err) {
+    markProviderBoot("loadInitialData.error");
+    measureProviderBoot("loadInitialData", "loadInitialData.start", "loadInitialData.error", "error", err);
     console.error("[MIMI] Error cargando datos iniciales:", err);
 
     actions.setError?.(err?.message ?? "No pudimos cargar tu panel de prestador");
@@ -2633,6 +2861,116 @@ setTimeout(async () => {
   } finally {
     actions.setLoading(false);
   }
+}
+
+scheduleProviderSecondaryBootResources(session = {}) {
+  const providerId = session?.providerId ?? null;
+  const userId = session?.userId ?? null;
+  if (!providerId || !userId) return;
+
+  const runId = Date.now();
+  this.providerSecondaryBootRunId = runId;
+
+  window.setTimeout(() => {
+    this.loadProviderSecondaryBootResources({ providerId, userId, runId }).catch((error) => {
+      console.warn("[MIMI Provider] Carga secundaria no disponible:", error?.message || error);
+      actions.updateState({
+        provider: {
+          ...(this.state?.provider ?? {}),
+          walletLoading: false
+        }
+      });
+    });
+  }, 0);
+}
+
+async loadProviderSecondaryBootResources({ providerId, userId, runId }) {
+  const secondaryWarnings = [];
+
+  const [
+    offers,
+    payoutAccountResult,
+    guidedServiceCatalog,
+    serviceAddonsConfig
+  ] = await Promise.all([
+    this.loadProviderBootResource(
+      "ofertas",
+      () => loadOffers(providerId),
+      () => [],
+      secondaryWarnings
+    ),
+    this.loadProviderBootResource(
+      "wallet",
+      () => getProviderPayoutAccount(),
+      () => this.providerPayoutFallback(),
+      secondaryWarnings
+    ),
+    this.loadProviderBootResource(
+      "catalogo guiado de servicios",
+      () => loadProviderGuidedServiceCatalog({ limit: 80 }),
+      (error) => this.providerGuidedServiceFallback(error),
+      secondaryWarnings
+    ),
+    this.loadProviderBootResource(
+      "adicionales de servicios",
+      () => loadProviderServiceAddonsConfig({ providerId }),
+      (error) => this.providerServiceAddonsFallback(error),
+      secondaryWarnings
+    )
+  ]);
+
+  if (runId !== this.providerSecondaryBootRunId) return;
+
+  const payoutAccountError = payoutAccountResult?.ok === false && payoutAccountResult?.error
+    ? this.providerPayoutErrorMessage(payoutAccountResult.error)
+    : null;
+  const usableOffers = this.filterUsableOffers(offers);
+
+  actions.updateState({
+    provider: {
+      ...(this.state?.provider ?? {}),
+      payoutAccount: payoutAccountResult?.account ?? null,
+      payoutAccountError,
+      walletLoading: false,
+      guidedService: this.normalizeProviderGuidedService(guidedServiceCatalog),
+      serviceAddons: this.normalizeProviderServiceAddons(serviceAddonsConfig),
+      offers: usableOffers
+    }
+  });
+
+  const firstOffer = usableOffers[0] ?? null;
+  if (firstOffer) {
+    actions.setActiveOffer(this.normalizeOfferForState(firstOffer));
+  } else if (!this.state?.activeOffer) {
+    actions.clearActiveOffer();
+  }
+
+  if (secondaryWarnings.length && window.MIMI_DEBUG_PROVIDER_BOOT) {
+    console.warn(
+      "[MIMI Provider] Carga secundaria parcial:",
+      secondaryWarnings.map((item) => item.label).join(", ")
+    );
+  }
+
+  printProviderBootMetrics();
+
+  window.setTimeout(async () => {
+    try {
+      const freshDashboard = await getProviderDashboard(providerId);
+      if (runId !== this.providerSecondaryBootRunId) return;
+
+      actions.updateState({
+        provider: {
+          ...(this.state?.provider ?? {}),
+          dashboard: freshDashboard,
+          payoutAccount: payoutAccountResult?.account ?? this.state?.provider?.payoutAccount ?? null,
+          payoutAccountError: payoutAccountError ?? this.state?.provider?.payoutAccountError ?? null
+        }
+      });
+    } catch (err) {
+      console.warn("[MIMI] Dashboard diferido no disponible:", err);
+    }
+  }, 800);
 }
 
 async setupProviderPhoneTrust({ forceChange = false } = {}) {
@@ -6880,6 +7218,7 @@ async handleProviderBusinessAction(action, source = null) {
   }
 
   if (action === "refresh-location") {
+    await this.ensureProviderMapLoaded("refresh-location");
     this.updateMapToCurrentPosition();
     this.showToast("Ubicacion actualizada", "success");
     return;
@@ -6887,6 +7226,7 @@ async handleProviderBusinessAction(action, source = null) {
 
   if (action === "focus-map") {
     this.setBottomSheetState("collapsed");
+    await this.ensureProviderMapLoaded("focus-map");
     setTimeout(() => this.map?.resize?.(), 80);
     return;
   }
@@ -8138,7 +8478,8 @@ startLocationTracking() {
     clearInterval(this.trackingInterval);
   }
 
-  this.updateMapToCurrentPosition();
+  this.ensureProviderMapLoaded("active-location-tracking")
+    .then(() => this.updateMapToCurrentPosition());
 
   this.trackingInterval = setInterval(async () => {
     this.updateMapToCurrentPosition();
@@ -8175,6 +8516,7 @@ startLocationTracking() {
         heading: loc.heading ?? null,
         speed: loc.speed ?? null
       });
+      recordProviderPerfCounter("provider_location_send_count");
       this.lastProviderTrackingPoint = { lat: loc.lat, lng: loc.lng };
       this.lastProviderTrackingSentAt = now;
     } catch (err) {
@@ -8621,32 +8963,43 @@ startLocationTracking() {
     const supabase = getSupabaseClient();
     if (!supabase || !conversationId) return;
 
-    if (this.chatRealtimeChannel) {
-      supabase.removeChannel(this.chatRealtimeChannel);
-      this.chatRealtimeChannel = null;
-    }
+    this.unsubscribeChatRealtime();
 
-    this.chatRealtimeChannel = supabase
-      .channel(`provider-chat-${conversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "svc_messages",
-          filter: `conversation_id=eq.${conversationId}`
-        },
-        (payload) => {
-          const message = payload.new ?? payload.old;
-          if (!message?.id) return;
-          this.upsertChatMessage(message);
-        }
-      )
-      .subscribe((status) => {
-        if (status === "CHANNEL_ERROR") {
-          console.warn("[MIMI][provider-chat] realtime channel error");
-        }
-      });
+    const key = `provider-chat:${conversationId}`;
+    this.chatRealtimeKey = key;
+    this.chatRealtimeChannel = subscribeScopedChannel(
+      key,
+      (count) => supabase
+        .channel(`provider-chat-${conversationId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "svc_messages",
+            filter: `conversation_id=eq.${conversationId}`
+          },
+          count((payload) => {
+            const message = payload.new ?? payload.old;
+            if (!message?.id) return;
+            this.upsertChatMessage(message);
+          })
+        )
+        .subscribe((status) => {
+          if (status === "CHANNEL_ERROR") {
+            console.warn("[MIMI][provider-chat] realtime channel error");
+          }
+        }),
+      { pauseWhenHidden: true }
+    );
+  }
+
+  unsubscribeChatRealtime() {
+    if (this.chatRealtimeKey) {
+      removeScopedChannel(this.chatRealtimeKey);
+    }
+    this.chatRealtimeKey = null;
+    this.chatRealtimeChannel = null;
   }
 
   upsertChatMessage(message) {
@@ -9361,6 +9714,11 @@ renderSheetSummary() {
 render() {
   if (!this.state) return;
 
+  if (!this.firstProviderStateRenderMarked) {
+    this.firstProviderStateRenderMarked = true;
+    measureProviderBootPoint("firstProviderStateRender");
+  }
+
   this.renderHeader();
   this.renderOnlineButton();
   this.renderOfferCard();
@@ -9609,6 +9967,10 @@ renderOnlineButton() {
     if (!service) {
       if (this.elements.activeServiceCard) this.elements.activeServiceCard.hidden = true;
       return;
+    }
+
+    if (["ACCEPTED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED"].includes(serviceStatus)) {
+      this.ensureProviderMapLoaded("active-service");
     }
 
     if (this.elements.activeServiceCard) {
@@ -9999,6 +10361,8 @@ if (this.elements.drawerInitials) {
 
     if (isOpen) {
       this.renderChatMessages();
+    } else {
+      this.unsubscribeChatRealtime();
     }
   }
 
@@ -10031,9 +10395,9 @@ if (this.elements.drawerInitials) {
       }
 
       disconnectManagedRealtime("provider-app:");
-      this.notificationRealtimeChannel?.unsubscribe?.();
-      this.offerRealtimeChannel?.unsubscribe?.();
-      this.realtimeChannel?.unsubscribe?.();
+      this.notificationRealtimeChannel = null;
+      this.offerRealtimeChannel = null;
+      this.realtimeChannel = null;
 
       if (userId) {
         this.notificationRealtimeChannel = subscribeScopedChannel(
@@ -10060,7 +10424,7 @@ if (this.elements.drawerInitials) {
               this.scheduleNotificationSync({ delay: MIMI_PROVIDER_NOTIFICATION_SYNC_MS });
             }
           }),
-          { critical: true }
+          { pauseWhenHidden: true }
         );
       }
 
@@ -10082,7 +10446,7 @@ if (this.elements.drawerInitials) {
           .subscribe((status) => {
             if (window.MIMI_DEBUG_REALTIME) console.log("[MIMI] Offers realtime:", status);
           }),
-          { critical: true }
+          { pauseWhenHidden: true }
         );
       }
 
@@ -10528,7 +10892,13 @@ setupProviderUpdateManager() {
     if (document.visibilityState === "visible") this.checkProviderAppVersion();
   });
 
-  window.setInterval(() => this.checkProviderAppVersion(), 10 * 60 * 1000);
+  if (this.providerUpdateInterval) {
+    window.clearInterval(this.providerUpdateInterval);
+  }
+  this.providerUpdateInterval = window.setInterval(() => {
+    if (document.visibilityState && document.visibilityState !== "visible") return;
+    this.checkProviderAppVersion();
+  }, 10 * 60 * 1000);
 }
 
 showInstallBanner({ sessionEntry = false } = {}) {
@@ -10683,10 +11053,22 @@ async handleInstall() {
 // No simulamos ofertas locales.
 
     
+    this.stopBackgroundSync();
+
     // Check distance alerts for scheduled services
-    setInterval(() => {
+    this.backgroundSyncInterval = setInterval(() => {
+      if (document.visibilityState && document.visibilityState !== "visible") return;
+      if (!this.state?.session?.providerId) return;
       this.checkDistanceAlerts();
     }, 60000);
+  }
+
+  stopBackgroundSync() {
+    if (this.backgroundSyncInterval) {
+      clearInterval(this.backgroundSyncInterval);
+      this.backgroundSyncInterval = null;
+      recordProviderPerfCounter("provider_background_sync_cleanup_count");
+    }
   }
 
 
@@ -10737,9 +11119,11 @@ async handleInstall() {
    */
   onAppForeground() {
     console.log('[MIMI] App in foreground');
-    
-    // Refresh location
-    this.updateMapToCurrentPosition();
+
+    if (this.map || this.navigationMode || this.state?.activeService) {
+      this.ensureProviderMapLoaded("foreground")
+        .then(() => this.updateMapToCurrentPosition());
+    }
     
     // Check if offer expired
     if (this.state?.activeOffer && !isOfferValid(this.state.activeOffer)) {
@@ -10762,17 +11146,34 @@ async handleLogout() {
   try {
     this.stopLocationTracking();
     this.stopPresenceHeartbeat();
+    this.stopNotificationSync();
+    this.stopBackgroundSync();
+    this.unsubscribeChatRealtime();
+    if (this.offerTimer) {
+      clearInterval(this.offerTimer);
+      this.offerTimer = null;
+    }
+    if (this.providerUpdateInterval) {
+      window.clearInterval(this.providerUpdateInterval);
+      this.providerUpdateInterval = null;
+    }
     disconnectManagedRealtime("provider-app:");
-    this.notificationRealtimeChannel?.unsubscribe?.();
-    this.offerRealtimeChannel?.unsubscribe?.();
-    this.realtimeChannel?.unsubscribe?.();
-    await signOut();
-
-    this.state = null;
-    this.map = null;
+    disconnectManagedRealtime("provider-chat:");
     this.notificationRealtimeChannel = null;
     this.offerRealtimeChannel = null;
     this.realtimeChannel = null;
+    await signOut();
+
+    this.state = null;
+    try {
+      this.map?.remove?.();
+    } catch (_) {}
+    this.map = null;
+    this.providerMapInitPromise = null;
+    this.notificationRealtimeChannel = null;
+    this.offerRealtimeChannel = null;
+    this.realtimeChannel = null;
+    this.chatRealtimeChannel = null;
 
     try {
       forceCleanSession("provider");

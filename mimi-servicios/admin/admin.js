@@ -19,7 +19,7 @@ function isAdminMobile() {
 }
 
 function normalizeMobileView(view = "providers") {
-  const allowed = new Set(["choferes", "providers", "clients", "catalog", "finance", "map", "support", "ai"]);
+  const allowed = new Set(["providers", "clients", "catalog", "finance", "support"]);
   return allowed.has(view) ? view : "providers";
 }
 
@@ -60,7 +60,7 @@ function setActiveMobileView(view = "providers", options = {}) {
   });
 }
 
-function setActiveModule(moduleName = "transport") {
+function setActiveModule(moduleName = "providers") {
   document.body.setAttribute("data-admin-module", moduleName);
 
   moduleButtons.forEach((button) => {
@@ -85,7 +85,7 @@ function setActiveModule(moduleName = "transport") {
 function setupModuleNavigation() {
   moduleButtons.forEach((button) => {
     button.addEventListener("click", () => {
-      setActiveModule(button.dataset.adminModule || "transport");
+      setActiveModule(button.dataset.adminModule || "providers");
     });
   });
 
@@ -94,7 +94,7 @@ function setupModuleNavigation() {
       event.preventDefault();
       event.stopPropagation();
 
-      const view = button.dataset.adminMobileViewTarget || "choferes";
+      const view = button.dataset.adminMobileViewTarget || "providers";
       setActiveMobileView(view, { scrollToTop: true });
     });
   });

@@ -60,7 +60,7 @@
           Clientes
         </button>
         <button class="admin-desktop-tab" type="button" data-admin-mobile-view-target="catalog" aria-pressed="false">
-          Catalogo
+          Catálogo
         </button>
         <button class="admin-desktop-tab" type="button" data-admin-mobile-view-target="finance" aria-pressed="false">
           Finanzas
@@ -114,219 +114,6 @@
         </span>
         <span id="adminClock" class="admin-signal">--:--</span>
       </div>
-    </section>
-
-    <section class="hero-grid" aria-label="Resumen general del panel" hidden>
-      <article class="hero-card hero-card-primary admin-mobile-panel admin-mobile-choferes admin-mobile-ai" aria-labelledby="opsCenterTitle">
-        <div class="hero-card-head">
-          <div>
-            <span class="eyebrow">Centro de operaciones</span>
-            <h2 id="opsCenterTitle">MIMI PANEL</h2>
-          </div>
-
-          <button id="reloadBtn" type="button" aria-label="Recargar panel">
-            Recargar
-          </button>
-        </div>
-
-        <div class="hero-stats" aria-label="Metricas principales">
-          <div class="hero-stat">
-            <span>Total</span>
-            <strong id="metricTotal">0</strong>
-          </div>
-
-          <div class="hero-stat">
-            <span>Pendientes</span>
-            <strong id="metricPending">0</strong>
-          </div>
-
-          <div class="hero-stat">
-            <span>Aprobados</span>
-            <strong id="metricApproved">0</strong>
-          </div>
-
-          <div class="hero-stat">
-            <span>Rechazados</span>
-            <strong id="metricRejected">0</strong>
-          </div>
-
-          <div class="hero-stat">
-            <span>Bloqueados</span>
-            <strong id="metricBlocked">0</strong>
-          </div>
-        </div>
-
-        <div class="hero-chart-card">
-          <div class="hero-chart-head">
-            <div>
-              <h3>Resumen operativo</h3>
-              <p>Distribucion actual de revision</p>
-            </div>
-
-            <span id="liveBadge" class="live-badge" aria-live="polite">
-              En vivo
-            </span>
-          </div>
-
-          <div
-            id="reviewChart"
-            class="review-chart"
-            aria-label="Grafico de revision"
-            role="img"
-          ></div>
-        </div>
-      </article>
-
-      <article class="hero-card map-shell admin-mobile-panel admin-mobile-map" aria-labelledby="liveMapTitle">
-<div class="map-card-header">
-  <div>
-    <h2 id="liveMapTitle">Mapa de choferes en vivo</h2>
-    <p class="map-hint">Online, ultima ubicacion y foco operativo</p>
-  </div>
-</div>
-
-<div class="map-surface">
-  <div class="map-canvas-frame">
-    <div class="map-floating-controls" aria-label="Controles flotantes del mapa">
-  <button id="fitDriversBtn" type="button" class="map-fab map-fab-primary" title="Ver todos los choferes">
-    Fit
-  </button>
-
-  <button id="locateMeBtn" type="button" class="map-fab" title="Detectar mi ubicacion">
-    GPS
-  </button>
-
-  <button id="focusArgentinaBtn" type="button" class="map-fab" title="Ver Argentina">
-    AR
-  </button>
-
-  <button id="focusCordobaBtn" type="button" class="map-fab" title="Ver Cordoba">
-    CBA
-  </button>
-
-  <select id="citySelector" class="map-city-select" aria-label="Seleccionar provincia o ciudad">
-    <optgroup label="General">
-      <option value="drivers">Choferes activos</option>
-      <option value="argentina">Argentina</option>
-    </optgroup>
-
-    <optgroup label="Provincias">
-      <option value="buenos_aires">Buenos Aires</option>
-      <option value="caba">CABA</option>
-      <option value="catamarca">Catamarca</option>
-      <option value="chaco">Chaco</option>
-      <option value="chubut">Chubut</option>
-      <option value="cordoba">Cordoba</option>
-      <option value="corrientes">Corrientes</option>
-      <option value="entre_rios">Entre Rios</option>
-      <option value="formosa">Formosa</option>
-      <option value="jujuy">Jujuy</option>
-      <option value="la_pampa">La Pampa</option>
-      <option value="la_rioja">La Rioja</option>
-      <option value="mendoza">Mendoza</option>
-      <option value="misiones">Misiones</option>
-      <option value="neuquen">Neuquen</option>
-      <option value="rio_negro">Rio Negro</option>
-      <option value="salta">Salta</option>
-      <option value="san_juan">San Juan</option>
-      <option value="san_luis">San Luis</option>
-      <option value="santa_cruz">Santa Cruz</option>
-      <option value="santa_fe">Santa Fe</option>
-      <option value="santiago_del_estero">Santiago del Estero</option>
-      <option value="tierra_del_fuego">Tierra del Fuego</option>
-      <option value="tucuman">Tucuman</option>
-    </optgroup>
-
-    <optgroup label="Ciudades">
-      <option value="villa_allende">Villa Allende</option>
-      <option value="carlos_paz">Villa Carlos Paz</option>
-      <option value="rosario">Rosario</option>
-      <option value="mendoza_capital">Mendoza Capital</option>
-      <option value="salta_capital">Salta Capital</option>
-      <option value="ushuaia">Ushuaia</option>
-    </optgroup>
-  </select>
-</div>
-  
-    <div
-      id="driversMap"
-      class="drivers-map"
-      aria-label="Mapa con ubicacion de choferes"
-    ></div>
-
-  </div>
-
-  <div class="map-overlay">
-
-    <div class="map-legend" aria-label="Leyenda del mapa">
-              <span><i class="dot dot-online"></i> Activo</span>
-              <span><i class="dot dot-pending"></i> Pendiente</span>
-              <span><i class="dot dot-blocked"></i> Bloqueado</span>
-            </div>
-
-            <div id="mapMeta" class="map-meta" aria-live="polite">
-              Esperando datos...
-            </div>
-          </div>
-        </div>
-      </article>
-    </section>
-
-    <section class="toolbar toolbar-pro admin-mobile-panel admin-mobile-choferes" aria-label="Busqueda y filtros" hidden>
-      <div class="toolbar-search">
-        <label for="searchInput" class="sr-only">Buscar chofer</label>
-        <input
-          id="searchInput"
-          type="text"
-          placeholder="Buscar por nombre, email, telefono o user_id"
-          autocomplete="off"
-          inputmode="search"
-          enterkeyhint="search"
-          spellcheck="false"
-        />
-      </div>
-
-      <div class="toolbar-filters" role="tablist" aria-label="Filtros de choferes">
-        <button class="filter-btn active" type="button" data-filter="ALL" aria-pressed="true">
-          Todos
-        </button>
-        <button class="filter-btn" type="button" data-filter="PENDING" aria-pressed="false">
-          Pendientes
-        </button>
-        <button class="filter-btn" type="button" data-filter="APPROVED" aria-pressed="false">
-          Aprobados
-        </button>
-        <button class="filter-btn" type="button" data-filter="REJECTED" aria-pressed="false">
-          Rechazados
-        </button>
-        <button class="filter-btn" type="button" data-filter="BLOCKED" aria-pressed="false">
-          Bloqueados
-        </button>
-      </div>
-    </section>
-
-    <section class="ops-grid" aria-label="Panel operativo secundario" hidden>
-      <article class="ops-card admin-mobile-panel admin-mobile-choferes" aria-labelledby="priorityQueueTitle">
-        <div class="ops-card-head">
-          <div>
-            <h3 id="priorityQueueTitle">Cola prioritaria</h3>
-            <p>Choferes que necesitan revision rapida</p>
-          </div>
-        </div>
-
-        <div id="priorityQueue" class="priority-queue" aria-live="polite"></div>
-      </article>
-
-      <article class="ops-card admin-mobile-panel admin-mobile-ai" aria-labelledby="aiSummaryTitle">
-        <div class="ops-card-head">
-          <div>
-            <h3 id="aiSummaryTitle">Resumen IA</h3>
-            <p>Score real de KYC, OCR y validacion automatica</p>
-          </div>
-        </div>
-
-        <div id="aiSummary" class="ai-summary" aria-live="polite"></div>
-      </article>
     </section>
     <section class="support-section admin-mobile-panel admin-mobile-support" aria-label="Centro de soporte">
   <div class="section-head support-section-head">
@@ -477,7 +264,7 @@
       </div>
     </section>
   </div>
-</section>  
+</section>
     <section
   id="servicesProvidersModule"
   class="services-providers-section admin-mobile-panel admin-mobile-providers"
@@ -664,22 +451,22 @@
 <section
   id="adminServiceCatalogModule"
   class="admin-service-catalog-section admin-mobile-panel admin-mobile-catalog"
-  aria-label="Catalogo Inteligente"
+  aria-label="Catálogo Inteligente"
 >
   <div class="section-head">
     <div>
-      <h2>Catalogo Inteligente</h2>
+      <h2>Catálogo Inteligente</h2>
       <p>Foundation Service Intelligence en modo lectura: templates, versiones, preguntas, reglas, flags y servicios regulados</p>
     </div>
     <div class="support-head-actions">
       <span id="catalogReadOnlyBadge" class="support-realtime-status" data-state="idle">Read-only</span>
       <button id="catalogRefreshBtn" type="button" class="support-head-btn">
-        Recargar catalogo
+        Recargar catálogo
       </button>
     </div>
   </div>
 
-  <section class="hero-card admin-catalog-metrics" aria-label="Metricas de catalogo">
+  <section class="hero-card admin-catalog-metrics" aria-label="Métricas de catálogo">
     <div class="hero-stats">
       <div class="hero-stat"><span>Templates</span><strong id="catalogMetricTemplates">0</strong></div>
       <div class="hero-stat"><span>Regulados</span><strong id="catalogMetricRegulated">0</strong></div>
@@ -688,7 +475,7 @@
     </div>
   </section>
 
-  <section class="toolbar toolbar-pro admin-catalog-toolbar" aria-label="Filtros de catalogo inteligente">
+  <section class="toolbar toolbar-pro admin-catalog-toolbar" aria-label="Filtros de catálogo inteligente">
     <div class="toolbar-search">
       <label for="catalogSearchInput" class="sr-only">Buscar template</label>
       <input
@@ -735,7 +522,7 @@
     </div>
   </section>
 
-  <section class="admin-catalog-workbench" aria-label="Explorador de catalogo inteligente">
+  <section class="admin-catalog-workbench" aria-label="Explorador de catálogo inteligente">
     <div>
       <section
         id="catalogTemplateList"
@@ -743,7 +530,7 @@
         aria-live="polite"
         aria-label="Listado de templates de servicio"
       >
-        <div class="financial-empty">Cargando catalogo...</div>
+        <div class="financial-empty">Cargando catálogo...</div>
       </section>
     </div>
 
@@ -753,16 +540,16 @@
       aria-live="polite"
       aria-label="Detalle del template seleccionado"
     >
-      <div class="financial-empty">Selecciona un template para ver detalle.</div>
+      <div class="financial-empty">Seleccioná un template para ver detalle.</div>
     </aside>
   </section>
 
-  <section class="admin-catalog-panels" aria-label="Paneles complementarios de catalogo">
+  <section class="admin-catalog-panels" aria-label="Paneles complementarios de catálogo">
     <article class="admin-catalog-panel">
       <div class="financial-panel-head">
         <div>
           <h3>Feature flags</h3>
-          <span>Lectura solamente. No activar sin aprobacion de release.</span>
+          <span>Lectura solamente. No activar sin aprobación de release.</span>
         </div>
       </div>
       <div id="catalogFeatureFlagsList" class="admin-catalog-compact-list"></div>
@@ -772,7 +559,7 @@
       <div class="financial-panel-head">
         <div>
           <h3>Servicios regulados</h3>
-          <span>Credenciales, aprobacion, disclaimers y bloqueos de pricing.</span>
+          <span>Credenciales, aprobación, disclaimers y bloqueos de pricing.</span>
         </div>
       </div>
       <div id="catalogRegulatedList" class="admin-catalog-compact-list"></div>
@@ -1007,27 +794,9 @@
     </article>
   </section>
 </section>
-    <section class="section-head admin-mobile-panel admin-mobile-choferes" aria-label="Listado principal" hidden>
-      <div>
-        <h2>Choferes</h2>
-        <p>Swipe a la derecha para aprobar, a la izquierda para rechazar</p>
-      </div>
-    </section>
-
-    <section
-      id="drivers"
-      class="drivers drivers-premium admin-mobile-panel admin-mobile-choferes"
-      aria-live="polite"
-      aria-label="Listado de choferes"
-      hidden
-    ></section>
   </main>
 
   <nav id="adminMobileDock" class="admin-mobile-dock" aria-label="Navegacion principal del panel">
-    <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="choferes" aria-pressed="false" hidden>
-      <span class="admin-mobile-dock-icon">Cho</span>
-      <span class="admin-mobile-dock-label">Choferes</span>
-    </button>
     <button class="admin-mobile-dock-btn is-active" type="button" data-admin-mobile-view-target="providers" aria-pressed="true">
       <span class="admin-mobile-dock-icon">Pro</span>
       <span class="admin-mobile-dock-label">Prestadores</span>
@@ -1038,85 +807,18 @@
     </button>
     <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="catalog" aria-pressed="false">
       <span class="admin-mobile-dock-icon">Cat</span>
-      <span class="admin-mobile-dock-label">Catalogo</span>
+      <span class="admin-mobile-dock-label">Catálogo</span>
     </button>
     <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="finance" aria-pressed="false">
       <span class="admin-mobile-dock-icon">Fin</span>
       <span class="admin-mobile-dock-label">Finanzas</span>
-    </button>
-    <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="map" aria-pressed="false" hidden>
-      <span class="admin-mobile-dock-icon">Map</span>
-      <span class="admin-mobile-dock-label">Mapa</span>
     </button>
     <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="support" aria-pressed="false">
       <span class="admin-mobile-dock-icon">Sup</span>
       <span class="admin-mobile-dock-label">Soporte</span>
       <span id="supportDockBadge" class="admin-mobile-dock-badge" hidden>0</span>
     </button>
-    <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="ai" aria-pressed="false" hidden>
-      <span class="admin-mobile-dock-icon">IA</span>
-      <span class="admin-mobile-dock-label">Resumen IA</span>
-    </button>
   </nav>
-
-  <section
-    id="driverModal"
-    class="modal hidden"
-    aria-hidden="true"
-    aria-labelledby="driverModalTitle"
-  >
-    <div class="modal-backdrop" data-close-modal="true"></div>
-
-    <div
-      class="modal-dialog"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="driverModalTitle"
-      aria-describedby="driverModalSubtitle"
-      tabindex="-1"
-    >
-<div class="modal-sheet-handle" aria-hidden="true"></div>
-
-<div class="modal-header">
-  <div class="modal-header-main">
-    <h3 id="driverModalTitle">Detalle del chofer</h3>
-    <p id="driverModalSubtitle" class="modal-subtitle"></p>
-  </div>
-
-  <button
-    id="closeModalBtn"
-    class="icon-btn modal-close-btn"
-    type="button"
-    aria-label="Cerrar detalle"
-    data-close-modal="true"
-  >
-    X
-  </button>
-</div>
-      <div class="modal-content">
-        <section class="modal-section" aria-labelledby="modalSummaryTitle">
-          <h4 id="modalSummaryTitle">Resumen</h4>
-          <div id="modalSummary"></div>
-        </section>
-
-        <section class="modal-section" aria-labelledby="modalScoreTitle">
-          <h4 id="modalScoreTitle">Score IA / KYC</h4>
-          <div id="modalScore"></div>
-        </section>
-
-        <section class="modal-section" aria-labelledby="modalDocumentsTitle">
-          <h4 id="modalDocumentsTitle">Documentos</h4>
-          <div id="modalDocuments" class="documents-grid"></div>
-        </section>
-
-        <section class="modal-section" aria-labelledby="modalMapInfoTitle">
-          <h4 id="modalMapInfoTitle">Ubicacion</h4>
-          <div id="modalMapInfo" class="modal-map-info"></div>
-        </section>
-      </div>
-    </div>
-  </section>
-
   <div
     id="toastContainer"
     class="toast-container"
@@ -1166,4 +868,3 @@ window.getAdminAccessToken = async function getAdminAccessToken() {
 <script type="module" src="./admin-finance.js?v=2026.05.16.1"></script>
 </body>
 </html>
-

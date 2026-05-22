@@ -2544,6 +2544,17 @@ body.provider-authenticated .header-glass {
   }
 }
 
+.service-return-copy {
+  padding: 10px 12px !important;
+  border-radius: 14px !important;
+  background: rgba(255,255,255,.08) !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  color: var(--text-secondary) !important;
+  font-size: 13px !important;
+  line-height: 1.25 !important;
+  font-weight: 700 !important;
+}
+
 .provider-review-notice-host {
   position: fixed;
   top: calc(env(safe-area-inset-top, 0px) + 14px);
@@ -13819,14 +13830,6 @@ body.provider-auth-required .notification-container {
   line-height: 1.35;
 }
 
-.service-return-copy {
-  margin: -2px 1px 0;
-  color: var(--text-secondary);
-  font-size: .78rem;
-  font-weight: 650;
-  line-height: 1.35;
-}
-
 .service-step-list {
   display: grid;
   gap: 7px;
@@ -21450,6 +21453,73 @@ body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel 
   outline-offset: 2px;
 }
 
+body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel .provider-service-builder-roadmap {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel .provider-service-builder-roadmap span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  padding: 9px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel .provider-service-builder-roadmap i {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 950;
+}
+
+body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel .provider-service-builder-roadmap strong {
+  overflow: hidden;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel .provider-service-builder-roadmap small {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel .provider-service-builder-roadmap span.is-pending {
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel .provider-service-builder-roadmap span.is-pending i {
+  background: #f59e0b;
+}
+
+body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel .provider-flow-step-addons .provider-addons-builder-card {
+  gap: 12px;
+  border-color: #fde68a;
+  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 76%);
+}
+
 body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel .provider-services-home-list > .provider-add-service-button,
 body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel .provider-services-empty-state .provider-add-service-button {
   display: none !important;
@@ -21591,6 +21661,23 @@ body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel 
     border-radius: 18px;
   }
 
+  body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel .provider-service-builder-roadmap {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(104px, 1fr);
+    grid-template-columns: none;
+    overflow-x: auto;
+    padding: 8px;
+    scrollbar-width: none;
+  }
+
+  body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel .provider-service-builder-roadmap::-webkit-scrollbar {
+    display: none;
+  }
+
+  body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel .provider-service-builder-roadmap span {
+    padding: 8px;
+  }
+
   body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel .provider-service-readiness-steps {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
@@ -21700,6 +21787,14 @@ body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel 
   body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel .provider-profile-summary em {
     padding-inline: 6px;
     font-size: 9px;
+  }
+
+  body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel .provider-service-builder-roadmap {
+    grid-auto-columns: minmax(94px, 1fr);
+  }
+
+  body.provider-authenticated[data-provider-tab="pricing"] #providerBusinessPanel .provider-service-builder-roadmap strong {
+    font-size: 11px;
   }
 }
 

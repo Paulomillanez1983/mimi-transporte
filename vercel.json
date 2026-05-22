@@ -131,6 +131,18 @@
       "destination": "/mimi-servicios/prestador.html"
     },
     {
+      "source": "/admin",
+      "destination": "/mimi-servicios/admin/admin-login.html"
+    },
+    {
+      "source": "/admin/panel",
+      "destination": "/mimi-servicios/admin/admin-panel.html"
+    },
+    {
+      "source": "/mimi-servicios/admin/(.*)",
+      "destination": "/mimi-servicios/admin/$1"
+    },
+    {
       "source": "/hub-operadores",
       "destination": "/mimi-servicios/prestador.html"
     },
@@ -284,6 +296,33 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=604800, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
+      "source": "/admin",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    },
+    {
+      "source": "/admin/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    },
+    {
+      "source": "/mimi-servicios/admin/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
         }
       ]
     },
