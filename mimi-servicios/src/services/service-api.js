@@ -63,6 +63,11 @@ const PROVIDER_ACTIVE_REQUEST_STATUSES = [
 ];
 const PROVIDER_GUIDED_SERVICE_FLAG = "MIMI_PROVIDER_GUIDED_SERVICE_ENABLED";
 const PROVIDER_SERVICE_ADDONS_FLAG = "MIMI_PROVIDER_SERVICE_ADDONS_ENABLED";
+const PROVIDER_WORKSPACE_READ_TIMEOUT_MS = 6500;
+const PROVIDER_LEGAL_CENTER_TIMEOUT_MS = 2200;
+const PROVIDER_STORAGE_SIGNED_URL_TIMEOUT_MS = 1200;
+const ACTIVE_REQUEST_READ_TIMEOUT_MS = 4500;
+const CLIENT_PROFILE_BOOT_TIMEOUT_MS = 2500;
 
 function isLocalDevelopmentHost() {
   if (typeof window === "undefined") return false;
@@ -252,6 +257,15 @@ function withTimeout(promise, ms, label = "operation_timeout") {
   return Promise.race([promise, timeout]).finally(() => {
     if (timer) clearTimeout(timer);
   });
+}
+
+function timeoutLabel(prefix, label) {
+  const safe = String(label || "resource")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return `${prefix}_${safe || "RESOURCE"}_TIMEOUT`;
 }
 
 async function requireSession() {
@@ -663,9 +677,13 @@ function mergeProviderLegalFallbacks(documents = []) {
 
 async function loadProviderLegalRequirements() {
   try {
-    const result = await invokeFunction("get-legal-center", {
-      actor_type: "provider"
-    });
+    const result = await withTimeout(
+      invokeFunction("get-legal-center", {
+        actor_type: "provider"
+      }),
+      PROVIDER_LEGAL_CENTER_TIMEOUT_MS,
+      "PROVIDER_LEGAL_CENTER_TIMEOUT"
+    );
 
     if (!result?.ok || !Array.isArray(result.documents)) {
       return mergeProviderLegalFallbacks();
@@ -703,9 +721,13 @@ async function resolveStorageObjectUrl(bucket, path) {
   if (!supabase?.storage || !bucket || !path) return null;
 
   try {
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .createSignedUrl(path, 60 * 60);
+    const { data, error } = await withTimeout(
+      supabase.storage
+        .from(bucket)
+        .createSignedUrl(path, 60 * 60),
+      PROVIDER_STORAGE_SIGNED_URL_TIMEOUT_MS,
+      "PROVIDER_DOCUMENT_SIGNED_URL_TIMEOUT"
+    );
     if (!error && data?.signedUrl) return data.signedUrl;
   } catch (error) {
     console.warn("[service-api] provider document signed url unavailable", error?.message || error);
@@ -772,9 +794,13 @@ async function resolveProviderAvatarUrl(value) {
   if (!parsed || !supabase?.storage) return raw;
 
   try {
-    const { data, error } = await supabase.storage
-      .from(parsed.bucket)
-      .createSignedUrl(parsed.path, 60 * 60);
+    const { data, error } = await withTimeout(
+      supabase.storage
+        .from(parsed.bucket)
+        .createSignedUrl(parsed.path, 60 * 60),
+      PROVIDER_STORAGE_SIGNED_URL_TIMEOUT_MS,
+      "PROVIDER_AVATAR_SIGNED_URL_TIMEOUT"
+    );
     if (!error && data?.signedUrl) return data.signedUrl;
   } catch (error) {
     console.warn("[service-api] provider avatar signed url unavailable", error?.message || error);
@@ -937,11 +963,15 @@ export async function bootstrapSession() {
 
   let clientProfile = null;
   try {
-    const { data: profileRows, error: profileError } = await supabase
-      .from("svc_client_profiles")
-      .select("id,user_id,phone_number,country_code,phone_verified,phone_verified_at")
-      .eq("user_id", user.id)
-      .limit(1);
+    const { data: profileRows, error: profileError } = await withTimeout(
+      supabase
+        .from("svc_client_profiles")
+        .select("id,user_id,phone_number,country_code,phone_verified,phone_verified_at")
+        .eq("user_id", user.id)
+        .limit(1),
+      CLIENT_PROFILE_BOOT_TIMEOUT_MS,
+      "CLIENT_PROFILE_BOOT_TIMEOUT"
+    );
 
     if (!profileError) {
       clientProfile = profileRows?.[0] ?? null;
@@ -1749,7 +1779,11 @@ export async function loadActiveRequest({ userId = null, providerId = null } = {
     return null;
   }
 
-  const { data, error } = await query;
+  const { data, error } = await withTimeout(
+    query,
+    ACTIVE_REQUEST_READ_TIMEOUT_MS,
+    "ACTIVE_REQUEST_TIMEOUT"
+  );
 
   if (error) throw error;
 
@@ -2246,7 +2280,11 @@ export async function loadProviderWorkspace(providerId) {
 
   const safeProviderWorkspaceRead = async (label, loader, fallback = []) => {
     try {
-      const value = await loader();
+      const value = await withTimeout(
+        Promise.resolve().then(loader),
+        PROVIDER_WORKSPACE_READ_TIMEOUT_MS,
+        timeoutLabel("PROVIDER_WORKSPACE", label)
+      );
       return value ?? fallback;
     } catch (error) {
       console.warn(`[service-api] provider workspace ${label} fallback`, error?.message || error);

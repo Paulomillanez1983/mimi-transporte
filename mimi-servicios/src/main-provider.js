@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.22.map-hotfix1";
+const MIMI_PROVIDER_BUILD = "2026.05.22.boot-hotfix1";
 const MIMI_PROVIDER_ICON_REVISION = "mimigo-status-badge-v11";
 const QUOTE_PRICING_LABEL = "Cotizar antes de confirmar";
 const MIMI_PROVIDER_NOTIFICATION_SYNC_MS = providerRuntimeNumber(
@@ -739,7 +739,7 @@ this.unsubscribe = subscribe((state) => {
   this.render();
 });
 
-const canBootProviderPanel = await this.loadInitialData();
+const canBootProviderPanel = await this.loadInitialData(earlySession);
   
 if (!canBootProviderPanel) {
   console.log("[MIMI] Provider auth gate active");
@@ -2663,28 +2663,32 @@ async loadProviderBootResource(label, loader, fallback, warnings = []) {
    * Load real provider session/workspace from Supabase.
    * This replaces every previous demo fallback with backend-driven state.
    */
-async loadInitialData() {
+async loadInitialData(preloadedSession = null) {
   markProviderBoot("loadInitialData.start");
   try {
     actions.setLoading(true);
     actions.clearError?.();
 
-    let session = null;
-    markProviderBoot("bootstrapSession.2.start");
-    try {
-      session = await bootstrapSession();
-      markProviderBoot("bootstrapSession.2.end");
-      measureProviderBoot("bootstrapSession.2", "bootstrapSession.2.start", "bootstrapSession.2.end");
-    } catch (sessionError) {
-      markProviderBoot("bootstrapSession.2.error");
-      measureProviderBoot(
-        "bootstrapSession.2",
-        "bootstrapSession.2.start",
-        "bootstrapSession.2.error",
-        "error",
-        sessionError
-      );
-      throw sessionError;
+    let session = preloadedSession?.isAuthenticated ? preloadedSession : null;
+    if (session) {
+      measureProviderBootPoint("bootstrapSession.2.reused", "loadInitialData.start");
+    } else {
+      markProviderBoot("bootstrapSession.2.start");
+      try {
+        session = await bootstrapSession();
+        markProviderBoot("bootstrapSession.2.end");
+        measureProviderBoot("bootstrapSession.2", "bootstrapSession.2.start", "bootstrapSession.2.end");
+      } catch (sessionError) {
+        markProviderBoot("bootstrapSession.2.error");
+        measureProviderBoot(
+          "bootstrapSession.2",
+          "bootstrapSession.2.start",
+          "bootstrapSession.2.error",
+          "error",
+          sessionError
+        );
+        throw sessionError;
+      }
     }
 
     actions.setSession({
