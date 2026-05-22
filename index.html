@@ -23,7 +23,7 @@
 
   <link rel="icon" type="image/png" sizes="32x32" href="./assets/icons/mimigo-client-icon-32.png?v=landing-v1">
   <link rel="apple-touch-icon" href="./assets/icons/mimigo-client-apple-touch-icon.png?v=landing-v1">
-  <link rel="stylesheet" href="./landing.css?v=2026.05.22-mobile-side-v1">
+  <link rel="stylesheet" href="./landing.css?v=2026.05.22-dual-copy-v1">
 </head>
 <body>
   <a class="skip-link" href="#main">Saltar al contenido</a>
@@ -44,29 +44,29 @@
 
   <main id="main">
     <section class="hero" id="inicio" aria-labelledby="hero-title">
-      <div class="hero-copy">
-        <p class="eyebrow">Conexiones que generan soluciones</p>
-        <h1 id="hero-title">La herramienta<br>que <span>menos trabajo</span><br>te da para<br>conseguir trabajo.</h1>
-        <p class="hero-lead">Conectamos prestadores con personas que necesitan <strong>servicios reales.</strong></p>
+      <div class="hero-copy" data-hero-copy>
+        <p class="eyebrow" data-hero-eyebrow>Servicios reales, cuando los necesit&aacute;s</p>
+        <h1 id="hero-title" data-hero-title>Ped&iacute; el servicio<br>que quer&eacute;s<br><span>cuando lo necesit&aacute;s.</span></h1>
+        <p class="hero-lead" data-hero-lead>Encontr&aacute; prestadores verificados y resolv&eacute; lo que necesit&aacute;s <strong>r&aacute;pido y seguro.</strong></p>
 
         <div class="hero-points" aria-label="Beneficios principales">
           <div class="hero-point">
             <span class="point-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path d="M8 7V5.8C8 4.8 8.8 4 9.8 4h4.4c1 0 1.8.8 1.8 1.8V7"/><path d="M5.5 7h13A1.5 1.5 0 0 1 20 8.5v9A2.5 2.5 0 0 1 17.5 20h-11A2.5 2.5 0 0 1 4 17.5v-9A1.5 1.5 0 0 1 5.5 7Z"/><path d="M4.3 11.5h15.4M10 11.5v1.2c0 .7.6 1.3 1.3 1.3h1.4c.7 0 1.3-.6 1.3-1.3v-1.2"/></svg>
             </span>
-            <span><strong>M&aacute;s oportunidades</strong><small>Conect&aacute; con personas que necesitan tu servicio.</small></span>
+            <span><strong data-hero-point-title="0">Prestadores verificados</strong><small data-hero-point-text="0">Compar&aacute; perfiles y eleg&iacute; con confianza.</small></span>
           </div>
           <div class="hero-point">
             <span class="point-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path d="M20 4 4 11.2l6.8 2.3L13.2 20 20 4Z"/><path d="m20 4-9.2 9.5"/></svg>
             </span>
-            <span><strong>Menos esfuerzo</strong><small>MIMIGO hace el trabajo pesado por vos.</small></span>
+            <span><strong data-hero-point-title="1">Menos vueltas</strong><small data-hero-point-text="1">Ped&iacute; ayuda en pocos pasos desde el celular.</small></span>
           </div>
           <div class="hero-point">
             <span class="point-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M6.5 19c1-3 2.9-4.5 5.5-4.5s4.5 1.5 5.5 4.5"/></svg>
             </span>
-            <span><strong>M&aacute;s resultados</strong><small>Gestion&aacute;, respond&eacute; y consegu&iacute; trabajo.</small></span>
+            <span><strong data-hero-point-title="2">M&aacute;s control</strong><small data-hero-point-text="2">Segu&iacute; tu solicitud y resolv&eacute; con soporte.</small></span>
           </div>
         </div>
 
@@ -107,8 +107,8 @@
               <img src="./assets/landing/mimigo-client-servicios-preview-v1.png" width="390" height="844" alt="Captura de MIMIGO Cliente Servicios">
             </figure>
             <figure class="preview-slide preview-slide--provider-home" data-preview-label="Prestador">
-              <img class="preview-backdrop" src="./assets/landing/mimigo-prestadores-home-preview-v1.png" width="1280" height="720" alt="" aria-hidden="true">
-              <img class="preview-foreground" src="./assets/landing/mimigo-prestadores-home-preview-v1.png" width="1280" height="720" alt="Home de MIMIGO Prestadores">
+              <img class="preview-backdrop" src="./assets/landing/mimigo-prestadores-login-preview-v1.png" width="390" height="844" alt="" aria-hidden="true">
+              <img class="preview-foreground" src="./assets/landing/mimigo-prestadores-login-preview-v1.png" width="390" height="844" alt="Pantalla de acceso de MIMIGO Prestadores">
             </figure>
             <div class="preview-fallback" role="img" aria-label="Vista estatica de MIMIGO">
               <strong>MIMIGO</strong>
@@ -226,15 +226,68 @@
       const slides = Array.from(carousel.querySelectorAll(".preview-slide"));
       const buttons = Array.from(carousel.querySelectorAll("[data-preview-target]"));
       const status = carousel.querySelector("[data-preview-status]");
+      const heroCopy = document.querySelector("[data-hero-copy]");
+      const heroEyebrow = document.querySelector("[data-hero-eyebrow]");
+      const heroTitle = document.querySelector("[data-hero-title]");
+      const heroLead = document.querySelector("[data-hero-lead]");
+      const heroPointTitles = Array.from(document.querySelectorAll("[data-hero-point-title]"));
+      const heroPointTexts = Array.from(document.querySelectorAll("[data-hero-point-text]"));
       const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
       let activeIndex = 0;
       let intervalId = 0;
       let resumeTimer = 0;
       let failed = false;
+      const heroStates = {
+        Cliente: {
+          eyebrow: "Servicios reales, cuando los necesitás",
+          title: 'Pedí el servicio<br>que querés<br><span>cuando lo necesitás.</span>',
+          lead: "Encontrá prestadores verificados y resolvé lo que necesitás <strong>rápido y seguro.</strong>",
+          points: [
+            ["Prestadores verificados", "Compará perfiles y elegí con confianza."],
+            ["Menos vueltas", "Pedí ayuda en pocos pasos desde el celular."],
+            ["Más control", "Seguí tu solicitud y resolvé con soporte."]
+          ]
+        },
+        Prestador: {
+          eyebrow: "Conexiones que generan soluciones",
+          title: 'La herramienta<br>que <span>menos trabajo</span><br>te da para<br>conseguir trabajo.',
+          lead: "Conectamos prestadores con personas que necesitan <strong>servicios reales.</strong>",
+          points: [
+            ["Más oportunidades", "Conectá con personas que necesitan tu servicio."],
+            ["Menos esfuerzo", "MIMIGO hace el trabajo pesado por vos."],
+            ["Más resultados", "Gestioná, respondé y conseguí trabajo."]
+          ]
+        }
+      };
+
+      function setHeroCopy(label) {
+        const nextState = heroStates[label] || heroStates.Cliente;
+        const apply = () => {
+          if (heroEyebrow) heroEyebrow.textContent = nextState.eyebrow;
+          if (heroTitle) heroTitle.innerHTML = nextState.title;
+          if (heroLead) heroLead.innerHTML = nextState.lead;
+          nextState.points.forEach(([title, text], index) => {
+            if (heroPointTitles[index]) heroPointTitles[index].textContent = title;
+            if (heroPointTexts[index]) heroPointTexts[index].textContent = text;
+          });
+        };
+
+        if (!heroCopy || reduceMotion.matches) {
+          apply();
+          return;
+        }
+
+        heroCopy.classList.add("is-switching");
+        window.setTimeout(() => {
+          apply();
+          heroCopy.classList.remove("is-switching");
+        }, 140);
+      }
 
       function setActive(nextIndex) {
         if (failed || !slides.length) return;
         activeIndex = (nextIndex + slides.length) % slides.length;
+        const activeLabel = slides[activeIndex].dataset.previewLabel || "Cliente";
         slides.forEach((slide, index) => {
           const isActive = index === activeIndex;
           slide.classList.toggle("is-active", isActive);
@@ -244,7 +297,8 @@
           button.classList.toggle("is-active", index === activeIndex);
           button.setAttribute("aria-pressed", String(index === activeIndex));
         });
-        if (status) status.textContent = slides[activeIndex].dataset.previewLabel || "Cliente";
+        if (status) status.textContent = activeLabel;
+        setHeroCopy(activeLabel);
       }
 
       function stop() {

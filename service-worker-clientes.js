@@ -4,7 +4,7 @@
    Scope esperado: /
    ========================================================================== */
 
-const SW_VERSION = "mimi-clientes-v2026.05.19-checkout-cancel-v1";
+const SW_VERSION = "mimi-clientes-v2026.05.22-landing-dual-copy-v1";
 const STATIC_CACHE = `${SW_VERSION}-static`;
 const RUNTIME_CACHE = `${SW_VERSION}-runtime`;
 const IMAGE_CACHE = `${SW_VERSION}-images`;
@@ -30,7 +30,7 @@ const APP_SHELL = [
   "/assets/brand/mimigo-client-wordmark.png",
   "/assets/og/og-mimigo-client-branding-v3.png",
   "/assets/landing/mimigo-client-servicios-preview-v1.png",
-  "/assets/landing/mimigo-prestadores-home-preview-v1.png",
+  "/assets/landing/mimigo-prestadores-login-preview-v1.png",
 
   // personas reales (card inferior)
 "/assets/ui/clarity-card-compact.png",
