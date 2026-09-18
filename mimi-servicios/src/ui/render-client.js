@@ -100,23 +100,16 @@ const pricingModelLabels = {
   LINEAR_METER: "Por metro lineal"
 };
 
+import { categoryPricingModel as resolveCategoryPricingModel } from "../services/pricing-models.js?v=2026.09.18.2";
+
 const quotePricingLabel = "Cotizar antes de confirmar";
 const quotePricingHelp = "El prestador te enviará un presupuesto dentro de MIMIGO antes de confirmar.";
 
-const nonHourlyCategoryModels = {
-  GOMERIA_MOVIL: "BASE_VISIT",
-  MECANICA_MOVIL: "BASE_VISIT",
-  HERRERIA: "QUOTE",
-  PSICOLOGIA: "UNIT",
-  KINESIOLOGIA: "UNIT",
-  NUTRICION: "UNIT",
-  ABOGACIA: "UNIT",
-  CONTABILIDAD: "UNIT",
-  CLASES_PARTICULARES: "UNIT",
-  MUDANZAS: "QUOTE",
-  JARDINERIA: "SQUARE_METER",
-  PINTURA: "SQUARE_METER"
-};
+// El mapa de rubro -> modelo de precio se movio a src/services/pricing-models.js.
+// Estaba duplicado con main-client.js y las dos copias ya se contradecian: aca
+// Psicologia/Kinesiologia/Nutricion/Abogacia/Contabilidad/Clases eran UNIT y alla
+// caian en HOURLY por ausencia, asi que el formulario pedia horas y la etiqueta
+// decia "por unidad" para el mismo rubro.
 
 const providerColors = [
   "#1a56db",
@@ -304,10 +297,11 @@ function categoryIcon(category) {
 }
 
 function categoryPricingModel(category) {
-  if (!category) return "HOURLY";
+  // Una sola implementacion, compartida con main-client.js.
+  if (!category) return resolveCategoryPricingModel(null, null);
   const explicit = category.default_pricing_model || category.pricing_model || category.pricingModel;
   const code = String(category.code || "").toUpperCase();
-  return String(explicit || nonHourlyCategoryModels[code] || "HOURLY").toUpperCase();
+  return resolveCategoryPricingModel(explicit, code);
 }
 
 function isHourlyCategory(category) {

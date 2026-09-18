@@ -1,4 +1,5 @@
 import { appConfig } from "./config.js";
+import { categoryPricingModel as resolveCategoryPricingModel } from "./services/pricing-models.js?v=2026.09.18.2";
 import {
   focusClientServicePosition,
   initMap,
@@ -112,7 +113,7 @@ let locationAdjustDraft = null;
 // OJO: este valor y `app-version.json -> client.version` tienen que subir JUNTOS.
 // Si app-version.json queda por encima de este número, el cartel de "Actualizar"
 // aparece en cada apertura de la PWA y nunca se apaga.
-const MIMI_CLIENT_BUILD = "2026.09.18.2";
+const MIMI_CLIENT_BUILD = "2026.09.18.3";
 const MIMI_CLIENT_ICON_REVISION = "mimigo-visual-v10";
 const GPS_ACCURACY_TARGET_M = 30;
 const GPS_ACCURACY_REVIEW_M = 80;
@@ -161,16 +162,11 @@ function updateClientMapWhenReady(payload) {
   ensureClientMap().then(() => updateClientMap(payload));
 }
 
-const NON_HOURLY_CATEGORY_MODELS = {
-  GOMERIA_MOVIL: "BASE_VISIT",
-  MECANICA_MOVIL: "BASE_VISIT",
-  HERRERIA: "QUOTE",
-  ABOGACIA: "QUOTE",
-  CONTABILIDAD: "QUOTE",
-  MUDANZAS: "QUOTE",
-  JARDINERIA: "SQUARE_METER",
-  PINTURA: "SQUARE_METER"
-};
+// El mapa de rubro -> modelo de precio se movio a src/services/pricing-models.js.
+// Estaba duplicado aca y en render-client.js, y las dos copias ya se contradecian:
+// Psicologia, Kinesiologia, Nutricion, Abogacia, Contabilidad y Clases estaban ausentes
+// aca (caian en HOURLY) y mapeadas a UNIT alla. El formulario pedia horas y la etiqueta
+// decia "por unidad" para el mismo rubro.
 
 function sanitizeServiceRequestPayload(request = {}) {
   const clean = { ...(request ?? {}) };
@@ -313,10 +309,11 @@ function getSelectedCategory() {
 }
 
 function categoryPricingModel(category) {
-  if (!category) return "HOURLY";
+  // Una sola implementacion, compartida con render-client.js.
+  if (!category) return resolveCategoryPricingModel(null, null);
   const explicit = category.default_pricing_model || category.pricing_model || category.pricingModel;
   const code = String(category.code || "").toUpperCase();
-  return String(explicit || NON_HOURLY_CATEGORY_MODELS[code] || "HOURLY").toUpperCase();
+  return resolveCategoryPricingModel(explicit, code);
 }
 
 function formatCurrency(value, currencyCode = "ARS") {
