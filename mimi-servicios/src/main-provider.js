@@ -5,12 +5,16 @@
 
 // Subirlo es lo que hace que el panel del prestador limpie sus caches y se recargue
 // (ver el bloque que compara con sessionStorage y borra mimi-go-partner-*).
-const MIMI_PROVIDER_BUILD = "2026.09.18.6";
-import { autoMountPriceBookEditor } from "./services/price-book.js?v=2026.09.19.2";
+const MIMI_PROVIDER_BUILD = "2026.09.18.7";
+import { autoMountPriceBookEditor } from "./services/price-book.js?v=2026.09.19.3";
+import { watchProviderUpdates } from "./services/provider-update.js?v=2026.09.19.3";
 
 // El editor del cuadro tarifario se monta solo cuando aparece la tarjeta de una
 // prestacion: asi un redibujado no lo rompe y no hay que tocarlo desde el render.
-autoMountPriceBookEditor();
+// Si hay una version publicada distinta a la que corre, se limpian las caches y se
+// recarga. Sin esto el panel podia quedarse sirviendo codigo viejo y ningun deploy se veia.
+watchProviderUpdates(MIMI_PROVIDER_BUILD);
+autoMountPriceBookEditor(MIMI_PROVIDER_BUILD);
 const MIMI_PROVIDER_ICON_REVISION = "mimigo-status-badge-v11";
 const QUOTE_PRICING_LABEL = "Cotizar antes de confirmar";
 const MIMI_PROVIDER_NOTIFICATION_SYNC_MS = providerRuntimeNumber(
