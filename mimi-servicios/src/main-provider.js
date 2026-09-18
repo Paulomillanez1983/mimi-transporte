@@ -5,7 +5,7 @@
 
 // Subirlo es lo que hace que el panel del prestador limpie sus caches y se recargue
 // (ver el bloque que compara con sessionStorage y borra mimi-go-partner-*).
-const MIMI_PROVIDER_BUILD = "2026.09.19.1";
+const MIMI_PROVIDER_BUILD = "2026.09.19.2";
 import { autoMountPriceBookEditor } from "./services/price-book.js?v=2026.09.19.4";
 import { watchProviderUpdates } from "./services/provider-update.js?v=2026.09.19.3";
 // La forma de cobro y el campo de precio unico salen de aca: una sola fuente con el cliente.
@@ -206,7 +206,7 @@ import {
   renderProviderScreen,
   renderProviderGuidedTemplateSelection,
   renderProviderServicePreviewSheet
-} from "./ui/render-provider.js?v=2026.09.19.1";
+} from "./ui/render-provider.js?v=2026.09.19.2";
 import {
   clearAuthRedirectIntent,
   forceCleanSession,
