@@ -59,22 +59,42 @@ serve(async (req) => {
   const token = (req.headers.get("Authorization") ?? "").replace("Bearer ", "").trim();
   if (!token) return fail("AUTH_REQUIRED", 401);
 
-  const { data: userData } = await supabase.auth.getUser(token);
-  const userId = userData?.user?.id;
-  if (!userId) return fail("Invalid JWT", 401);
+  // ── Quién puede reembolsar ─────────────────────────────────────────────────
+  // 1) Un usuario de admin_users (panel de administración), como siempre.
+  // 2) La service_role: la usa svc-cancel-request cuando tiene que devolver el
+  //    resto del pago de una cancelación. Corre sin usuario detrás, así que antes
+  //    no podía reembolsar nunca y el cliente quedaba con la plata retenida.
+  //    No amplía la superficie de ataque: quien tenga esa clave ya escribe en
+  //    toda la base con RLS salteado.
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const isSystemCaller = Boolean(serviceRoleKey) && token === serviceRoleKey;
 
-  const isAdmin = Boolean((await supabase
-    .from("admin_users")
-    .select("user_id,role")
-    .eq("user_id", userId)
-    .eq("active", true)
-    .in("role", ["ADMIN", "SUPERADMIN", "FINANCE", "FINANCE_ADMIN"])
-    .maybeSingle()).data);
-  if (!isAdmin) return fail("Forbidden", 403);
+  if (!isSystemCaller) {
+    const { data: userData } = await supabase.auth.getUser(token);
+    const userId = userData?.user?.id;
+    if (!userId) return fail("Invalid JWT", 401);
+
+    const isAdmin = Boolean((await supabase
+      .from("admin_users")
+      .select("user_id,role")
+      .eq("user_id", userId)
+      .eq("active", true)
+      .in("role", ["ADMIN", "SUPERADMIN", "FINANCE", "FINANCE_ADMIN"])
+      .maybeSingle()).data);
+    if (!isAdmin) return fail("Forbidden", 403);
+  }
 
   const body = await readJson(req);
   const paymentId = String(body.payment_id ?? "").trim();
-  const reason = String(body.reason ?? "admin_refund").slice(0, 280);
+  const requestedReason = String(body.reason ?? "admin_refund").slice(0, 200);
+  // Un llamador de sistema tiene que declarar de dónde viene. Si no, el reembolso
+  // queda sin trazabilidad en el ledger y nadie puede auditar por qué salió esa plata.
+  if (isSystemCaller && !String(body.system_source ?? "").trim()) {
+    return fail("system_source required for service-role caller", 400);
+  }
+  const reason = isSystemCaller
+    ? `${requestedReason} [SYSTEM:${String(body.system_source).trim().slice(0, 60)}]`.slice(0, 280)
+    : requestedReason;
   if (!paymentId) return fail("payment_id required", 400);
 
   const { data: payment, error } = await supabase.from("payments").select("*").eq("id", paymentId).maybeSingle();

@@ -1,4 +1,11 @@
 import { appConfig } from "../config.js";
+import {
+  estimateClientCancellationSync,
+  primeCancellationRules
+} from "../services/cancellation-policy.js?v=2026.09.18.1";
+
+// Las reglas de cancelación se cargan una sola vez por sesión de pantalla.
+let cancellationRulesPrimed = false;
 
 const stateLabels = {
   SEARCHING: "Buscando prestador",
@@ -1056,6 +1063,37 @@ export function renderProviderActiveService(state) {
       0
   );
   const activePaymentLabel = providerPaymentStatusLabel(activeService?.payment_status ?? activeService?.payment?.status);
+  const activePlatformFee = Number(
+    activeDetails.platform_fee ??
+      activeService?.platform_fee_snapshot ??
+      0
+  );
+  const activeClientTotal = Number(
+    activeDetails.total_price ??
+      activeService?.total_price_snapshot ??
+      activeProviderAmount + activePlatformFee
+  );
+  // Si el cliente cancela, al prestador le queda el 70% del cargo. El monto sale de
+  // cancellation_rules y no está hardcodeado acá: si las reglas todavía no se
+  // cargaron, no se muestra el número en vez de mostrar uno inventado.
+  const cancellationEstimate = ["PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED"].includes(
+    String(activeService?.status || "")
+  )
+    ? estimateClientCancellationSync({ status: activeService.status, totalPaid: activeClientTotal })
+    : null;
+  const cancellationNotice = activeService?.status === "IN_PROGRESS"
+    ? `<p class="muted" data-cancellation-notice>Servicio en curso: el cliente ya no puede cancelar, solo reclamar.</p>`
+    : cancellationEstimate && cancellationEstimate.providerShare > 0
+      ? `<p class="muted" data-cancellation-notice>Si el cliente cancela ahora, se te reconocen <strong>${currency(
+          cancellationEstimate.providerShare
+        )}</strong> por el viaje.</p>`
+      : "";
+  if (!cancellationRulesPrimed) {
+    cancellationRulesPrimed = true;
+    primeCancellationRules().catch(() => {
+      cancellationRulesPrimed = false;
+    });
+  }
 
   providerActiveService.innerHTML = activeService
     ? `
@@ -1108,6 +1146,7 @@ export function renderProviderActiveService(state) {
 
   providerActions.innerHTML = activeService
     ? [
+        cancellationNotice,
         ["ACCEPTED", "SCHEDULED"].includes(activeService.status)
           ? `<button class="btn-primary" data-provider-flow="en-route" type="button">En camino</button>`
           : "",

@@ -1,4 +1,6 @@
-const APP_VERSION = "2026.09.18.1-client-2026.06.05.2-provider";
+// Bump necesario: sin cambiar APP_VERSION, los celulares siguen sirviendo el
+// cliente/panel cacheados y nunca ven el cartel de cancelación con los montos.
+const APP_VERSION = "2026.09.18.2-client-2026.06.05.2-provider";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [
@@ -25,6 +27,7 @@ const APP_ASSETS = [
   "../js/mimi-maps/map-routing.js",
 
   "./src/config.js",
+  "./src/services/cancellation-policy.js",
   "./src/main-client.js",
   "./src/main-provider.js",
 

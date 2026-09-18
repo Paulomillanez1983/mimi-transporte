@@ -53,6 +53,11 @@ import {
   subscribeToAuthChanges
 } from "./services/supabase.js?v=2026.05.17.2";
 import {
+  cancellationBlockedReason,
+  invalidateCancellationRulesCache,
+  requestCancellationConfirmation
+} from "./services/cancellation-policy.js?v=2026.09.18.1";
+import {
   getMimiPushToken,
   rememberPushTokenRegistration,
   shouldRegisterPushToken
@@ -3776,9 +3781,25 @@ async function cancelActiveClientRequest({
     return false;
   }
 
-  if (isApprovedPaymentStatus(paymentStatus)) {
-    setInfo(null, "El pago ya figura confirmado. Para cancelar ahora, contacta soporte desde la solicitud.");
+  // Con el PIN ya validado el servicio arrancó: no se cancela, se reclama.
+  const activeStatus = requestStatusValue(request);
+  const blockedReason = cancellationBlockedReason(activeStatus);
+  if (blockedReason) {
+    setInfo(null, blockedReason);
     return false;
+  }
+
+  // Si ya pagó, la cancelación puede tener cargo: el cliente tiene que ver el monto
+  // ANTES de aceptar. Antes esto estaba bloqueado de plano ("contactá a soporte"), así
+  // que un cliente que ya había pagado no tenía ninguna forma de cancelar desde la app.
+  if (isApprovedPaymentStatus(paymentStatus)) {
+    const confirmation = await requestCancellationConfirmation({
+      status: activeStatus,
+      totalPaid: paymentTotalFromRequest(request, payment?.total_amount),
+      providerName: request?.provider_name ?? request?.providerName ?? null
+    });
+    if (!confirmation.confirmed) return false;
+    console.log("[MIMI Cancel] cliente confirmó con cargo visible", confirmation.policy);
   }
 
   let cancelledPayment = null;
@@ -3805,6 +3826,13 @@ async function cancelActiveClientRequest({
   console.log("[MIMI Cancel] cancel edge response", result);
 
   clearPendingCheckoutMarker(payment?.id ?? null);
+  invalidateCancellationRulesCache();
+
+  // Los números que valen son los que devolvió el servidor, no los del cartel:
+  // entre el preview y la cancelación el estado de la solicitud pudo cambiar.
+  const serverFee = Number(result?.cancellation_fee ?? 0);
+  const serverRefund = Number(result?.refund_due ?? 0);
+  const refundFailed = Boolean(result?.refund?.attempted) && result?.refund?.ok === false;
 
   setState((draft) => {
     if (draft.client.activeRequest) {
@@ -3820,7 +3848,11 @@ async function cancelActiveClientRequest({
       };
     }
     draft.client.selectedProvider = null;
-    draft.meta.info = "Solicitud cancelada correctamente.";
+    draft.meta.info = refundFailed
+      ? `Cancelaste el servicio. El reembolso de ${formatCurrency(serverRefund)} quedó pendiente: lo estamos revisando y te avisamos.`
+      : serverFee > 0
+        ? `Solicitud cancelada. Se descontaron ${formatCurrency(serverFee)} y se te devuelven ${formatCurrency(serverRefund)}.`
+        : "Solicitud cancelada. Se te devuelve el total, sin cargo.";
     draft.meta.error = null;
   });
 
