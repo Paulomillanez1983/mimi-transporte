@@ -23,7 +23,8 @@
     "qa:provider-price-save": "node qa/provider-price-save-e2e.js",
     "qa:provider-pricebook-mount": "node qa/provider-pricebook-mount.js",
     "qa:provider-pricing-model-rules": "node qa/provider-pricing-model-rules.js",
-    "qa:provider-imports": "node qa/provider-imports-complete.js"
+    "qa:provider-imports": "node qa/provider-imports-complete.js",
+    "qa:provider-boot-resilience": "node qa/provider-boot-resilience.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

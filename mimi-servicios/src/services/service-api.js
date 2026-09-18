@@ -941,15 +941,36 @@ export async function bootstrapSession() {
   const providerSelect =
     "id,user_id,full_name,email,phone,avatar_url,status,approved,blocked,rating_avg,rating_count,last_lat,last_lng,last_location,last_seen_at";
 
-  const { data: providerRows, error: providerLookupError } = await withTimeout(
-    supabase
-      .from("svc_providers")
-      .select(providerSelect)
-      .eq("user_id", user.id)
-      .limit(1),
-    8000,
-    "PROVIDER_LOOKUP_TIMEOUT"
-  );
+  // Un timeout NO significa que no haya sesion.
+  //
+  // La primera vuelta a Supabase desde un telefono puede pasar de 8s (arranque en frio, TLS, cola
+  // de auth) y, cuando eso pasaba, el arranque del panel daba por perdida la sesion y le mostraba
+  // el login a un prestador que estaba bien logueado: el panel quedaba dibujado pero sin responder
+  // a nada. Antes de darlo por perdido se reintenta.
+  let providerRows = null;
+  let providerLookupError = null;
+
+  for (let intento = 1; intento <= 3; intento += 1) {
+    try {
+      const respuesta = await withTimeout(
+        supabase
+          .from("svc_providers")
+          .select(providerSelect)
+          .eq("user_id", user.id)
+          .limit(1),
+        8000,
+        "PROVIDER_LOOKUP_TIMEOUT"
+      );
+      providerRows = respuesta.data;
+      providerLookupError = respuesta.error;
+      break;
+    } catch (error) {
+      providerLookupError = error;
+      const esTimeout = /TIMEOUT/i.test(String(error?.message ?? ""));
+      if (!esTimeout || intento === 3) throw error;
+      console.warn(`[MIMI] el lookup del prestador se paso de tiempo, reintento ${intento} de 3`);
+    }
+  }
 
   if (providerLookupError) throw providerLookupError;
 
