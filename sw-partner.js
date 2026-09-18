@@ -1,4 +1,6 @@
-const APP_VERSION = "2026.06.05.2-provider";
+// Tiene que subir junto con MIMI_PROVIDER_BUILD (main-provider.js) para que el service
+// worker del prestador cambie de cache y no siga sirviendo el panel viejo.
+const APP_VERSION = "2026.09.18.1-provider";
 const CACHE_PREFIX = "mimi-go-partner-";
 const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 const LEGACY_CACHE_PREFIXES = ["mimi-servicios-provider-"];

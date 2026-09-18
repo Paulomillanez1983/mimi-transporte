@@ -3,7 +3,9 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.06.05.2";
+// Subirlo es lo que hace que el panel del prestador limpie sus caches y se recargue
+// (ver el bloque que compara con sessionStorage y borra mimi-go-partner-*).
+const MIMI_PROVIDER_BUILD = "2026.09.18.1";
 const MIMI_PROVIDER_ICON_REVISION = "mimigo-status-badge-v11";
 const QUOTE_PRICING_LABEL = "Cotizar antes de confirmar";
 const MIMI_PROVIDER_NOTIFICATION_SYNC_MS = providerRuntimeNumber(

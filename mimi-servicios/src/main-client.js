@@ -109,7 +109,10 @@ let clientSupportMessages = [];
 let locationConfirmResolver = null;
 let locationAdjustDraft = null;
 
-const MIMI_CLIENT_BUILD = "2026.05.19.7";
+// OJO: este valor y `app-version.json -> client.version` tienen que subir JUNTOS.
+// Si app-version.json queda por encima de este número, el cartel de "Actualizar"
+// aparece en cada apertura de la PWA y nunca se apaga.
+const MIMI_CLIENT_BUILD = "2026.09.18.2";
 const MIMI_CLIENT_ICON_REVISION = "mimigo-visual-v10";
 const GPS_ACCURACY_TARGET_M = 30;
 const GPS_ACCURACY_REVIEW_M = 80;
