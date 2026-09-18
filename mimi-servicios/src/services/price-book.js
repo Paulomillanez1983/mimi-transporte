@@ -145,6 +145,13 @@ const ETIQUETA_KIND = Object.fromEntries(KINDS.map((k) => [k.value, k.label]));
  */
 export function mountPriceBookEditor(tarjeta, build = "") {
   if (!tarjeta || montados.has(tarjeta)) return false;
+
+  // Nunca adentro de algo que ya responde a un toque. El atributo data-offering-id tambien esta
+  // en los botones de la tarjeta ("Editar servicio", "Ver como cliente"): si el cuadro tarifario
+  // se cuelga de uno de esos, cada toque suyo sube hasta el boton. Tocar "Quitar" abria el editor
+  // del servicio en vez de quitar el parametro, y el boton de agregar tampoco hacia lo suyo.
+  if (tarjeta.closest("button, a, label, summary")) return false;
+
   const offeringId = tarjeta.getAttribute("data-offering-id")
     || tarjeta.querySelector('input[name$=":id"]')?.value;
   if (!offeringId) return false;
@@ -152,7 +159,9 @@ export function mountPriceBookEditor(tarjeta, build = "") {
   montados.add(tarjeta);
 
   const caja = document.createElement("div");
-  caja.style.cssText = "margin-top:12px;padding:12px;border:1px solid rgba(0,0,0,.12);border-radius:12px;background:#fbfcfe;";
+  caja.style.cssText =
+    "grid-column:1/-1;width:100%;box-sizing:border-box;margin-top:12px;padding:12px;" +
+    "border:1px solid rgba(0,0,0,.12);border-radius:12px;background:#fbfcfe;";
 
   const titulo = document.createElement("strong");
   titulo.textContent = build ? `Tu cuadro tarifario · ${build}` : "Tu cuadro tarifario";
@@ -170,6 +179,10 @@ export function mountPriceBookEditor(tarjeta, build = "") {
 
   const estado = document.createElement("small");
   estado.style.cssText = "display:block;font-size:11px;margin-top:6px;opacity:.8;";
+
+  // Tocar el cuadro tarifario no es tocar la tarjeta. Sin esto el toque sube hasta el boton que
+  // envuelve la tarjeta y abre el editor del servicio.
+  caja.addEventListener("click", (evento) => evento.stopPropagation());
 
   caja.append(titulo, ayuda, lista, formulario, estado);
   tarjeta.appendChild(caja);
@@ -371,7 +384,10 @@ export function mountPriceBookEditor(tarjeta, build = "") {
  */
 export function autoMountPriceBookEditor(build = "") {
   const intentar = () => {
-    const tarjetas = document.querySelectorAll("[data-offering-id]");
+    // data-offering-id esta en la tarjeta Y en los botones de adentro. Se toma solo la tarjeta de
+    // mas afuera: si no, el cuadro se monta dos veces, una adentro de un boton.
+    const tarjetas = [...document.querySelectorAll("[data-offering-id]")]
+      .filter((t) => !t.parentElement?.closest?.("[data-offering-id]"));
     let monto = false;
     tarjetas.forEach((t) => {
       if (montados.has(t)) return;
