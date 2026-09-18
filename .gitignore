@@ -20,3 +20,5 @@ test-results/
 node_modules/
 package-lock.json
 qa-playwright/.qa-state.json
+
+test-results/

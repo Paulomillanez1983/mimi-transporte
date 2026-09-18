@@ -1,7 +1,14 @@
-import supabaseAdminService from "./supabase-admin-client.js?v=2026.05.14.2";
+import supabaseAdminService from "./supabase-admin-client.js?v=2026.05.15.5";
 
-const SUPPORT_API_BASE = "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1";
-const SUPPORT_POLL_MS = 12000;
+const SUPPORT_API_BASE = `${String(
+  window.MIMI_ADMIN_ENV?.SUPABASE_URL ||
+  "https://xrphpqmutvadjrucqicn.supabase.co"
+).replace(/\/$/, "")}/functions/v1`;
+const SUPPORT_REALTIME_DEBOUNCE_MS = 900;
+const SUPPORT_MIN_REFRESH_GAP_MS = 5000;
+const SUPPORT_REALTIME_FALLBACK_POLL_MS = 5 * 60 * 1000;
+const SUPPORT_DEGRADED_POLL_MS = 2 * 60 * 1000;
+const SUPPORT_HIDDEN_POLL_MS = 15 * 60 * 1000;
 
 const supportState = {
   conversations: [],
@@ -11,6 +18,12 @@ const supportState = {
   loadingList: false,
   sendingReply: false,
   pollTimer: null,
+  realtimeChannel: null,
+  realtimeRefreshTimer: null,
+  realtimeStatus: "idle",
+  realtimeHealthy: false,
+  lastLoadAt: 0,
+  lastLoadFailedAt: 0,
   initialized: false
 };
 
@@ -267,6 +280,7 @@ function getSupportElements() {
     search: document.getElementById("supportSearchInput"),
     filter: document.getElementById("supportFilterStatus"),
     refresh: document.getElementById("supportRefreshBtn"),
+    realtimeStatus: document.getElementById("supportRealtimeStatus"),
     threadEmpty: document.getElementById("supportThreadEmpty"),
     threadPanel: document.getElementById("supportThreadPanel"),
     threadAvatar: document.getElementById("supportThreadAvatar"),
@@ -293,6 +307,25 @@ function updateSupportDockBadge() {
 
   badge.hidden = unreadTotal <= 0;
   badge.textContent = unreadTotal > 99 ? "99+" : String(unreadTotal);
+}
+
+function setSupportRealtimeStatus(status, label) {
+  supportState.realtimeStatus = status;
+
+  const els = getSupportElements();
+  if (!els.realtimeStatus) return;
+
+  const text = label || {
+    idle: "Realtime",
+    connecting: "Conectando",
+    live: "En vivo",
+    degraded: "Respaldo",
+    offline: "Sin realtime"
+  }[status] || "Realtime";
+
+  els.realtimeStatus.textContent = text;
+  els.realtimeStatus.dataset.state = status;
+  els.realtimeStatus.setAttribute("aria-label", `Estado de soporte: ${text}`);
 }
 
 function getCurrentConversation() {
@@ -927,14 +960,23 @@ async function sendSupportReply() {
       els.reply.value = previousText;
     }
 
-    alert(err?.message || "No se pudo enviar el mensaje");
+    showSupportToast(err?.message || "No se pudo enviar el mensaje", "error");
   } finally {
     setSendBusy(false);
   }
 }
 
 async function loadSupportConversations(options = {}) {
-  const { preserveSelection = true, silent = false } = options;
+  const { preserveSelection = true, silent = false, force = false } = options;
+
+  if (
+    silent &&
+    !force &&
+    supportState.lastLoadAt &&
+    Date.now() - supportState.lastLoadAt < SUPPORT_MIN_REFRESH_GAP_MS
+  ) {
+    return;
+  }
 
   try {
     if (!silent) {
@@ -974,14 +1016,17 @@ async function loadSupportConversations(options = {}) {
     renderConversationList();
     renderSelectedConversation();
     updateSupportDockBadge();
+    supportState.lastLoadAt = Date.now();
   } catch (err) {
     if (isSupportAuthGate(err)) {
       stopSupportPolling();
+      stopSupportRealtime();
       renderSupportAuthGate(err.reason);
       return;
     }
 
     console.error("[support.loadSupportConversations]", err);
+    supportState.lastLoadFailedAt = Date.now();
 
     supportState.conversations = [];
     supportState.filtered = [];
@@ -1040,7 +1085,7 @@ async function persistConversationStatus(status) {
     showSupportToast("Estado actualizado.", "success");
   } catch (err) {
     console.error("[support.persistConversationStatus]", err);
-    alert(err?.message || "No se pudo actualizar el estado");
+    showSupportToast(err?.message || "No se pudo actualizar el estado", "error");
   }
 }
 
@@ -1052,18 +1097,127 @@ function autoResizeSupportReply() {
   els.reply.style.height = `${Math.min(els.reply.scrollHeight, 180)}px`;
 }
 
+function scheduleSupportRealtimeRefresh(reason = "realtime") {
+  if (!supportState.initialized) return;
+
+  window.clearTimeout(supportState.realtimeRefreshTimer);
+  const ageMs = supportState.lastLoadAt ? Date.now() - supportState.lastLoadAt : Infinity;
+  const freshnessDelay = ageMs < SUPPORT_MIN_REFRESH_GAP_MS ? SUPPORT_MIN_REFRESH_GAP_MS - ageMs : 0;
+  supportState.realtimeRefreshTimer = window.setTimeout(() => {
+    loadSupportConversations({ preserveSelection: true, silent: true, force: true });
+  }, Math.max(SUPPORT_REALTIME_DEBOUNCE_MS, freshnessDelay));
+
+  if (reason === "message") {
+    setSupportRealtimeStatus("live", "Mensaje nuevo");
+  }
+}
+
+function stopSupportRealtime() {
+  window.clearTimeout(supportState.realtimeRefreshTimer);
+  supportState.realtimeRefreshTimer = null;
+  supportState.realtimeHealthy = false;
+
+  const channel = supportState.realtimeChannel;
+  supportState.realtimeChannel = null;
+
+  if (!channel) {
+    setSupportRealtimeStatus("offline");
+    return;
+  }
+
+  try {
+    if (supabaseAdminService.client?.removeChannel) {
+      supabaseAdminService.client.removeChannel(channel);
+    } else {
+      channel.unsubscribe?.();
+    }
+  } catch (error) {
+    console.warn("[support.realtime.stop]", error?.message || error);
+  }
+
+  setSupportRealtimeStatus("offline");
+}
+
+async function startSupportRealtime() {
+  stopSupportRealtime();
+  setSupportRealtimeStatus("connecting");
+
+  try {
+    const activeAdmin = await supabaseAdminService.waitForActiveAdmin?.(4500);
+    const client = supabaseAdminService.client;
+
+    if (!activeAdmin?.ok || !client?.channel) {
+      setSupportRealtimeStatus("degraded");
+      return;
+    }
+
+    const token = activeAdmin?.session?.access_token || null;
+    if (token && typeof client.realtime?.setAuth === "function") {
+      client.realtime.setAuth(token);
+    }
+
+    const channel = client
+      .channel(`admin-support:${activeAdmin.user.id}:${Date.now()}`)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "svc_conversations"
+      }, () => scheduleSupportRealtimeRefresh("conversation"))
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "svc_messages"
+      }, () => scheduleSupportRealtimeRefresh("message"))
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "svc_notifications",
+        filter: `user_id=eq.${activeAdmin.user.id}`
+      }, () => scheduleSupportRealtimeRefresh("notification"));
+
+    supportState.realtimeChannel = channel;
+
+    channel.subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        supportState.realtimeHealthy = true;
+        setSupportRealtimeStatus("live", "En vivo");
+        startSupportPolling();
+        return;
+      }
+
+      if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
+        supportState.realtimeHealthy = false;
+        setSupportRealtimeStatus("degraded", "Respaldo");
+        startSupportPolling();
+      }
+    });
+  } catch (error) {
+    console.warn("[support.realtime.start]", error?.message || error);
+    setSupportRealtimeStatus("degraded", "Respaldo");
+  }
+}
+
 function startSupportPolling() {
   stopSupportPolling();
 
-  supportState.pollTimer = window.setInterval(() => {
-    if (document.hidden) return;
-    loadSupportConversations({ preserveSelection: true, silent: true });
-  }, SUPPORT_POLL_MS);
+  const delay = document.hidden
+    ? SUPPORT_HIDDEN_POLL_MS
+    : supportState.realtimeHealthy
+      ? SUPPORT_REALTIME_FALLBACK_POLL_MS
+      : SUPPORT_DEGRADED_POLL_MS;
+
+  supportState.pollTimer = window.setTimeout(async () => {
+    supportState.pollTimer = null;
+    if (!document.hidden || !supportState.realtimeHealthy) {
+      await loadSupportConversations({ preserveSelection: true, silent: true });
+    }
+    if (supportState.initialized) startSupportPolling();
+  }, delay);
 }
 
 function stopSupportPolling() {
   if (supportState.pollTimer) {
-    window.clearInterval(supportState.pollTimer);
+    window.clearTimeout(supportState.pollTimer);
     supportState.pollTimer = null;
   }
 }
@@ -1071,6 +1225,7 @@ function stopSupportPolling() {
 function handleVisibilitySupportRefresh() {
   if (!document.hidden && supportState.initialized) {
     loadSupportConversations({ preserveSelection: true, silent: true });
+    startSupportPolling();
   }
 }
 
@@ -1152,11 +1307,13 @@ export function initAdminSupport() {
   supabaseAdminService.waitForActiveAdmin?.(4500)
     .then((adminStatus) => {
       if (!adminStatus?.ok) {
+        stopSupportRealtime();
         renderSupportAuthGate(adminStatus?.reason);
         return;
       }
 
       loadSupportConversations({ preserveSelection: true, silent: false });
+      startSupportRealtime();
       startSupportPolling();
     })
     .catch(() => {
@@ -1165,7 +1322,9 @@ export function initAdminSupport() {
 }
 window.adminSupport = {
   initAdminSupport,
-  loadSupportConversations
+  loadSupportConversations,
+  startSupportRealtime,
+  stopSupportRealtime
 };
 
 window.addEventListener("DOMContentLoaded", () => {

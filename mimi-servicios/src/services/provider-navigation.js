@@ -9,6 +9,7 @@ const EMPTY_ADDRESS_LABELS = new Set([
   "",
   "pendiente",
   "ubicacion a confirmar",
+  "ubicación a confirmar",
   "ruta activa en el mapa"
 ]);
 

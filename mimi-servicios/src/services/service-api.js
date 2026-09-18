@@ -23,6 +23,9 @@ const MESSAGE_SAFE_SELECT = "id,conversation_id,sender_user_id,sender_role,messa
 const PROVIDER_WALLET_SAFE_SELECT = "id,provider_id,currency,available_balance,pending_balance,negative_balance,cash_debt_balance,risk_hold_balance,payout_hold_balance,lifetime_earnings,wallet_status,risk_level,cash_enabled,recovery_enabled,last_activity_at,last_recomputed_at,metadata,updated_at";
 const PROVIDER_PROFILE_SAFE_SELECT = "id,provider_id,first_name,bio,address_text,city,province,country_code,pricing_mode,accepts_immediate,accepts_scheduled,max_hours_per_service,onboarding_completed,years_experience,kyc_status,review_status,ai_score,ai_score_label,review_required,risk_flags,reviewed_at,service_modes,public_headline,professional_summary,video_intro_url,phone_number,phone_country_code,phone_verified,phone_verified_at,trusted_device,trusted_until,metadata_json,avatar_public_url,created_at,updated_at";
 const REQUEST_OFFER_SAFE_SELECT = "id,request_id,provider_id,status,sent_at,expires_at,responded_at,created_at,updated_at";
+const PROVIDER_WORKSPACE_READ_TIMEOUT_MS = 4500;
+const PROVIDER_WORKSPACE_LEGAL_TIMEOUT_MS = 2500;
+const PROVIDER_DOCUMENT_URL_TIMEOUT_MS = 1500;
 const SERVICE_REQUEST_SAFE_SELECT = `
   id,
   client_user_id,
@@ -252,6 +255,14 @@ function withTimeout(promise, ms, label = "operation_timeout") {
   return Promise.race([promise, timeout]).finally(() => {
     if (timer) clearTimeout(timer);
   });
+}
+
+function safeTimeoutLabel(prefix, label) {
+  return `${prefix}_${String(label || "read")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_|_$/g, "") || "READ"}_TIMEOUT`;
 }
 
 async function requireSession() {
@@ -703,9 +714,13 @@ async function resolveStorageObjectUrl(bucket, path) {
   if (!supabase?.storage || !bucket || !path) return null;
 
   try {
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .createSignedUrl(path, 60 * 60);
+    const { data, error } = await withTimeout(
+      supabase.storage
+        .from(bucket)
+        .createSignedUrl(path, 60 * 60),
+      PROVIDER_DOCUMENT_URL_TIMEOUT_MS,
+      "PROVIDER_DOCUMENT_URL_TIMEOUT"
+    );
     if (!error && data?.signedUrl) return data.signedUrl;
   } catch (error) {
     console.warn("[service-api] provider document signed url unavailable", error?.message || error);
@@ -718,8 +733,32 @@ async function resolveStorageObjectUrl(bucket, path) {
   }
 }
 
+function storageObjectKey(bucket, path) {
+  return `${String(bucket || "").trim()}::${String(path || "").trim()}`;
+}
+
+function latestDocumentUrlKeys(rows = []) {
+  const seenTypes = new Set();
+  const keys = new Set();
+  const ordered = [...(rows ?? [])].sort((a, b) =>
+    Date.parse(b?.created_at || 0) - Date.parse(a?.created_at || 0)
+  );
+
+  for (const item of ordered) {
+    const type = normalizeDocumentType(item?.document_type);
+    const bucket = item?.storage_bucket ?? SERVICE_PROVIDER_DOCUMENTS_BUCKET;
+    const path = item?.storage_path ?? null;
+    if (!type || !bucket || !path || seenTypes.has(type)) continue;
+    seenTypes.add(type);
+    keys.add(storageObjectKey(bucket, path));
+  }
+
+  return keys;
+}
+
 async function normalizeProviderDocuments(rows = []) {
   const supabase = getSupabaseClient();
+  const documentsToResolve = latestDocumentUrlKeys(rows);
   const normalized = await Promise.all((rows ?? []).map(async (item) => {
     const metadata = item?.metadata_json && typeof item.metadata_json === "object"
       ? item.metadata_json
@@ -735,7 +774,10 @@ async function normalizeProviderDocuments(rows = []) {
       metadata.preview_url,
       metadata.image_url
     );
-    const signedOrPublicUrl = metadataUrl || await resolveStorageObjectUrl(bucket, path);
+    const shouldResolveStorageUrl = documentsToResolve.has(storageObjectKey(bucket, path));
+    const signedOrPublicUrl = metadataUrl || (shouldResolveStorageUrl
+      ? await resolveStorageObjectUrl(bucket, path)
+      : null);
     const publicUrl =
       supabase && bucket && path
         ? supabase.storage.from(bucket).getPublicUrl(path).data?.publicUrl ?? null
@@ -772,9 +814,13 @@ async function resolveProviderAvatarUrl(value) {
   if (!parsed || !supabase?.storage) return raw;
 
   try {
-    const { data, error } = await supabase.storage
-      .from(parsed.bucket)
-      .createSignedUrl(parsed.path, 60 * 60);
+    const { data, error } = await withTimeout(
+      supabase.storage
+        .from(parsed.bucket)
+        .createSignedUrl(parsed.path, 60 * 60),
+      PROVIDER_DOCUMENT_URL_TIMEOUT_MS,
+      "PROVIDER_AVATAR_URL_TIMEOUT"
+    );
     if (!error && data?.signedUrl) return data.signedUrl;
   } catch (error) {
     console.warn("[service-api] provider avatar signed url unavailable", error?.message || error);
@@ -890,6 +936,7 @@ export async function bootstrapSession() {
 
   let providerId = null;
   let role = "client";
+  let providerProfile = null;
 
   const providerSelect =
     "id,user_id,full_name,email,phone,avatar_url,status,approved,blocked,rating_avg,rating_count,last_lat,last_lng,last_location,last_seen_at";
@@ -907,6 +954,7 @@ export async function bootstrapSession() {
   if (providerLookupError) throw providerLookupError;
 
   if (providerRows?.[0]?.id) {
+    providerProfile = providerRows[0];
     providerId = providerRows[0].id;
     role = "provider";
   } else if (isProviderPage() && hasFreshProviderRegistrationIntent()) {
@@ -932,28 +980,32 @@ export async function bootstrapSession() {
 
     providerId = createdProvider?.id ?? null;
     role = providerId ? "provider" : "client";
+    providerProfile = providerId ? createdProvider : null;
     if (providerId) clearProviderRegistrationIntent();
   }
 
   let clientProfile = null;
-  try {
-    const { data: profileRows, error: profileError } = await supabase
-      .from("svc_client_profiles")
-      .select("id,user_id,phone_number,country_code,phone_verified,phone_verified_at")
-      .eq("user_id", user.id)
-      .limit(1);
+  if (!isProviderPage()) {
+    try {
+      const { data: profileRows, error: profileError } = await supabase
+        .from("svc_client_profiles")
+        .select("id,user_id,phone_number,country_code,phone_verified,phone_verified_at")
+        .eq("user_id", user.id)
+        .limit(1);
 
-    if (!profileError) {
-      clientProfile = profileRows?.[0] ?? null;
+      if (!profileError) {
+        clientProfile = profileRows?.[0] ?? null;
+      }
+    } catch (error) {
+      console.warn("[service-api] client profile unavailable", error);
     }
-  } catch (error) {
-    console.warn("[service-api] client profile unavailable", error);
   }
 
   return {
     isAuthenticated: true,
     userId: user.id,
     providerId,
+    providerProfile,
     role,
     userEmail: user.email ?? null,
     userName:
@@ -1226,13 +1278,13 @@ export async function loadProviderServiceAddonsConfig({ providerId = null } = {}
     ? "local_override"
     : localOverride === false
       ? "local_override_disabled"
-      : localRuntimeEnabled
-        ? "local_runtime"
-        : providerAllowed
-          ? "provider_scope_allowlist"
-          : remoteFlag
-            ? "provider_scope_denied"
-            : "default_false";
+    : localRuntimeEnabled
+      ? "local_runtime"
+      : providerAllowed
+        ? "provider_scope_allowlist"
+        : remoteFlag
+          ? "provider_scope_denied"
+          : "default_false";
 
   return emptyProviderServiceAddonsConfig({
     enabled,
@@ -2242,11 +2294,20 @@ export async function loadProviderWorkspace(providerId) {
     };
   }
 
-  await requireSession();
+  const session = await requireSession();
 
-  const safeProviderWorkspaceRead = async (label, loader, fallback = []) => {
+  const safeProviderWorkspaceRead = async (
+    label,
+    loader,
+    fallback = [],
+    timeoutMs = PROVIDER_WORKSPACE_READ_TIMEOUT_MS
+  ) => {
     try {
-      const value = await loader();
+      const value = await withTimeout(
+        Promise.resolve().then(loader),
+        timeoutMs,
+        safeTimeoutLabel("PROVIDER_WORKSPACE", label)
+      );
       return value ?? fallback;
     } catch (error) {
       console.warn(`[service-api] provider workspace ${label} fallback`, error?.message || error);
@@ -2257,7 +2318,29 @@ export async function loadProviderWorkspace(providerId) {
   const legalRequirementsPromise = safeProviderWorkspaceRead(
     "legal requirements",
     () => loadProviderLegalRequirements(),
-    []
+    [],
+    PROVIDER_WORKSPACE_LEGAL_TIMEOUT_MS
+  );
+  const legalAcceptancesPromise = safeProviderWorkspaceRead(
+    "legal acceptances",
+    () => {
+      const userId = session?.user?.id;
+      if (!userId) return Promise.resolve([]);
+      return supabase
+        .from("legal_acceptances")
+        .select("actor_type, document_code, document_version, accepted_at")
+        .eq("user_id", userId)
+        .eq("accepted", true)
+        .in("document_code", ["terms_providers", "privacy_policy"])
+        .order("accepted_at", { ascending: false })
+        .limit(20)
+        .then(({ data, error }) => {
+          if (error) throw error;
+          return data ?? [];
+        });
+    },
+    [],
+    PROVIDER_WORKSPACE_LEGAL_TIMEOUT_MS
   );
 
   const [
@@ -2362,22 +2445,7 @@ export async function loadProviderWorkspace(providerId) {
   // ¿Ya aceptó los términos de la versión actual? (para no pedirlos cada vez)
   // El cliente `supabase` ya está declarado al inicio de la función.
   const legalRequirements = await legalRequirementsPromise;
-  let legalAcceptances = [];
-  if (supabase && profileRows?.[0]?.user_id) {
-    try {
-      const { data } = await supabase
-        .from("legal_acceptances")
-        .select("actor_type, document_code, document_version, accepted_at")
-        .eq("user_id", profileRows[0].user_id)
-        .eq("accepted", true)
-        .in("document_code", ["terms_providers", "privacy_policy"])
-        .order("accepted_at", { ascending: false })
-        .limit(20);
-      legalAcceptances = data ?? [];
-    } catch (e) {
-      console.warn("[MIMI] no se pudieron leer aceptaciones legales:", e?.message);
-    }
-  }
+  const legalAcceptances = await legalAcceptancesPromise;
 
   const profileRow = profileRows?.[0] ?? null;
   const profileDetailRow = profileDetailRows?.[0] ?? null;

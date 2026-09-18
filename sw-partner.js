@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-21-mimigo-pro-provider-map1";
+const APP_VERSION = "2026.06.05.2-provider";
 const CACHE_PREFIX = "mimi-go-partner-";
 const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 const LEGACY_CACHE_PREFIXES = ["mimi-servicios-provider-"];
@@ -13,29 +13,17 @@ const APP_ASSETS = [
   "/prestador",
   "/mimi-servicios/prestador.html",
   "/manifest-partners.json",
-  "/mimi-servicios/env.js",
   "/mimi-servicios/styles/app.css",
   "/mimi-servicios/styles/map-ui.css",
   "/mimi-servicios/styles/provider.css",
-  "/mimi-servicios/src/config.js",
   "/mimi-servicios/src/main-provider.js",
-  "/mimi-servicios/src/services/map.js",
-  "/mimi-servicios/src/services/realtime-manager.js",
-  "/mimi-servicios/src/services/runtime-config.js",
-  "/mimi-servicios/src/services/observability.js",
-  "/mimi-servicios/src/services/pocketbase-cms.js",
-  "/mimi-servicios/src/services/service-api.js",
-  "/mimi-servicios/src/services/sound.js",
-  "/mimi-servicios/src/services/supabase.js",
-  "/mimi-servicios/src/services/provider-storage.js",
   "/mimi-servicios/src/services/provider-navigation.js",
-  "/mimi-servicios/src/services/push.js",
-  "/mimi-servicios/src/state/app-state.js",
+  "/mimi-servicios/src/services/service-api.js",
   "/mimi-servicios/src/ui/render-provider.js",
-  "/mimi-servicios/src/utils/phone-countries.js",
-  "/mimi-servicios/assets/icons/mimigo-partners-icon-192.png",
-  "/mimi-servicios/assets/icons/mimigo-partners-icon-512.png",
-  "/mimi-servicios/assets/icons/mimigo-partners-icon-512-maskable.png",
+  "/mimi-servicios/assets/icons/mimigo-pro-icon-v10-192.png",
+  "/mimi-servicios/assets/icons/mimigo-pro-icon-v10-512.png",
+  "/mimi-servicios/assets/icons/mimigo-pro-icon-v10-512-maskable.png",
+  "/mimi-servicios/assets/icons/mimigo-pro-badge-v11-96.png",
   "/mimi-servicios/assets/brand/mimigo-partners-wordmark.png",
   "/mimi-servicios/assets/brand/mimigo-partners-workspace-hero-1600x1100.png",
   "/css/mimi-maps.css",
@@ -45,7 +33,10 @@ const APP_ASSETS = [
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(precacheAssets());
+  event.waitUntil((async () => {
+    await precacheAssets();
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener("activate", (event) => {
@@ -61,30 +52,39 @@ self.addEventListener("push", (event) => {
   const payload = readPushPayload(event);
   const data = payload.data || {};
   const title = payload.notification?.title || data.title || "MIMIGO";
-  const body = payload.notification?.body || data.body || "Tenes una novedad en MIMIGO.";
+  const body = payload.notification?.body || data.body || "Tenés una novedad en MIMIGO.";
   const tag = data.tag || data.challenge_id || `mimi-partner-${Date.now()}`;
+  const isKycAlert = data.type === "PROVIDER_KYC_REVIEW" || data.kyc_alert === "1";
+  const badgeCount = Math.max(1, Number(data.unread_count || data.badge_count || 1) || 1);
 
   const actions = data.type === "APP_UPDATE" ? [
     { action: "update", title: "Actualizar" },
-    { action: "later", title: "Mas tarde" }
+    { action: "later", title: "Más tarde" }
   ] : data.challenge_id ? [
-    { action: "approve", title: "Si, soy yo" },
+    { action: "approve", title: "Sí, soy yo" },
     { action: "reject", title: "No fui yo" }
+  ] : isKycAlert ? [
+    { action: "open", title: "Revisar" }
   ] : [];
 
   event.waitUntil(self.registration.showNotification(title, {
     body,
-    icon: "/mimi-servicios/assets/icons/mimigo-partners-icon-192.png",
-    badge: "/mimi-servicios/assets/icons/mimigo-partners-icon-32.png",
+    icon: "/mimi-servicios/assets/icons/mimigo-pro-icon-v10-192.png",
+    badge: "/mimi-servicios/assets/icons/mimigo-pro-badge-v11-96.png",
     tag,
     renotify: true,
+    silent: false,
+    vibrate: isKycAlert ? [220, 80, 220, 80, 320] : [180, 80, 180],
+    requireInteraction: Boolean(isKycAlert || data.challenge_id),
+    timestamp: Date.now(),
     data,
     actions
-  }));
+  }).then(() => setPartnerAppBadge(badgeCount)));
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
+  event.waitUntil(clearPartnerAppBadge());
   const data = event.notification.data || {};
   const challengeId = data.challenge_id || "";
   const action = event.action || "open";
@@ -126,6 +126,26 @@ self.addEventListener("fetch", (event) => {
 async function precacheAssets() {
   const cache = await caches.open(CACHE_NAME);
   await Promise.allSettled(APP_ASSETS.map((asset) => cache.add(asset)));
+}
+
+async function setPartnerAppBadge(count = 1) {
+  try {
+    if (self.registration?.setAppBadge) {
+      await self.registration.setAppBadge(Math.max(1, Number(count) || 1));
+    }
+  } catch {
+    // Badging is optional.
+  }
+}
+
+async function clearPartnerAppBadge() {
+  try {
+    if (self.registration?.clearAppBadge) {
+      await self.registration.clearAppBadge();
+    }
+  } catch {
+    // Badging is optional.
+  }
 }
 
 async function cleanupCaches() {
@@ -199,7 +219,7 @@ function shouldCache(response) {
 }
 
 function offlineResponse() {
-  return new Response("MIMI GO Partner no tiene conexion en este momento.", {
+  return new Response("MIMIGO Pro no tiene conexión en este momento.", {
     status: 503,
     headers: { "Content-Type": "text/plain; charset=utf-8" }
   });

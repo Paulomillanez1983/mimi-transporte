@@ -49,9 +49,9 @@
   <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Styles -->
-  <link rel="stylesheet" href="/mimi-servicios/styles/app.css?v=2026.05.20.14">
-  <link rel="stylesheet" href="/mimi-servicios/styles/map-ui.css?v=2026.05.20.14">
-  <link rel="stylesheet" href="/mimi-servicios/styles/provider.css?v=2026.05.21.map1">
+  <link rel="stylesheet" href="/mimi-servicios/styles/app.css?v=2026.06.05.2">
+  <link rel="stylesheet" href="/mimi-servicios/styles/map-ui.css?v=2026.06.05.2">
+  <link rel="stylesheet" href="/mimi-servicios/styles/provider.css?v=2026.06.05.2">
 
   <!-- Provider map theme: light, clean, professional -->
   <script>
@@ -230,6 +230,9 @@
           <div class="service-client" id="activeServiceClient">Mariana</div>
           <div class="service-payment" id="activeServicePayment">Pago pendiente</div>
         </div>
+        <div class="service-return-copy" id="serviceReturnCopy">
+          Cuando llegues, volvé a MIMIGO y tocá 'Llegué' para pedir el PIN e iniciar el servicio.
+        </div>
         <div class="service-navigation-panel" id="activeServiceNavigation" hidden>
           <div class="service-route-metrics">
             <div>
@@ -242,10 +245,9 @@
             </div>
           </div>
           <div class="service-next-step" id="serviceNextStep">Calculando la mejor ruta al cliente...</div>
-          <p class="service-return-copy">Cuando llegues, volv&eacute; a MIMIGO y toc&aacute; 'Llegu&eacute;' para pedir el PIN e iniciar el servicio.</p>
           <div class="service-step-list" id="serviceStepList"></div>
           <div class="service-nav-actions">
-            <button class="service-nav-btn" id="openExternalNavigation" type="button" aria-label="Navegar con Google Maps al domicilio del cliente" title="Navegar al domicilio">Navegar</button>
+            <button class="service-nav-btn" id="openExternalNavigation" type="button" aria-label="Navegar al domicilio del cliente con tu app de mapas" title="Abrir Google Maps para navegar al domicilio">Navegar</button>
           </div>
           <div class="service-nav-actions service-nav-actions--secondary">
             <button class="service-nav-btn nav-follow" id="toggleInAppNavigation" type="button">Seguir en app</button>
@@ -633,7 +635,7 @@
       </div>
       <div class="chat-quick-replies" id="chatQuickReplies">
         <button type="button" data-chat-quick="Estoy en camino.">Estoy en camino</button>
-        <button type="button" data-chat-quick="Llegue al domicilio.">Llegue</button>
+        <button type="button" data-chat-quick="Llegué al domicilio.">Llegué</button>
         <button type="button" data-chat-quick="Necesito un dato más para coordinar.">Necesito datos</button>
       </div>
       <div class="chat-messages" id="chatMessages"></div>
@@ -794,6 +796,6 @@
   <script src="/mimi-servicios/env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Push notifications are initialized from src/services/push.js. -->
-  <script type="module" src="/mimi-servicios/src/main-provider.js?v=2026.05.21.map1"></script>
+  <script type="module" src="/mimi-servicios/src/main-provider.js?v=2026.06.05.2"></script>
 </body>
 </html>

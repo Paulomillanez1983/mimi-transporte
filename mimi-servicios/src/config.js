@@ -133,7 +133,7 @@ export const appConfig = {
     { id: "tecnico-pc", code: "TECNICO_PC", name: "Técnico PC", description: "Soporte técnico, computadoras, redes e impresoras.", aliases: ["computadora", "pc", "notebook", "impresora"] },
     { id: "tecnologia", code: "TECNOLOGIA", name: "Tecnologia", description: "Instalaciones, soporte técnico y configuracion de equipos.", aliases: ["wifi", "router", "camaras", "smart tv"] },
     { id: "mascotas", code: "MASCOTAS", name: "Mascotas", description: "Paseos, cuidado, acompanamiento y asistencia basica.", aliases: ["perros", "gatos", "paseador"] },
-    { id: "gomeria-movil", code: "GOMERIA_MOVIL", name: "Gomeria móvil", description: "Auxilio por pinchadura, cambio de rueda y reparaciones simples.", aliases: ["gomero", "pinchadura", "rueda", "cubierta"] },
+    { id: "gomeria-movil", code: "GOMERIA_MOVIL", name: "Gomería móvil", description: "Auxilio por pinchadura, cambio de rueda y reparaciones simples.", aliases: ["gomero", "pinchadura", "rueda", "cubierta"] },
     { id: "mecanica-movil", code: "MECANICA_MOVIL", name: "Mecánica móvil", description: "Diagnóstico, auxilio mecánico y reparaciones simples en sitio.", aliases: ["mecanico", "auto no arranca", "bateria", "motor"] },
     { id: "herreria", code: "HERRERIA", name: "Herrería", description: "Rejas, portones, soldaduras, estructuras y presupuestos.", aliases: ["herrero", "reja", "porton", "soldadura"] },
     { id: "belleza", code: "BELLEZA", name: "Belleza", description: "Servicios personales, estetica y cuidado a domicilio.", aliases: ["estetica", "maquillaje", "belleza"] }

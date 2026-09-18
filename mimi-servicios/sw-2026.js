@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-09-18-acentos-catalogo-1";
+const APP_VERSION = "2026.09.18.1-client-2026.06.05.2-provider";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [
@@ -50,15 +50,17 @@ const APP_ASSETS = [
   "./assets/icons/mimigo-client-icon-192.png",
   "./assets/icons/mimigo-client-icon-512.png",
   "./assets/icons/mimigo-client-icon-512-maskable.png",
-  "./assets/icons/mimigo-client-apple-touch-icon.png?v=branding-v3",
-  "./assets/icons/mimigo-client-icon-32.png?v=branding-v3",
-  "./assets/icons/mimigo-client-icon-16.png?v=branding-v3",
-  "./assets/icons/mimigo-partners-icon-192.png",
-  "./assets/icons/mimigo-partners-icon-512.png",
-  "./assets/icons/mimigo-partners-icon-512-maskable.png",
-  "./assets/icons/mimigo-partners-apple-touch-icon.png?v=branding-v3",
-  "./assets/icons/mimigo-partners-icon-32.png?v=branding-v3",
-  "./assets/icons/mimigo-partners-icon-16.png?v=branding-v3",
+  "./assets/icons/mimigo-client-apple-touch-icon-v10.png?v=mimigo-visual-v10",
+  "./assets/icons/mimigo-client-icon-v10-32.png?v=mimigo-visual-v10",
+  "./assets/icons/mimigo-client-icon-v10-16.png?v=mimigo-visual-v10",
+  "./assets/icons/mimigo-client-badge-96.png",
+  "./assets/icons/mimigo-pro-icon-192.png",
+  "./assets/icons/mimigo-pro-icon-512.png",
+  "./assets/icons/mimigo-pro-icon-512-maskable.png",
+  "./assets/icons/mimigo-pro-apple-touch-icon-v10.png?v=mimigo-status-badge-v11",
+  "./assets/icons/mimigo-pro-icon-v10-32.png?v=mimigo-status-badge-v11",
+  "./assets/icons/mimigo-pro-icon-v10-16.png?v=mimigo-status-badge-v11",
+  "./assets/icons/mimigo-pro-badge-96.png",
   "./assets/brand/mimigo-client-wordmark.png",
   "./assets/brand/mimigo-partners-wordmark.png",
   "./assets/brand/mimigo-client-splash-1536x1024.png",
@@ -138,7 +140,7 @@ self.addEventListener("push", (event) => {
   const options = {
     body: payload.body || payload.notification?.body || "Tenés una novedad en MIMI",
     icon: payload.icon || "./assets/icons/mimigo-client-icon-192.png",
-    badge: payload.badge || "./assets/icons/mimigo-client-icon-32.png?v=branding-v3",
+    badge: payload.badge || "./assets/icons/mimigo-client-badge-96.png",
     tag: payload.tag || "mimi-services-push",
     renotify: true,
     requireInteraction: payload.requireInteraction || false,

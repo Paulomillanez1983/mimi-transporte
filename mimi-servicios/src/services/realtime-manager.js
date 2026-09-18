@@ -1,5 +1,5 @@
-import { getSupabaseClient } from "./supabase.js";
-import { MIMI_REALTIME_OPTIMIZED } from "./runtime-config.js";
+import { getSupabaseClient } from "./supabase.js?v=2026.05.17.2";
+import { MIMI_REALTIME_ENABLED, MIMI_REALTIME_OPTIMIZED } from "./runtime-config.js";
 
 const channels = new Map();
 const pausedChannels = new Map();
@@ -15,6 +15,7 @@ export function subscribeScopedChannel(key, buildChannel, {
   pauseWhenHidden = false,
   critical = false
 } = {}) {
+  if (!MIMI_REALTIME_ENABLED) return null;
   if (!key || typeof buildChannel !== "function") return null;
 
   const existing = channels.get(key);
@@ -24,7 +25,27 @@ export function subscribeScopedChannel(key, buildChannel, {
     return existing.channel;
   }
 
+  if (pausedChannels.has(key)) {
+    if (pauseWhenHidden && document.visibilityState === "hidden" && !critical) {
+      stats.duplicates += 1;
+      debugRealtime("duplicate-paused", key);
+      return null;
+    }
+    pausedChannels.delete(key);
+  }
+
   if (pauseWhenHidden && document.visibilityState === "hidden" && !critical) {
+    pausedChannels.set(key, {
+      key,
+      channel: null,
+      pauseWhenHidden,
+      critical,
+      buildChannel,
+      startedAt: Date.now(),
+      pausedAt: Date.now()
+    });
+    stats.paused += 1;
+    debugRealtime("defer-hidden", key);
     return null;
   }
 
@@ -46,7 +67,13 @@ export function subscribeScopedChannel(key, buildChannel, {
 
 export function removeScopedChannel(key) {
   const entry = channels.get(key);
-  if (!entry) return;
+  if (!entry) {
+    if (pausedChannels.delete(key)) {
+      stats.removed += 1;
+      debugRealtime("remove-paused", key);
+    }
+    return;
+  }
 
   detachChannel(entry);
   channels.delete(key);
@@ -97,7 +124,7 @@ function detachChannel(entry) {
 }
 
 export function disconnectRealtime(scopePrefix = "") {
-  [...channels.keys()]
+  [...new Set([...channels.keys(), ...pausedChannels.keys()])]
     .filter((key) => !scopePrefix || key.startsWith(scopePrefix))
     .forEach(removeScopedChannel);
 }

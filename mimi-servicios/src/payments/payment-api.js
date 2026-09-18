@@ -13,39 +13,45 @@ function normalizePayment(row = null) {
     currency: row.currency ?? "ARS",
     status: String(row.status ?? "PENDING").toUpperCase(),
     checkout_url: row.checkout_url ?? row.checkoutUrl ?? null,
-    provider_name: row.provider_name ?? row.providerName ?? "mock",
-    provider_payment_id: row.provider_payment_id ?? row.providerPaymentId ?? null,
-    sync_warning: row.sync_warning ?? row.syncWarning ?? null,
-    provider_warning: row.provider_warning ?? row.providerWarning ?? null
+    provider_name: row.provider_name ?? row.providerName ?? row.payment_provider ?? "mercadopago",
+    sync_warning: row.sync_warning ?? row.provider_warning ?? null
   };
+}
+
+function paymentApiError(code, message = code) {
+  const error = new Error(message);
+  error.code = code;
+  return error;
 }
 
 export async function createPaymentIntent(input = {}) {
   const data = await invokeFunction(appConfig.functions.createPaymentIntent, {
     service_request_id: input.serviceRequestId ?? input.requestId ?? null,
-    trip_id: input.tripId ?? null,
-    context_type: input.contextType ?? (input.tripId ? "TRANSPORT_TRIP" : "SERVICE_REQUEST")
+    context_type: input.contextType ?? "SERVICE_REQUEST"
   });
 
-  return normalizePayment(data?.payment ?? data);
+  const payment = normalizePayment(data?.payment ?? data);
+  if (!payment?.id) {
+    throw paymentApiError("PAYMENT_INTENT_EMPTY", "No pudimos preparar el intento de pago.");
+  }
+  return payment;
 }
 
 export async function getPaymentStatus(paymentId, options = {}) {
   const data = await invokeFunction(appConfig.functions.getPaymentStatus, {
     payment_id: paymentId,
-    provider_payment_id:
-      options.providerPaymentId ??
-      options.provider_payment_id ??
-      options.collectionId ??
-      options.collection_id ??
-      null,
-    preference_id: options.preferenceId ?? options.preference_id ?? null
+    provider_payment_id: options.providerPaymentId ?? options.mercadoPagoPaymentId ?? null,
+    collection_id: options.collectionId ?? null,
+    preference_id: options.preferenceId ?? null
   });
 
   const payment = normalizePayment(data?.payment ?? data);
-  if (payment) {
-    payment.sync_warning = payment.sync_warning ?? data?.sync_warning ?? null;
-    payment.provider_warning = payment.provider_warning ?? data?.provider_warning ?? null;
+  if (!payment?.id) {
+    throw paymentApiError("PAYMENT_STATUS_EMPTY", "No pudimos leer el estado del pago.");
+  }
+  if (payment && (data?.sync_warning || data?.provider_warning)) {
+    payment.sync_warning = data.sync_warning ?? data.provider_warning;
+    payment.provider_warning = data.provider_warning ?? null;
   }
   return payment;
 }
@@ -56,7 +62,11 @@ export async function cancelPayment(paymentId, reason = "cancelled_from_client_u
     reason
   });
 
-  return normalizePayment(data?.payment ?? data);
+  const payment = normalizePayment(data?.payment ?? data);
+  if (!payment?.id) {
+    throw paymentApiError("PAYMENT_CANCEL_EMPTY", "No pudimos cancelar el pago.");
+  }
+  return payment;
 }
 
 export async function refundPayment(paymentId, amount = null, reason = "requested_from_app") {

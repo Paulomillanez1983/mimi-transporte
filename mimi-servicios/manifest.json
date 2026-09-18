@@ -1,10 +1,10 @@
 {
-  "id": "/mimi-servicios/",
-  "name": "MIMI Go Servicios",
-  "short_name": "MIMI Go",
-  "description": "App cliente para pedir prestadores cercanos con MIMI Go",
-  "start_url": "/mimi-servicios/cliente.html",
-  "scope": "/mimi-servicios/",
+  "id": "/servicios?app=mimigo-client",
+  "name": "MIMIGO",
+  "short_name": "MIMIGO",
+  "description": "App MIMIGO para pedir prestadores cercanos",
+  "start_url": "/servicios",
+  "scope": "/servicios",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
   "background_color": "#020617",
@@ -14,9 +14,10 @@
   "dir": "ltr",
   "categories": ["business", "productivity", "utilities"],
   "icons": [
-    { "src": "./assets/icons/mimigo-client-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "./assets/icons/mimigo-client-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "./assets/icons/mimigo-client-icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "./assets/icons/mimigo-client-icon-v10-192.png?v=mimigo-visual-v10", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./assets/icons/mimigo-client-icon-v10-512.png?v=mimigo-visual-v10", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./assets/icons/mimigo-client-icon-v10-512-maskable.png?v=mimigo-visual-v10", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "./assets/icons/mimigo-client-icon-v10-512-monochrome.png?v=mimigo-visual-v10", "sizes": "512x512", "type": "image/png", "purpose": "monochrome" }
   ],
   "shortcuts": [
     {
@@ -24,14 +25,14 @@
       "short_name": "Pedir",
       "description": "Abrir MIMI Go para pedir un prestador",
       "url": "/mimi-servicios/cliente.html?view=home",
-      "icons": [{ "src": "./assets/icons/mimigo-client-icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "./assets/icons/mimigo-client-icon-v10-192.png?v=mimigo-visual-v10", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Ver prestadores",
       "short_name": "Prestadores",
       "description": "Ver prestadores cercanos disponibles",
       "url": "/mimi-servicios/cliente.html?view=providers",
-      "icons": [{ "src": "./assets/icons/mimigo-client-icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "./assets/icons/mimigo-client-icon-v10-192.png?v=mimigo-visual-v10", "sizes": "192x192", "type": "image/png" }]
     }
   ],
   "prefer_related_applications": false,

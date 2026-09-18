@@ -1108,6 +1108,79 @@ button {
   pointer-events: auto;
 }
 
+.location-adjust-panel {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+  padding: 11px;
+  border-radius: 16px;
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+}
+
+.location-adjust-panel[hidden] {
+  display: none !important;
+}
+
+.location-adjust-panel span,
+.location-confirm-address span {
+  color: #047857;
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+.location-adjust-panel strong,
+.location-confirm-address strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--client-text);
+  font-size: 14px;
+  line-height: 1.18;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.location-adjust-panel small {
+  display: block;
+  margin-top: 3px;
+  color: #475569;
+  font-size: 11px;
+  line-height: 1.35;
+  font-weight: 750;
+}
+
+.location-adjust-actions,
+.location-confirm-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.location-confirm-actions {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.05fr);
+}
+
+.location-adjust-actions .btn-primary,
+.location-adjust-actions .btn-secondary,
+.location-confirm-actions .btn-primary,
+.location-confirm-actions .btn-secondary {
+  min-height: 42px;
+  padding-inline: 10px;
+  font-size: 12px;
+}
+
+.mimi-map-marker--service.is-draggable {
+  cursor: grab;
+  transform: scale(1.08);
+  filter: drop-shadow(0 10px 22px rgba(37, 99, 235, 0.32));
+}
+
+.mimi-map-marker--service.is-draggable:active {
+  cursor: grabbing;
+}
+
 .provider-carousel {
   display: flex;
   gap: 10px;
@@ -1403,6 +1476,19 @@ button {
   font-size: 12px;
 }
 
+.client-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.client-empty-actions .btn-primary {
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: 12px;
+}
+
 .sort-chip strong {
   font-size: 11px;
   font-weight: 800;
@@ -1440,24 +1526,6 @@ button {
   text-align: center;
   border-color: rgba(34, 197, 94, 0.35);
   background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
-}
-
-.payment-required-card {
-  border-color: rgba(37, 99, 235, 0.25);
-  background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
-}
-
-.summary-actions-inline {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.summary-actions-inline .btn-primary,
-.summary-actions-inline .btn-secondary {
-  width: 100%;
-  min-height: 44px;
 }
 
 .service-pin-code {
@@ -1621,6 +1689,24 @@ button {
   line-height: 1.4;
 }
 
+.payment-chip-success {
+  color: #047857;
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.payment-chip-danger {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.payment-chip-pending {
+  color: #92400e;
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
 .search-progress-card {
   background: linear-gradient(135deg, #eff6ff, #fff);
 }
@@ -1749,6 +1835,19 @@ button {
   color: #f59e0b;
   border-color: rgba(245, 158, 11, 0.35);
   background: #fffbeb;
+}
+
+.review-form.is-review-saved .review-stars {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.review-form.is-review-saved #reviewStatusText {
+  padding: 12px;
+  border-radius: 14px;
+  color: #065f46;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
 }
 
 .review-comment-field {
@@ -1946,7 +2045,8 @@ button {
   gap: 9px;
 }
 
-.account-actions-grid button {
+.account-actions-grid button,
+.account-actions-grid .partner-app-cta {
   min-height: 44px;
   border: 0;
   border-radius: 16px;
@@ -1955,6 +2055,15 @@ button {
   background: #eff6ff;
   font-size: 12px;
   font-weight: 900;
+}
+
+.account-actions-grid .partner-app-cta {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  text-decoration: none;
+  color: #047857;
+  background: #ecfdf5;
 }
 
 .account-actions-grid .danger-action {
@@ -2593,6 +2702,28 @@ body[data-client-view="support"] .details-grid {
   font-weight: 700;
 }
 
+.provider-quote-note {
+  margin: 0;
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.35;
+  font-weight: 750;
+}
+
+#confirmPricingHelp {
+  display: block;
+  max-width: 230px;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 10px;
+  line-height: 1.35;
+  font-weight: 750;
+}
+
+#confirmPricingHelp[hidden] {
+  display: none;
+}
+
 .request-confirm-overlay {
   position: fixed;
   inset: 0;
@@ -2649,6 +2780,17 @@ body[data-client-view="support"] .details-grid {
   font-size: 11px;
   line-height: 1.4;
   font-weight: 700;
+}
+
+.location-confirm-sheet {
+  gap: 10px;
+}
+
+.location-confirm-address {
+  padding: 12px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid var(--client-border);
 }
 
 .confirm-priority {
@@ -3329,6 +3471,57 @@ body[data-client-view="support"] .details-grid {
 }
 .phone-collect-status.is-success {
   color: #059669;
+}
+
+.phone-fallback-actions {
+  margin: 8px 0 4px;
+  padding: 10px;
+  border: 1px solid rgba(14, 165, 233, 0.18);
+  border-radius: 14px;
+  background: rgba(240, 249, 255, 0.72);
+}
+
+.phone-fallback-actions[hidden] {
+  display: none !important;
+}
+
+.phone-fallback-actions p {
+  margin: 0 0 8px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.phone-fallback-action-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 8px;
+}
+
+.phone-fallback-btn {
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.phone-fallback-btn.is-primary {
+  border-color: rgba(22, 163, 74, 0.22);
+  background: #16a34a;
+  color: #03130a;
+}
+
+.phone-fallback-btn.is-secondary {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.phone-fallback-btn.is-ghost {
+  background: rgba(255, 255, 255, 0.68);
+  color: #2563eb;
 }
 
 .phone-collect-actions {
@@ -4629,6 +4822,100 @@ body[data-client-view="home"] .client-cms-faq-list span {
   }
 }
 
+/* Client installed mobile compact mode 2026-05-13.
+   Kept client-only; mirrors the native-app density without reusing provider styles. */
+@media (display-mode: standalone) and (max-width: 480px),
+       (display-mode: fullscreen) and (max-width: 480px),
+       (max-width: 430px) and (max-height: 860px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    min-height: 100svh;
+  }
+
+  .app-shell,
+  .app-container {
+    min-height: 100svh !important;
+  }
+
+  body[data-client-view="home"] .app-shell {
+    gap: 8px !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px) !important;
+  }
+
+  .client-header {
+    min-height: 50px !important;
+    padding-inline: 12px !important;
+  }
+
+  .brand-lockup-image img {
+    width: clamp(108px, 32vw, 142px) !important;
+    max-height: 34px !important;
+  }
+
+  .header-avatar-login {
+    min-width: 112px !important;
+    height: 40px !important;
+    font-size: 13px !important;
+  }
+
+  body[data-client-view="home"] .hero-text-client {
+    margin-block: 2px 5px !important;
+  }
+
+  body[data-client-view="home"] .hero-text-client h1 {
+    font-size: clamp(19px, 5.8vw, 23px) !important;
+    line-height: 1.05 !important;
+  }
+
+  body[data-client-view="home"] .hero-text-client p {
+    font-size: 12px !important;
+    line-height: 1.22 !important;
+  }
+
+  .google-auth-button {
+    min-height: 44px !important;
+    border-radius: 14px !important;
+    font-size: 13px !important;
+  }
+
+  .auth-consent-overlay,
+  .phone-collect-overlay {
+    padding:
+      calc(env(safe-area-inset-top, 0px) + 10px)
+      12px
+      calc(env(safe-area-inset-bottom, 0px) + 10px) !important;
+  }
+
+  .auth-consent-sheet,
+  .phone-collect-sheet {
+    max-height: calc(100svh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 20px) !important;
+    overflow-y: auto !important;
+    border-radius: 22px !important;
+    padding: 16px !important;
+  }
+
+  .auth-consent-logo,
+  .phone-collect-header img {
+    width: 104px !important;
+  }
+
+  .auth-consent-sheet h2,
+  .phone-collect-sheet h2 {
+    font-size: 21px !important;
+    line-height: 1.04 !important;
+  }
+
+  .phone-collect-field input,
+  .country-picker-button,
+  .phone-collect-actions .btn-primary {
+    min-height: 48px !important;
+  }
+}
+
 /* ============================================================
    MIMI GO IA ORB + Play Store install UX 2026-05-12
    Enterprise mobile polish without changing IA/listener logic.
@@ -4949,5 +5236,311 @@ body[data-client-view="home"] .client-cms-faq-list span {
   .mimi-ai-orb-ring,
   .mimi-install-banner {
     animation: none !important;
+  }
+}
+
+.mimi-update-banner {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  top: calc(env(safe-area-inset-top, 0px) + 88px);
+  z-index: 220;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  background: rgba(2, 6, 23, 0.94);
+  color: #f8fafc;
+  box-shadow: 0 20px 52px rgba(2, 6, 23, 0.34);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.mimi-update-banner[hidden],
+.mimi-update-banner[aria-hidden="true"] {
+  display: none !important;
+}
+
+.mimi-update-banner[data-critical="true"] {
+  border-color: rgba(251, 191, 36, 0.48);
+}
+
+.mimi-update-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mimi-update-copy strong {
+  color: #ffffff;
+  font-size: 14px;
+  line-height: 1.1;
+}
+
+.mimi-update-copy span {
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.28;
+}
+
+.mimi-update-cta {
+  min-height: 40px;
+  padding: 9px 13px;
+  border: 0;
+  border-radius: 13px;
+  background: #38bdf8;
+  color: #03121f;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+/* Trust Center: on-demand identity verification, never shown during normal navigation. */
+.client-trust-center {
+  display: none;
+  width: min(1080px, 100%);
+  margin: 0 auto 96px;
+}
+
+body[data-client-view="trust"] [data-client-screen]:not([data-client-screen="trust"]),
+body[data-client-view="trust"] .flow-guide {
+  display: none !important;
+}
+
+body[data-client-view="trust"] .client-trust-center {
+  display: block !important;
+}
+
+.client-trust-shell {
+  display: grid;
+  gap: 16px;
+}
+
+.client-trust-hero,
+.client-trust-panel,
+.client-trust-upload,
+.client-trust-timeline {
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
+}
+
+.client-trust-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(260px, 0.7fr);
+  gap: 16px;
+  padding: 20px;
+}
+
+.client-trust-hero.client-trust-alert {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.client-trust-hero h2,
+.client-trust-panel h3,
+.client-trust-upload h3,
+.client-trust-timeline h3 {
+  margin: 0;
+}
+
+.client-trust-hero p,
+.client-trust-panel p,
+.client-trust-upload p,
+.client-trust-timeline p {
+  margin: 6px 0 0;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.client-trust-score {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.client-trust-score strong {
+  font-size: 34px;
+  letter-spacing: 0;
+}
+
+.client-trust-badges,
+.client-trust-grid,
+.client-trust-actions,
+.client-trust-upload-grid,
+.client-trust-preview-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.client-trust-badges {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin-top: 14px;
+}
+
+.client-trust-badge {
+  display: grid;
+  gap: 2px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.client-trust-badge strong {
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.client-trust-badge span {
+  font-size: 12px;
+  color: #475569;
+}
+
+.client-trust-badge.is-good {
+  border-color: rgba(22, 163, 74, 0.24);
+  background: #f0fdf4;
+}
+
+.client-trust-badge.is-risk {
+  border-color: rgba(220, 38, 38, 0.28);
+  background: #fff1f2;
+}
+
+.client-trust-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.client-trust-panel,
+.client-trust-upload,
+.client-trust-timeline {
+  padding: 16px;
+}
+
+.client-trust-actions {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-top: 14px;
+}
+
+.client-trust-actions button,
+.client-trust-upload button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.client-trust-actions .primary,
+.client-trust-upload button {
+  background: #07142f;
+  color: #fff;
+}
+
+.client-trust-actions .secondary {
+  background: #eef2ff;
+  color: #1e293b;
+}
+
+.client-trust-upload-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 14px;
+}
+
+.client-trust-preview-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.client-trust-preview {
+  min-height: 148px;
+  border: 1px dashed rgba(15, 23, 42, 0.18);
+  border-radius: 8px;
+  padding: 10px;
+  background: #f8fafc;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.client-trust-preview img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #0f172a;
+}
+
+.client-trust-preview strong {
+  font-size: 13px;
+}
+
+.client-trust-preview span {
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.client-trust-preview.is-good {
+  border-color: rgba(22, 163, 74, 0.28);
+  background: #f0fdf4;
+}
+
+.client-trust-preview.is-review {
+  border-color: rgba(245, 158, 11, 0.34);
+  background: #fffbeb;
+}
+
+.client-trust-preview.is-rejected {
+  border-color: rgba(220, 38, 38, 0.28);
+  background: #fff1f2;
+}
+
+.client-trust-upload label {
+  display: grid;
+  gap: 7px;
+  font-weight: 800;
+}
+
+.client-trust-upload input[type="file"] {
+  width: 100%;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-radius: 8px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.client-trust-consent {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 10px !important;
+  margin-top: 12px;
+  color: #334155;
+}
+
+.client-trust-timeline ul {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.client-trust-timeline li {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+@media (max-width: 760px) {
+  .client-trust-hero,
+  .client-trust-grid,
+  .client-trust-upload-grid,
+  .client-trust-preview-grid {
+    grid-template-columns: 1fr;
   }
 }
