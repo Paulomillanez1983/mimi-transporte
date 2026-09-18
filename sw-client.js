@@ -2,7 +2,7 @@
 // repositorio, aunque la app lo registra y es el service worker real del cliente.
 // Sin él, cualquier deploy desde el repo deja /sw-client.js en 404 y se rompe la
 // instalación del service worker (notificaciones push y modo offline).
-const APP_VERSION = "2026.09.18.3-client-root-services";
+const APP_VERSION = "2026.09.18.4-client-root-services";
 const CACHE_PREFIX = "mimi-go-client-";
 const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 const LEGACY_CACHE_PREFIXES = ["mimi-servicios-provider-", "mimi-servicios-client-", "mimi-clientes-"];
@@ -23,6 +23,8 @@ const APP_ASSETS = [
   "/mimi-servicios/styles/client.css",
   "/mimi-servicios/src/main-client.js",
   "/mimi-servicios/src/services/pricing-models.js",
+  "/mimi-servicios/src/services/request-photos.js",
+  "/mimi-servicios/src/services/photo-compression.js",
   "/mimi-servicios/src/services/cancellation-policy.js",
   "/mimi-servicios/src/services/service-api.js",
   "/mimi-servicios/src/services/service-geocoding.js",
