@@ -315,6 +315,11 @@ export function mountPriceBookEditor(tarjeta, build = "") {
     selAjuste.parentElement.style.display = esExcluirOIncluir ? "none" : "";
     inMonto.parentElement.style.display = esExcluirOIncluir ? "none" : "";
   }
+  // El estado inicial de los campos tiene que ser el que corresponde al tipo que viene elegido.
+  // Sin esta llamada, el formulario aparecia con todos los campos a la vista y recien se
+  // acomodaba al tocar el select: la caja cambiaba de alto de golpe y la pantalla pegaba un
+  // salto justo cuando el prestador estaba eligiendo el tipo.
+  refrescarVisibilidad();
   selKind.addEventListener("change", refrescarVisibilidad);
   selCond.addEventListener("change", refrescarVisibilidad);
 

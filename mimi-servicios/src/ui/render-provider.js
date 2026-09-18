@@ -17,7 +17,7 @@ import {
   PROVIDER_PRICE_PLACEHOLDERS as providerPricePlaceholders,
   categoryPricingModel as resolveCategoryPricingModel,
   resolvePricingModel
-} from "../services/pricing-models.js?v=2026.09.19.1";
+} from "../services/pricing-models.js?v=2026.09.19.6";
 
 // Las reglas de cancelación se cargan una sola vez por sesión de pantalla.
 let cancellationRulesPrimed = false;
@@ -3293,8 +3293,7 @@ function renderProviderBusiness(state) {
   // La forma de cobro sale del servicio que el prestador eligio: primero lo que ya tiene
   // guardado su prestacion, despues lo que declara la plantilla y, si no hay nada, el respaldo
   // del rubro. Dejo de ser una pregunta de la pantalla.
-  const pricingModel = resolvePricingModel({
-    offeringModel: firstOffering?.pricing_model,
+  const pricingModel = resolveOfferingPricingModel(firstOffering ?? {}, {
     templateModel: firstOffering?.metadata?.service_template_pricing_model,
     categoryCode: defaultCategory?.code,
     categoryModel: defaultCategory?.default_pricing_model
@@ -3675,7 +3674,7 @@ function renderProviderBusiness(state) {
             </summary>
             <label class="input-group">
               <span>Forma de cobro</span>
-              <select name="offering:0:pricingModel">${renderProviderChargeOptions(pricingModel)}</select>
+              <select name="offering:0:pricingModel" data-provider-pricing-saved="${firstOffering?.pricing_model ? "1" : "0"}">${renderProviderChargeOptions(pricingModel)}</select>
             </label>
             <small class="provider-charge-override-help">Cambiala solo si cobras distinto de como se cobra este servicio.</small>
           </details>

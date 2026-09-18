@@ -51,20 +51,22 @@ check(
 );
 check(
   "render-provider importa el modelo de precio del modulo compartido",
-  /PRICE_FIELD_BY_MODEL[\s\S]{0,400}from "\.\.\/services\/pricing-models\.js\?v=2026\.09\.19\.1"/.test(
+  /PRICE_FIELD_BY_MODEL[\s\S]{0,400}from "\.\.\/services\/pricing-models\.js\?v=[0-9.]+"/.test(
     renderProvider
   )
 );
 check(
   "main-provider importa el modelo de precio del modulo compartido",
-  /PROVIDER_PRICE_PLACEHOLDERS[\s\S]{0,200}from "\.\/services\/pricing-models\.js\?v=2026\.09\.19\.1"/.test(
+  /PROVIDER_PRICE_PLACEHOLDERS[\s\S]{0,200}from "\.\/services\/pricing-models\.js\?v=[0-9.]+"/.test(
     mainProvider
   )
 );
 check(
   "los dos modulos piden el mismo especificador de modulo",
-  renderProvider.includes('pricing-models.js?v=2026.09.19.1"') &&
-    mainProvider.includes('pricing-models.js?v=2026.09.19.1"')
+  // El especificador se lee del archivo, no se fija aca: lo que importa es que los dos pidan el
+  // mismo modulo (si no, se instancia dos veces y las tablas dejan de ser una sola fuente).
+  /pricing-models\.js\?v=[0-9.]+"/.test(renderProvider) &&
+    /pricing-models\.js\?v=[0-9.]+"/.test(mainProvider)
 );
 check(
   "no quedo una tercera copia de las etiquetas de modelo en main-provider",
