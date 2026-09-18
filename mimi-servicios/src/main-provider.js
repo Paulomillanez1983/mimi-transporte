@@ -5,8 +5,8 @@
 
 // Subirlo es lo que hace que el panel del prestador limpie sus caches y se recargue
 // (ver el bloque que compara con sessionStorage y borra mimi-go-partner-*).
-const MIMI_PROVIDER_BUILD = "2026.09.19.8";
-import { autoMountPriceBookEditor } from "./services/price-book.js?v=2026.09.19.8";
+const MIMI_PROVIDER_BUILD = "2026.09.19.9";
+import { autoMountPriceBookEditor } from "./services/price-book.js?v=2026.09.19.9";
 import { watchProviderUpdates } from "./services/provider-update.js?v=2026.09.19.3";
 // La forma de cobro y el campo de precio unico salen de aca: una sola fuente con el cliente.
 import {
@@ -18,7 +18,7 @@ import {
   PROVIDER_DEFAULT_UNIT_NAMES,
   PROVIDER_PRICE_HELP,
   PROVIDER_PRICE_PLACEHOLDERS
-} from "./services/pricing-models.js?v=2026.09.19.8";
+} from "./services/pricing-models.js?v=2026.09.19.9";
 
 /**
  * Los cuatro precios que existen en el formulario de alta, en el nombre que usa el formulario
@@ -206,7 +206,7 @@ import {
   renderProviderScreen,
   renderProviderGuidedTemplateSelection,
   renderProviderServicePreviewSheet
-} from "./ui/render-provider.js?v=2026.09.19.8";
+} from "./ui/render-provider.js?v=2026.09.19.9";
 import {
   clearAuthRedirectIntent,
   forceCleanSession,
@@ -806,6 +806,10 @@ async init() {
   }
 
   this.cacheElements();
+
+  // Se registra aca, antes del chequeo de sesion: si ese chequeo falla el arranque vuelve, pero
+  // los toques tienen que funcionar igual.
+  this.setupTabBarDelegation();
 
 this.unsubscribe = subscribe((state) => {
   this.state = state;
@@ -5135,32 +5139,10 @@ stats: {
       actions.closeDrawer();
     });
 
-    // Tab buttons
-this.elements.tabButtons.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const tab = btn.dataset.tab;
-    if (tab === "pricing") {
-      this.closeProviderServiceComposer();
-    }
-
-    const isSameTab =
-      btn.classList.contains("active") &&
-      this.elements.bottomSheet?.classList.contains("expanded");
-
-    if (isSameTab) {
-      this.setBottomSheetState("peek");
-      this.restoreSheetReturnTab();
-      return;
-    }
-
-    this.captureSheetReturnTab();
-    this.switchTab(tab);
-    this.setBottomSheetState("expanded");
-    if (tab === "wallet") {
-      this.refreshProviderPayoutAccount({ silent: true });
-    }
-  });
-});
+    // Los toques de la barra de pestañas se atienden por delegacion, en el documento: ver
+    // setupTabBarDelegation(). Aca queda solo como red de seguridad por si el arranque paso por
+    // un camino que no la registro.
+    this.setupTabBarDelegation();
 
     this.elements.sheetCloseBtn?.addEventListener("click", () => {
       this.closeExpandedSheet({ fromHistory: false });
@@ -6004,11 +5986,76 @@ document.addEventListener("change", (event) => {
   }
 
   /**
+   * Un toque en la barra de pestañas.
+   *
+   * Vive aparte porque lo llama un listener delegado en el documento, no cada boton. Asi funciona
+   * aunque los botones se reemplacen o aunque el arranque no haya llegado a engancharlos.
+   */
+  handleProviderTabTap(btn, tab) {
+    // Cerrar el formulario no puede impedir cambiar de pestaña: si falla, se sigue igual.
+    if (tab === "pricing") {
+      try {
+        this.closeProviderServiceComposer();
+      } catch (error) {
+        console.warn("[MIMI] no se pudo cerrar el formulario antes de cambiar de pestaña:", error?.message);
+      }
+    }
+
+    const isSameTab =
+      btn.classList.contains("active") &&
+      this.elements.bottomSheet?.classList.contains("expanded");
+
+    if (isSameTab) {
+      this.setBottomSheetState("peek");
+      this.restoreSheetReturnTab();
+      return;
+    }
+
+    this.captureSheetReturnTab();
+    this.switchTab(tab);
+    this.setBottomSheetState("expanded");
+    if (tab === "wallet") {
+      this.refreshProviderPayoutAccount({ silent: true });
+    }
+  }
+
+  /**
+   * El toque de las pestañas se atiende por delegacion, en el documento.
+   *
+   * Antes cada boton recibia su propio listener dentro de setupEventListeners(), que corre DESPUES
+   * del chequeo de sesion. Cuando ese chequeo falla (PROVIDER_LOOKUP_TIMEOUT, pasa seguido con la
+   * red lenta) el arranque vuelve antes de engancharlos: el panel queda dibujado pero sin
+   * responder, como tildado, y tocar "Servicios" no hace nada. Lo mismo pasaba si los botones
+   * todavia no estaban en el DOM cuando se los buscaba.
+   *
+   * Con delegacion alcanza con que existan en el momento del toque.
+   */
+  setupTabBarDelegation() {
+    if (this.__tabBarDelegated) {
+      return;
+    }
+    this.__tabBarDelegated = true;
+
+    document.addEventListener("click", (event) => {
+      const btn = event.target?.closest?.(".tab-btn");
+      if (!btn || !btn.dataset.tab) {
+        return;
+      }
+      this.handleProviderTabTap(btn, btn.dataset.tab);
+    });
+  }
+
+  /**
    * Switch tab
    */
   switchTab(tab, options = {}) {
     if (tab === "pricing" && !options.preserveServiceComposer) {
-      this.closeProviderServiceComposer();
+      // Si cerrar el formulario falla, igual hay que cambiar de pestaña.
+      try {
+        this.closeProviderServiceComposer();
+      } catch (error) {
+        console.warn("[MIMI] el formulario no se pudo cerrar, se cambia de pestaña igual:", error?.message);
+      }
     }
 
     document.body.dataset.providerTab = tab;

@@ -8,12 +8,12 @@
     "message": "Ahora podes adjuntar hasta 3 fotos del problema al pedido: se comprimen en tu telefono y el prestador ve exactamente que hay que arreglar."
   },
   "provider": {
-    "version": "2026.09.19.8",
+    "version": "2026.09.19.9",
     "min_supported_version": "2026.05.14.11",
     "critical": true,
     "force_update": false,
     "icon_revision": "mimigo-status-badge-v11",
-    "message": "El panel ya no se queda sin responder: la sesion del prestador se caia sola y abria el login encima del panel."
+    "message": "Las pestanas del panel responden siempre: el toque se atiende por delegacion y ya no depende de que la sesion cargue a tiempo."
   },
   "admin": {
     "version": "2026.05.15.enterprise.5",
