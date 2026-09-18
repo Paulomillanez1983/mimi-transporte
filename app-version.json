@@ -1,11 +1,11 @@
 {
   "client": {
-    "version": "2026.09.18.2",
+    "version": "2026.09.18.3",
     "min_supported_version": "2026.05.13.8",
     "critical": false,
     "force_update": false,
     "icon_revision": "mimigo-visual-v10",
-    "message": "Catálogo de rubros con acentos + política de cancelación: ahora ves cuánto se descuenta y cuánto se te devuelve antes de cancelar."
+    "message": "Se corrigen los rubros con modelo de precio equivocado (plomería y otros): el presupuesto se pide o se cotiza según el servicio, en vez de pedirte que adivines las horas."
   },
   "provider": {
     "version": "2026.09.18.2",
