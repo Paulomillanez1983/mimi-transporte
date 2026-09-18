@@ -42,6 +42,7 @@ const ESTILO_BOTON =
   "padding:10px 14px;border-radius:10px;border:0;background:#1a56db;color:#fff;font-weight:600;font-size:14px;cursor:pointer;";
 
 let observador = null;
+let temporizador = null;
 const montados = new WeakSet();
 
 function supabaseCliente() {
@@ -360,7 +361,14 @@ export function mountPriceBookEditor(tarjeta, build = "") {
   return true;
 }
 
-/** Se monta sola cuando aparece el editor de prestaciones, y se re-monta si se redibuja. */
+/**
+ * Se monta sola cuando aparece la tarjeta de una prestacion, y se re-monta si se redibuja.
+ *
+ * El observador ya no se apaga a los 3 minutos como antes: un prestador que creaba su primer
+ * servicio despues de ese rato no veia nunca el cuadro tarifario, y no habia forma de saber
+ * que existia. Ahora vive mientras la pantalla este visible, y las mutaciones se agrupan para
+ * que observar el panel completo no cueste nada.
+ */
 export function autoMountPriceBookEditor(build = "") {
   const intentar = () => {
     const tarjetas = document.querySelectorAll("[data-offering-id]");
@@ -369,10 +377,21 @@ export function autoMountPriceBookEditor(build = "") {
       if (montados.has(t)) return;
       if (mountPriceBookEditor(t, build)) monto = true;
     });
-    if (monto) estadoConsola();
+    if (monto) console.log("[MIMI Tarifario] editor montado");
   };
 
-  const estadoConsola = () => console.log("[MIMI Tarifario] editor montado");
+  const agendar = () => {
+    if (temporizador) return;
+    temporizador = setTimeout(() => {
+      temporizador = null;
+      intentar();
+    }, 400);
+  };
+
+  const observar = () => {
+    observador = new MutationObserver(agendar);
+    observador.observe(document.body, { childList: true, subtree: true });
+  };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", intentar, { once: true });
@@ -381,12 +400,18 @@ export function autoMountPriceBookEditor(build = "") {
   }
 
   try {
-    observador = new MutationObserver(intentar);
-    observador.observe(document.body, { childList: true, subtree: true });
-    setTimeout(() => {
-      observador?.disconnect();
-      observador = null;
-    }, 180000);
+    observar();
+
+    // Con la pestana en segundo plano no hace falta observar: se retoma al volver.
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        observador?.disconnect();
+        observador = null;
+        return;
+      }
+      if (!observador) observar();
+      intentar();
+    });
   } catch (error) {
     console.warn("[MIMI Tarifario] no se pudo observar el editor", error);
   }

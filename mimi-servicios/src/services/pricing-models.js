@@ -120,6 +120,24 @@ export const PRICE_FIELD_BY_MODEL = {
 };
 
 /** Cómo se llama ese campo cuando se lo nombra al prestador. */
+/**
+ * Nombre del campo de precio TAL COMO VIAJA EN EL FORMULARIO del panel.
+ *
+ * `PRICE_FIELD_BY_MODEL` devuelve la columna de la base (`base_visit_fee`, snake_case), pero el
+ * formulario del prestador y el colector del panel usan camelCase (`offering:0:baseVisitFee`).
+ * Sin esta traduccion, el campo visible se llama distinto de lo que el colector lee y el precio
+ * se pierde en silencio al guardar.
+ */
+export const PRICE_FIELD_FORM_NAMES = {
+  price_per_hour: "pricePerHour",
+  base_visit_fee: "baseVisitFee",
+  fixed_price: "fixedPrice",
+  unit_price: "unitPrice"
+};
+
+/** Los cuatro campos de precio que existen en el formulario de alta. */
+export const PRICE_FORM_FIELDS = Object.values(PRICE_FIELD_FORM_NAMES);
+
 export const PRICE_FIELD_LABELS = {
   HOURLY: "Precio por hora",
   BASE_VISIT: "Precio de la visita",
@@ -135,6 +153,58 @@ export const DEFAULT_UNIT_NAMES = {
   UNIT: "unidad",
   SQUARE_METER: "m²",
   LINEAR_METER: "metro lineal"
+};
+
+/**
+ * Unidad que le proponemos al PRESTADOR cuando su forma de cobro la necesita.
+ * No es `DEFAULT_UNIT_NAMES`: esa es la que ve el cliente. Estos son los nombres que el
+ * prestador ya venía viendo en el panel, y estaban duplicados en tres lugares
+ * (render-provider, main-provider y el respaldo de la categoría) con valores distintos
+ * para el mismo modelo. Ahora hay una sola lista.
+ */
+export const PROVIDER_DEFAULT_UNIT_NAMES = {
+  HOURLY: "hora",
+  BASE_VISIT: "visita",
+  FIXED: "trabajo",
+  UNIT: "sesion",
+  SQUARE_METER: "m2",
+  LINEAR_METER: "metro",
+  QUOTE: ""
+};
+
+/**
+ * Qué significa cada forma de cobro, en una línea, para el prestador. Vive acá y no en la
+ * pantalla porque la usa tanto el formulario de alta (render-provider) como el resumen que
+ * se actualiza en vivo mientras el prestador cambia de servicio (main-provider).
+ */
+export const PROVIDER_CHARGE_HELP = {
+  BASE_VISIT: "El cliente ve cuanto sale la visita. El trabajo se acuerda despues de ver el problema.",
+  FIXED: "El cliente ve el precio final antes de pedirte.",
+  HOURLY: "El cliente ve tu valor por hora. La duracion se acuerda al coordinar.",
+  UNIT: "El cliente ve el precio por unidad o sesion.",
+  SQUARE_METER: "El cliente estima los metros cuadrados y ve el precio.",
+  LINEAR_METER: "El cliente estima los metros lineales y ve el precio.",
+  QUOTE: "Sin precio de entrada: el cliente te pide presupuesto y vos respondes con un numero."
+};
+
+/** Qué significa el único campo de precio que se le pide al prestador para cada modelo. */
+export const PROVIDER_PRICE_HELP = {
+  HOURLY: "Lo que cobras por hora de trabajo.",
+  BASE_VISIT: "Lo que cobras por ir a ver el trabajo. Despues presupuestas.",
+  FIXED: "El precio final del trabajo, sin sorpresas para el cliente.",
+  UNIT: "Lo que cobras por unidad o sesion.",
+  SQUARE_METER: "Lo que cobras por metro cuadrado.",
+  LINEAR_METER: "Lo que cobras por metro lineal."
+};
+
+/** Ejemplo de monto por modelo, para el placeholder del campo. */
+export const PROVIDER_PRICE_PLACEHOLDERS = {
+  HOURLY: "Ej: 8000",
+  BASE_VISIT: "Ej: 12000",
+  FIXED: "Ej: 45000",
+  UNIT: "Ej: 15000",
+  SQUARE_METER: "Ej: 9000",
+  LINEAR_METER: "Ej: 7000"
 };
 
 function normalizeCode(value) {

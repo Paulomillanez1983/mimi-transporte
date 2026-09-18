@@ -8,12 +8,12 @@
     "message": "Ahora podes adjuntar hasta 3 fotos del problema al pedido: se comprimen en tu telefono y el prestador ve exactamente que hay que arreglar."
   },
   "provider": {
-    "version": "2026.09.18.7",
+    "version": "2026.09.19.1",
     "min_supported_version": "2026.05.14.11",
     "critical": true,
     "force_update": false,
     "icon_revision": "mimigo-status-badge-v11",
-    "message": "El panel ahora se actualiza solo cuando publicamos una mejora."
+    "message": "El precio ahora sale del servicio que elegis: un solo campo, con la forma de cobro ya resuelta."
   },
   "admin": {
     "version": "2026.05.15.enterprise.5",

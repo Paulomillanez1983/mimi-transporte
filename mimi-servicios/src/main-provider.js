@@ -5,9 +5,33 @@
 
 // Subirlo es lo que hace que el panel del prestador limpie sus caches y se recargue
 // (ver el bloque que compara con sessionStorage y borra mimi-go-partner-*).
-const MIMI_PROVIDER_BUILD = "2026.09.18.7";
-import { autoMountPriceBookEditor } from "./services/price-book.js?v=2026.09.19.3";
+const MIMI_PROVIDER_BUILD = "2026.09.19.1";
+import { autoMountPriceBookEditor } from "./services/price-book.js?v=2026.09.19.4";
 import { watchProviderUpdates } from "./services/provider-update.js?v=2026.09.19.3";
+// La forma de cobro y el campo de precio unico salen de aca: una sola fuente con el cliente.
+import {
+  PRICE_FIELD_BY_MODEL,
+  PRICE_FIELD_FORM_NAMES,
+  PRICE_FIELD_LABELS,
+  PRICING_MODEL_LABELS,
+  PROVIDER_CHARGE_HELP,
+  PROVIDER_DEFAULT_UNIT_NAMES,
+  PROVIDER_PRICE_HELP,
+  PROVIDER_PRICE_PLACEHOLDERS
+} from "./services/pricing-models.js?v=2026.09.19.1";
+
+/**
+ * Los cuatro precios que existen en el formulario de alta, en el nombre que usa el formulario
+ * (`baseVisitFee`), no en el de la columna (`base_visit_fee`). Uno solo es visible: el que
+ * corresponde a la forma de cobro. Los otros tres son el respaldo de lo ya guardado.
+ */
+const TARIFA_CAMPOS_DE_PRECIO = Object.values(PRICE_FIELD_FORM_NAMES);
+
+/** Del nombre de columna al nombre del campo del formulario. */
+function campoDeFormulario(campo) {
+  if (!campo) return "";
+  return PRICE_FIELD_FORM_NAMES[campo] ?? campo;
+}
 
 // El editor del cuadro tarifario se monta solo cuando aparece la tarjeta de una
 // prestacion: asi un redibujado no lo rompe y no hay que tocarlo desde el render.
@@ -182,7 +206,7 @@ import {
   renderProviderScreen,
   renderProviderGuidedTemplateSelection,
   renderProviderServicePreviewSheet
-} from "./ui/render-provider.js?v=2026.06.05.2";
+} from "./ui/render-provider.js?v=2026.09.19.1";
 import {
   clearAuthRedirectIntent,
   forceCleanSession,
@@ -455,7 +479,10 @@ function normalizeProviderCategory(category = {}) {
     description: category.description,
     aliases: category.aliases ?? [],
     search_keywords: category.search_keywords ?? [],
-    default_pricing_model: category.default_pricing_model ?? "HOURLY",
+    // NO poner "HOURLY" por defecto: la base puede no traer modelo y ese literal era lo
+    // que hacia que Plomeria apareciera como "por hora". Si viene vacio, lo resuelve
+    // pricing-models.js con el mapa por rubro.
+    default_pricing_model: category.default_pricing_model ?? null,
     requires_provider_quote: Boolean(category.requires_provider_quote),
     allowed_service_modes: category.allowed_service_modes ?? ["IN_PERSON"],
     requires_professional_license: Boolean(category.requires_professional_license),
@@ -6899,42 +6926,45 @@ providerGuidedTemplateBlocksAutoPricing(template = {}) {
 }
 
 providerGuidedDefaultUnitName(pricingModel = "") {
-  const model = String(pricingModel || "").toUpperCase();
-  const labels = {
-    HOURLY: "hora",
-    BASE_VISIT: "visita",
-    FIXED: "trabajo",
-    UNIT: "servicio",
-    SQUARE_METER: "m2",
-    LINEAR_METER: "metro",
-    QUOTE: "cotizacion"
-  };
-  return labels[model] || "servicio";
+  return PROVIDER_DEFAULT_UNIT_NAMES[String(pricingModel || "").toUpperCase()] ?? "";
 }
 
 providerGuidedDraftField(form, name) {
-  const field = form?.querySelector?.(`[name="${name}"]`);
+  // El formulario puede tener el mismo nombre dos veces: el campo visible y el respaldo oculto
+  // de otra forma de cobro. Gana siempre el visible, que es lo que el prestador escribio.
+  const campos = [...(form?.querySelectorAll?.(`[name="${name}"]`) ?? [])];
+  const field = campos.find((item) => item.type !== "hidden") ?? campos[0];
   if (!field) return "";
   if (field.type === "checkbox") return field.checked;
   return field.value ?? "";
 }
 
 providerGuidedDraftPriceLabel(form) {
-  const pricingModel = String(this.providerGuidedDraftField(form, "offering:0:pricingModel") || "HOURLY").toUpperCase();
-  const quoteRequired = Boolean(this.providerGuidedDraftField(form, "offering:0:quoteRequired")) || pricingModel === "QUOTE";
+  const pricingModel = String(
+    this.providerGuidedDraftField(form, "offering:0:pricingModel") || "BASE_VISIT"
+  ).toUpperCase();
+  const quoteRequired =
+    Boolean(this.providerGuidedDraftField(form, "offering:0:quoteRequired")) ||
+    pricingModel === "QUOTE";
   if (quoteRequired) return "Cotizar";
 
-  const unitPrice = Number(this.providerGuidedDraftField(form, "offering:0:unitPrice") || 0);
-  const fixedPrice = Number(this.providerGuidedDraftField(form, "offering:0:fixedPrice") || 0);
-  const pricePerHour = Number(this.providerGuidedDraftField(form, "offering:0:pricePerHour") || 0);
-  const baseVisitFee = Number(this.providerGuidedDraftField(form, "offering:0:baseVisitFee") || 0);
-  const unitName = String(this.providerGuidedDraftField(form, "offering:0:unitName") || this.providerGuidedDefaultUnitName(pricingModel));
+  // Se lee el campo que corresponde a la forma de cobro, no los cuatro a la vez: si no, una
+  // prestacion vieja con dos precios cargados mostraba justo el que no valia.
+  const campo = PRICE_FIELD_BY_MODEL[pricingModel] ?? null;
+  if (!campo) return "Cotizar";
+  const monto = Number(
+    this.providerGuidedDraftField(form, `offering:0:${campoDeFormulario(campo)}`) || 0
+  );
+  if (!(monto > 0)) return "Precio o cotizacion pendiente";
 
-  if (unitPrice > 0) return `${this.formatMoney(unitPrice)} / ${unitName}`;
-  if (fixedPrice > 0) return this.formatMoney(fixedPrice);
-  if (pricePerHour > 0) return `${this.formatMoney(pricePerHour)} / hora`;
-  if (baseVisitFee > 0) return `${this.formatMoney(baseVisitFee)} visita`;
-  return "Precio o cotizacion pendiente";
+  const unitName = String(
+    this.providerGuidedDraftField(form, "offering:0:unitName") ||
+      this.providerGuidedDefaultUnitName(pricingModel)
+  ).trim();
+  if (pricingModel === "HOURLY") return `${this.formatMoney(monto)} / hora`;
+  if (pricingModel === "BASE_VISIT") return `${this.formatMoney(monto)} visita`;
+  if (pricingModel === "FIXED") return this.formatMoney(monto);
+  return `${this.formatMoney(monto)} / ${unitName || "unidad"}`;
 }
 
 providerGuidedDraftPreviewHtml(form, template = null) {
@@ -7841,17 +7871,13 @@ applyProviderCategoryUiRules(form = document.getElementById("providerBusinessFor
     .map((policy) => `<option value="${policy}" ${policy === currentPolicy ? "selected" : ""}>${policyLabels[policy]}</option>`)
     .join("");
 
+  // La forma de cobro sale del servicio elegido, asi que el campo de precio del formulario se
+  // reacomoda en el mismo paso: un solo campo visible, con la etiqueta que corresponde.
+  const chargeModel = String(pricingModelSelect?.value || pricingModel || "BASE_VISIT").toUpperCase();
+  this.syncProviderChargeField(form, chargeModel);
+
   if (unitNameInput && !unitNameInput.value.trim()) {
-    const unitByModel = {
-      QUOTE: "",
-      FIXED: "trabajo",
-      HOURLY: "hora",
-      BASE_VISIT: "visita",
-      UNIT: "sesion",
-      SQUARE_METER: "m2",
-      LINEAR_METER: "metro"
-    };
-    unitNameInput.value = unitByModel[String(pricingModelSelect?.value || "").toUpperCase()] ?? "";
+    unitNameInput.value = this.providerGuidedDefaultUnitName(chargeModel);
   }
 
   if (coverageField) {
@@ -7860,6 +7886,77 @@ applyProviderCategoryUiRules(form = document.getElementById("providerBusinessFor
     coverageField.querySelector("select")?.toggleAttribute("required", !onlineOnly);
   }
 }
+  /**
+   * El formulario de alta tiene un solo campo de precio visible: el que corresponde a la forma
+   * de cobro del servicio elegido. Antes se pedian cuatro precios a la vez (por hora, precio
+   * cerrado, visita y unidad) y el prestador tenia que adivinar cual era el que valia.
+   *
+   * Los otros tres precios viajan como input oculto. Mientras el prestador no toque la forma de
+   * cobro, esos respaldos llevan lo que ya tenia guardado: editar el titulo no le borra nada.
+   *
+   * Cuando SI la cambia, el monto que estaba viendo se muda al campo nuevo y los demas se
+   * limpian. Es a proposito: si quedara el valor viejo, el guardado tomaria un numero que el
+   * prestador ya no esta viendo y le publicaria un precio que nunca escribio.
+   *
+   * Si la forma de cobro no lleva precio, el campo se deshabilita en vez de ocultarse: asi no
+   * pisa con un vacio al respaldo, ni en el envio ni al leerlo.
+   */
+  syncProviderChargeField(form, model) {
+    if (!form) return;
+
+    const input = form.querySelector("[data-provider-price-input]");
+    const envoltorioPrecio = form.querySelector("[data-provider-price-field]");
+    const etiquetaPrecio = form.querySelector("[data-provider-price-label]");
+    const ayudaPrecio = form.querySelector("[data-provider-price-help]");
+    const envoltorioUnidad = form.querySelector("[data-provider-unit-field]");
+    const etiquetaCobro = form.querySelector("[data-provider-charge-label]");
+    const ayudaCobro = form.querySelector("[data-provider-charge-help]");
+
+    const campo = PRICE_FIELD_BY_MODEL[model] ?? null;
+    const campoAnterior = input?.dataset?.providerPriceFieldName || "";
+    const respaldoDe = (campo) =>
+      campo
+        ? form.querySelector(`input[type="hidden"][name="offering:0:${campoDeFormulario(campo)}"]`)
+        : null;
+
+    if (campoAnterior && campoAnterior !== campo) {
+      const monto = input?.value ?? "";
+      const nuevo = respaldoDe(campo);
+      // Lo que ya tenia guardado para esa forma de cobro gana: es su tarifa para ese esquema y
+      // ademas queda a la vista, asi el prestador ve el cambio y no un numero inventado.
+      const guardado = nuevo ? nuevo.value : "";
+      TARIFA_CAMPOS_DE_PRECIO.forEach((nombre) => {
+        const respaldo = respaldoDe(nombre);
+        if (respaldo) respaldo.value = "";
+      });
+      if (nuevo) nuevo.value = guardado || monto;
+    }
+
+    if (etiquetaCobro) etiquetaCobro.textContent = PRICING_MODEL_LABELS[model] ?? model;
+    if (ayudaCobro) ayudaCobro.textContent = PROVIDER_CHARGE_HELP[model] ?? "";
+    if (etiquetaPrecio) etiquetaPrecio.textContent = PRICE_FIELD_LABELS[model] ?? "Precio";
+    if (ayudaPrecio) ayudaPrecio.textContent = PROVIDER_PRICE_HELP[model] ?? "";
+
+    if (input) {
+      if (campo) {
+        input.dataset.providerPriceFieldName = campo;
+        input.setAttribute("name", `offering:0:${campoDeFormulario(campo)}`);
+        const respaldo = respaldoDe(campo);
+        if (respaldo) input.value = respaldo.value;
+        input.placeholder = PROVIDER_PRICE_PLACEHOLDERS[model] ?? "Ej: 15000";
+        input.disabled = false;
+      } else {
+        input.dataset.providerPriceFieldName = "";
+        input.value = "";
+        input.disabled = true;
+      }
+    }
+
+    if (envoltorioPrecio) envoltorioPrecio.hidden = !campo;
+    if (envoltorioUnidad) {
+      envoltorioUnidad.hidden = !["UNIT", "SQUARE_METER", "LINEAR_METER"].includes(model);
+    }
+  }
 
 renderProviderSuggestionCards(form, matches, text, { fallback = false } = {}) {
   const panel = form?.querySelector?.("#providerAiSuggestionsPanel");

@@ -37,6 +37,16 @@ El producto **abandonó el vertical de transporte**: ese código sigue en el rep
 - **Admin:** `admin/admin-env.js` + `admin/supabase-admin-client.js` (⚠️ este último tiene URL y anon key duplicadas y hardcodeadas: pendiente de unificar con `window.MIMI_ADMIN_ENV`).
 - **CMS:** el PocketBase del VPS está **dado de baja** (hosting impago). `MIMI_POCKETBASE_ENABLED` debe quedar en `false` y `VITE_POCKETBASE_URL` vacío. No lo reactives.
 - **Service worker:** `mimi-servicios/sw-2026.js` sirve `env.js` network-first. Si editás `env.js`, subí la versión del SW.
+- **Precio de una prestación:** una sola fuente, `mimi-servicios/src/services/pricing-models.js` (la importan el cliente y el panel). El modelo de precio **no se le pregunta al prestador**: sale del servicio que elige. Ahí viven también las etiquetas, el campo de precio único y la unidad por defecto. No dupliques esas listas.
+- **Nombres de campo ≠ nombres de columna (verificado, ya causó un bug):** `PRICE_FIELD_BY_MODEL` devuelve la columna de la base (`base_visit_fee`), pero el formulario del panel y su colector usan camelCase (`offering:0:baseVisitFee`). La traducción es `PRICE_FIELD_FORM_NAMES` + `campoDeFormulario()`. Si escribís `offering:0:base_visit_fee`, el precio se pierde sin ningún error.
+
+## Versiones del panel del prestador — suben juntas
+
+`MIMI_PROVIDER_BUILD` (**main-provider.js**) · `provider.version` (**app-version.json**) · `APP_VERSION` (**sw-partner.js**, sufijo `-provider`) · el `?v=` del `<script>` en **prestador.html** · el `?v=` del import de **render-provider.js** en main-provider.
+
+Si uno queda atrás, el panel sigue sirviendo código viejo y **el cambio no se ve aunque el deploy haya salido bien**. Un deploy que no se ve es indistinguible de un deploy que no ocurrió. `qa/provider-payout-account-foundation-static.js` ya compara el `?v=` de render-provider contra el build.
+
+El cliente tiene su propio trío (`MIMI_CLIENT_BUILD` + `app-version.json -> client.version` + el `?v=` de main-client.js en `cliente.html`) y la misma regla.
 
 ## Flujo de negocio — la parte más importante
 

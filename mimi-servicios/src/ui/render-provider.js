@@ -3,6 +3,21 @@ import {
   estimateClientCancellationSync,
   primeCancellationRules
 } from "../services/cancellation-policy.js?v=2026.09.18.1";
+// El modelo de precio, sus etiquetas y la unidad que se le propone al prestador vivian en
+// una tercera copia local en este archivo, que ya podia contradecir a la del cliente.
+// Ahora las dos leen de services/pricing-models.js.
+import {
+  PRICE_FIELD_BY_MODEL,
+  PRICE_FIELD_FORM_NAMES,
+  PRICE_FIELD_LABELS,
+  PRICING_MODEL_LABELS,
+  PROVIDER_CHARGE_HELP as providerChargeHelp,
+  PROVIDER_DEFAULT_UNIT_NAMES,
+  PROVIDER_PRICE_HELP as providerPriceHelp,
+  PROVIDER_PRICE_PLACEHOLDERS as providerPricePlaceholders,
+  categoryPricingModel as resolveCategoryPricingModel,
+  resolvePricingModel
+} from "../services/pricing-models.js?v=2026.09.19.1";
 
 // Las reglas de cancelación se cargan una sola vez por sesión de pantalla.
 let cancellationRulesPrimed = false;
@@ -40,15 +55,32 @@ const reviewStatusLabels = {
 
 const dayLabels = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
-const pricingModelLabels = {
-  QUOTE: "Cotizar antes de confirmar",
-  FIXED: "Precio cerrado por trabajo",
-  HOURLY: "Por hora",
-  BASE_VISIT: "Por visita",
-  UNIT: "Por sesion / unidad",
-  SQUARE_METER: "Por m2 / unidad",
-  LINEAR_METER: "Por metro lineal"
+// Etiquetas del modelo de precio. Una sola fuente: services/pricing-models.js.
+const pricingModelLabels = PRICING_MODEL_LABELS;
+
+// Es la misma lista de 7 modelos de siempre, pero nombrada por el resultado que el prestador
+// reconoce. Ya no es una pregunta obligatoria: es el atajo para el caso en que cobra distinto
+// de como se cobra el servicio que eligio.
+const providerChargeLabels = {
+  BASE_VISIT: "Cobro una visita y despues presupuesto",
+  FIXED: "Cobro un precio cerrado por trabajo",
+  HOURLY: "Cobro por hora de trabajo",
+  UNIT: "Cobro por unidad o sesion",
+  SQUARE_METER: "Cobro por metro cuadrado",
+  LINEAR_METER: "Cobro por metro lineal",
+  QUOTE: "Solo presupuesto: cotizo antes de confirmar"
 };
+
+// Se usa solo en el atajo "Cambiar forma de cobro".
+function renderProviderChargeOptions(selected = "HOURLY") {
+  const current = String(selected || "HOURLY").toUpperCase();
+
+  return Object.entries(providerChargeLabels)
+    .map(([value, label]) => `
+      <option value="${value}" ${current === value ? "selected" : ""}>${escapeHtml(label)}</option>
+    `)
+    .join("");
+}
 
 const quotePricingHelp = "El presupuesto, la aceptación y el pago se realizan dentro de MIMIGO.";
 
@@ -363,7 +395,9 @@ function categoryById(categories = [], id = "") {
 
 function recommendedDefaultsForCategory(category = {}) {
   const safeCategory = category ?? {};
-  const model = String(safeCategory.default_pricing_model || "HOURLY").toUpperCase();
+  // El rubro puede no traer modelo en la base. Antes eso caia en HOURLY y el panel le pedia
+  // horas a un plomero. El respaldo sale del mapa de pricing-models.js, no de un literal.
+  const model = resolveCategoryPricingModel(safeCategory.default_pricing_model, safeCategory.code);
   const modes = Array.isArray(safeCategory.allowed_service_modes) && safeCategory.allowed_service_modes.length
     ? safeCategory.allowed_service_modes
     : ["IN_PERSON"];
@@ -373,7 +407,7 @@ function recommendedDefaultsForCategory(category = {}) {
     pricingModel: model,
     serviceMode,
     locationPolicy: serviceMode === "ONLINE" ? "ONLINE_ONLY" : "CLIENT_ADDRESS",
-    unitName: model === "UNIT" ? "sesion" : "",
+    unitName: PROVIDER_DEFAULT_UNIT_NAMES[model] ?? "",
     durationMinutes: model === "UNIT" ? 45 : ""
   };
 }
@@ -2543,7 +2577,10 @@ function providerGuidedTemplateVersion(template = {}) {
 
 function providerGuidedTemplatePricingModel(template = {}) {
   const version = providerGuidedTemplateVersion(template);
-  return String(version.pricing_model || template.default_pricing_model || "HOURLY").toUpperCase();
+  return resolvePricingModel({
+    templateModel: version.pricing_model ?? template.default_pricing_model,
+    categoryCode: template.category_code ?? template.category?.code
+  });
 }
 
 function providerGuidedTemplateRequirements(template = {}) {
@@ -3230,7 +3267,20 @@ function renderProviderBusiness(state) {
     ? categories.find((category) => category.id === firstOffering.category_id)
     : null);
   const defaults = recommendedDefaultsForCategory(defaultCategory);
-  const pricingModel = firstOffering?.pricing_model ?? defaults.pricingModel;
+  // La forma de cobro sale del servicio que el prestador eligio: primero lo que ya tiene
+  // guardado su prestacion, despues lo que declara la plantilla y, si no hay nada, el respaldo
+  // del rubro. Dejo de ser una pregunta de la pantalla.
+  const pricingModel = resolvePricingModel({
+    offeringModel: firstOffering?.pricing_model,
+    templateModel: firstOffering?.metadata?.service_template_pricing_model,
+    categoryCode: defaultCategory?.code,
+    categoryModel: defaultCategory?.default_pricing_model
+  });
+  const primaryPriceField = PRICE_FIELD_BY_MODEL[pricingModel] ?? null;
+  // La columna de la base y el nombre del campo del formulario no se llaman igual.
+  const primaryPriceInputField = primaryPriceField ? PRICE_FIELD_FORM_NAMES[primaryPriceField] ?? primaryPriceField : "";
+  const primaryPriceValue = primaryPriceField ? (firstOffering?.[primaryPriceField] ?? "") : "";
+  const needsUnitName = ["UNIT", "SQUARE_METER", "LINEAR_METER"].includes(pricingModel);
   const serviceMode = firstOffering?.service_mode ?? defaults.serviceMode;
   const locationPolicy = firstOffering?.location_policy ?? defaults.locationPolicy;
   const profileMetadata = detail?.metadata_json || detail?.metadata || {};
@@ -3317,9 +3367,6 @@ function renderProviderBusiness(state) {
   const shouldKeepProfileCompact = true;
   const shouldOpenProfileDetails = !shouldKeepProfileCompact && (!providerFirstNameValue || !selectedProvince || !selectedCity || !currentAddressInputValue);
   const hasAdvancedPriceData = Boolean(
-    firstOffering?.unit_name ||
-    firstOffering?.price_per_hour ||
-    firstOffering?.fixed_price ||
     firstOffering?.duration_minutes ||
     firstOffering?.quote_required
   );
@@ -3542,7 +3589,7 @@ function renderProviderBusiness(state) {
           <select name="offering:0:categoryId" hidden aria-hidden="true" tabindex="-1">
               <option value="">Primero elegi una card sugerida</option>
               ${categories.map((category) => `
-                <option value="${escapeHtml(category.id)}" data-pricing-model="${escapeHtml(category.default_pricing_model ?? "HOURLY")}" data-service-modes="${escapeHtml((category.allowed_service_modes ?? ["IN_PERSON"]).join(","))}" ${(firstOffering?.category_id ?? selectedCategories[0]?.id ?? "") === category.id ? "selected" : ""}>${escapeHtml(category.name)}</option>
+                <option value="${escapeHtml(category.id)}" data-pricing-model="${escapeHtml(resolveCategoryPricingModel(category.default_pricing_model, category.code))}" data-service-modes="${escapeHtml((category.allowed_service_modes ?? ["IN_PERSON"]).join(","))}" ${(firstOffering?.category_id ?? selectedCategories[0]?.id ?? "") === category.id ? "selected" : ""}>${escapeHtml(category.name)}</option>
               `).join("")}
           </select>
 
@@ -3564,14 +3611,18 @@ function renderProviderBusiness(state) {
 
           <div class="provider-form-subtitle">
             <strong>Precio y modalidad</strong>
-            <span>Usa un precio claro. Si cada caso cambia mucho, marca Cotizar antes de confirmar. ${quotePricingHelp}</span>
+            <span>La forma de cobro la define el servicio que elegiste. Carga un numero y el cliente lo ve antes de pedirte. ${quotePricingHelp}</span>
+          </div>
+
+          <!-- La forma de cobro dejo de ser un desplegable de taxonomia: se muestra resuelta.
+               Abajo, dentro de "Cambiar forma de cobro", queda el atajo para el caso raro. -->
+          <div style="margin:10px 0 12px;padding:12px 14px;border-radius:12px;border:1px solid rgba(0,0,0,.12);background:#f7f9fc;">
+            <span style="display:block;font-size:11px;letter-spacing:.04em;text-transform:uppercase;opacity:.65;">Forma de cobro</span>
+            <strong data-provider-charge-label style="display:block;font-size:16px;margin-top:2px;">${escapeHtml(pricingModelLabels[pricingModel] ?? pricingModel)}</strong>
+            <small data-provider-charge-help style="display:block;font-size:12px;opacity:.75;margin-top:4px;">${escapeHtml(providerChargeHelp[pricingModel] ?? "")}</small>
           </div>
 
           <div class="provider-form-grid provider-compact-grid provider-primary-price-grid">
-            <label class="input-group">
-              <span>Como cobras</span>
-              <select name="offering:0:pricingModel">${renderPricingModelOptions(pricingModel)}</select>
-            </label>
             <label class="input-group">
               <span>Modalidad</span>
               <select name="offering:0:serviceMode">${renderServiceModeOptionsForCategory(defaultCategory, serviceMode)}</select>
@@ -3580,37 +3631,39 @@ function renderProviderBusiness(state) {
               <span>Atencion</span>
               <select name="offering:0:locationPolicy">${renderLocationPolicyOptionsForMode(serviceMode, locationPolicy)}</select>
             </label>
-            <label class="input-group">
-              <span>Precio aproximado</span>
-              <input name="offering:0:unitPrice" type="number" min="0" step="100" value="${escapeHtml(String(firstOffering?.unit_price ?? ""))}" placeholder="Ej: 15000">
+            <label class="input-group provider-field-wide" data-provider-price-field ${primaryPriceField ? "" : "hidden"}>
+              <span data-provider-price-label>${escapeHtml(PRICE_FIELD_LABELS[pricingModel] ?? "Precio")}</span>
+              <input data-provider-price-input data-provider-price-field-name="${escapeHtml(primaryPriceField ?? "")}" name="offering:0:${primaryPriceInputField || "unitPrice"}" type="number" min="0" step="100" inputmode="numeric" value="${escapeHtml(String(primaryPriceValue))}" placeholder="${escapeHtml(providerPricePlaceholders[pricingModel] ?? "Ej: 15000")}" ${primaryPriceField ? "" : "disabled"}>
+              <small data-provider-price-help>${escapeHtml(providerPriceHelp[pricingModel] ?? "")}</small>
+            </label>
+            <label class="input-group" data-provider-unit-field ${needsUnitName ? "" : "hidden"}>
+              <span>Se cobra por</span>
+              <input name="offering:0:unitName" type="text" maxlength="40" value="${escapeHtml(firstOffering?.unit_name ?? defaults.unitName)}" placeholder="sesion, m2, trabajo">
+              <small>Como lo lee el cliente en tu tarjeta.</small>
             </label>
           </div>
 
-          <details class="provider-advanced-price-details" ${hasAdvancedPriceData ? "open" : ""}>
-            <summary>
-              <span>Opciones avanzadas</span>
-              <small>Duracion, precio por hora, precio cerrado o cotizacion previa.</small>
-            </summary>
-            <div class="provider-form-grid provider-compact-grid">
-            <label class="input-group">
-              <span>Unidad de referencia</span>
-              <input name="offering:0:unitName" type="text" maxlength="40" value="${escapeHtml(firstOffering?.unit_name ?? defaults.unitName)}" placeholder="sesion, consulta, trabajo">
-            </label>
-            <label class="input-group">
-              <span>$/hora si aplica</span>
-              <input name="offering:0:pricePerHour" type="number" min="0" step="100" value="${escapeHtml(String(firstOffering?.price_per_hour ?? ""))}" placeholder="Opcional">
-            </label>
-            <label class="input-group">
-              <span>Precio cerrado</span>
-              <input name="offering:0:fixedPrice" type="number" min="0" step="100" value="${escapeHtml(String(firstOffering?.fixed_price ?? ""))}" placeholder="Opcional">
-            </label>
-            <label class="input-group">
-              <span>Duracion estimada</span>
-              <input name="offering:0:durationMinutes" type="number" min="15" max="240" step="5" value="${escapeHtml(String(firstOffering?.duration_minutes ?? defaults.durationMinutes))}" placeholder="45">
-            </label>
-            </div>
+          <p style="font-size:12px;opacity:.75;margin:10px 0 0;">Tramos, recargos y "que incluye" los cargas en tu cuadro tarifario, apenas guardes el servicio.</p>
 
+          <details class="provider-advanced-price-details">
+            <summary>
+              <span>Cambiar forma de cobro</span>
+              <small>Por defecto la define el servicio que elegiste.</small>
+            </summary>
+            <label class="input-group">
+              <span>Forma de cobro</span>
+              <select name="offering:0:pricingModel">${renderProviderChargeOptions(pricingModel)}</select>
+            </label>
+            <small style="display:block;font-size:11px;opacity:.7;">Cambiala solo si cobras distinto de como se cobra este servicio.</small>
+          </details>
+
+          <!-- Los cuatro precios viajan siempre. Solo uno es visible: el que corresponde a la
+               forma de cobro. Los otros tres quedan como respaldo para que cambiar de forma de
+               cobro no borre lo que el prestador ya habia cargado. -->
+          <input name="offering:0:pricePerHour" type="hidden" value="${escapeHtml(String(firstOffering?.price_per_hour ?? ""))}">
           <input name="offering:0:baseVisitFee" type="hidden" value="${escapeHtml(String(firstOffering?.base_visit_fee ?? ""))}">
+          <input name="offering:0:fixedPrice" type="hidden" value="${escapeHtml(String(firstOffering?.fixed_price ?? ""))}">
+          <input name="offering:0:unitPrice" type="hidden" value="${escapeHtml(String(firstOffering?.unit_price ?? ""))}">
           <input name="offering:0:minimumCharge" type="hidden" value="${escapeHtml(String(firstOffering?.minimum_charge ?? 0))}">
           <input name="offering:0:minimumHours" type="hidden" value="${escapeHtml(String(firstOffering?.minimum_hours ?? ""))}">
           <input name="offering:0:maximumHours" type="hidden" value="${escapeHtml(String(firstOffering?.maximum_hours ?? detail?.max_hours_per_service ?? 8))}">
@@ -3618,6 +3671,18 @@ function renderProviderBusiness(state) {
             <input name="offering:0:quoteRequired" type="checkbox" ${firstOffering?.quote_required ? "checked" : ""}>
             <span>Cotizar antes de confirmar<small>${quotePricingHelp}</small></span>
           </label>
+
+          <details class="provider-advanced-price-details" ${hasAdvancedPriceData ? "open" : ""}>
+            <summary>
+              <span>Opciones avanzadas</span>
+              <small>Duracion estimada del servicio.</small>
+            </summary>
+            <div class="provider-form-grid provider-compact-grid">
+            <label class="input-group">
+              <span>Duracion estimada</span>
+              <input name="offering:0:durationMinutes" type="number" min="15" max="240" step="5" value="${escapeHtml(String(firstOffering?.duration_minutes ?? defaults.durationMinutes))}" placeholder="45">
+            </label>
+            </div>
           </details>
           ${isAddingOffering && guidedPanelOpen ? renderProviderGuidedDraftPreviewShell() : ""}
           <input name="offering:0:clientInstructions" type="hidden" value="${escapeHtml(firstOffering?.client_instructions ?? "")}">
@@ -3850,236 +3915,7 @@ function renderProviderBusiness(state) {
         providerName: providerDisplayName,
         addonsEnabled
       }) : ""}
-    </section>
-  `;
-  return;
-
-  container.innerHTML = `
-    <section class="provider-stack provider-publisher-app">
-      <form class="provider-settings-form provider-publisher-shell" id="providerBusinessForm">
-        <section class="provider-business-hero">
-          <div>
-            <span class="eyebrow">Configurador guiado</span>
-            <h3>Arma tu perfil de prestador</h3>
-            <p class="muted">Escribi que sabes hacer. MIMI te ayuda a ordenarlo en rubros, descripcion, precio y zona sin prometer certificaciones ni garantias.</p>
-          </div>
-          <div class="provider-publish-summary">
-            <span>${offerings.length ? "Publicado" : "Sin publicar"}</span>
-            <strong>${escapeHtml(primaryOffering?.title ?? "Crea tu primer servicio")}</strong>
-            <small>${escapeHtml(primaryOffering ? primaryPrice : "El cliente necesita saber que ofreces antes de verte online.")}</small>
-          </div>
-        </section>
-
-        <div class="provider-setup-progress" aria-label="Progreso de configuracion">
-          ${["Servicio", "Rubro", "Descripcion", "Zona", "Fotos", "Revision", "Terminos"].map((label, index) => `
-            <button class="${index === 0 ? "is-active" : ""} ${index < 2 || offerings.length ? "is-done" : ""}" type="button" data-provider-business-action="provider-setup-go" data-provider-setup-target="${index + 1}">${index + 1}. ${escapeHtml(label)}</button>
-          `).join("")}
-        </div>
-
-        <section class="provider-ai-card provider-step-card is-featured is-active" data-provider-setup-step="1">
-          <div class="provider-step-heading">
-            <span>1</span>
-            <div>
-              <small>Asistente MIMI</small>
-              <h3>Contanos que ofrecés</h3>
-            </div>
-          </div>
-          <p class="muted">Escribí o dictá qué trabajos hacés. MIMI lo ordena en rubros para que revises y confirmes.</p>
-          <div class="provider-ai-input-shell">
-            <textarea name="providerAiPrompt" rows="3" maxlength="500" placeholder="Ej: arreglo paredes, pinto, hago revoques, coloco ceramicos">${escapeHtml(offerings[0]?.description ?? "")}</textarea>
-            <div class="provider-ai-controls">
-              <button class="provider-icon-action" data-provider-business-action="start-provider-dictation" type="button" aria-label="Dictar por voz" title="Dictar por voz">🎙</button>
-              <button class="btn-primary provider-suggest-button" data-provider-business-action="suggest-provider-service" type="button">Sugerir</button>
-            </div>
-          </div>
-          <div class="provider-voice-status" id="providerVoiceStatus" hidden></div>
-          <div class="provider-ai-empty" id="providerAiEmpty" ${hasSelectedRubros ? "hidden" : ""}>Primero escribí qué hacés. Después elegí una o varias opciones sugeridas.</div>
-          <div class="provider-ai-suggestions" id="providerAiSuggestions" ${hasSelectedRubros ? "" : "hidden"}>
-            ${selectedCategories.map((category) => `
-              <button class="provider-suggestion-card is-selected" type="button" data-provider-suggestion-card data-provider-business-action="toggle-provider-suggestion" data-category-id="${escapeHtml(category.id)}" data-category-code="${escapeHtml(category.code)}" aria-pressed="true">
-                <strong>${escapeHtml(category.name)}</strong>
-                <span>${escapeHtml(category.description ?? "Rubro seleccionado")}</span>
-              </button>
-            `).join("")}
-          </div>
-          <div class="provider-wizard-nav">
-            <span id="providerSelectionHint">${escapeHtml(hasSelectedRubros ? selectedCategoryLabel : "Elegí al menos una sugerencia para seguir.")}</span>
-            <button class="btn-primary" data-provider-business-action="provider-setup-next" type="button" ${hasSelectedRubros ? "" : "disabled"}>Siguiente</button>
-          </div>
-        </section>
-
-        <div class="provider-help-note">
-          <strong>No cargues horarios aca</strong>
-          <span>Tu disponibilidad depende de estar conectado. Esta pantalla solo define que ofreces y como se entiende tu perfil.</span>
-        </div>
-
-        <section class="provider-step-card provider-profile-basics" data-provider-setup-step="2">
-          <div class="provider-step-heading">
-            <span>2</span>
-            <div>
-              <small>Perfil publico</small>
-              <h3>Ahora armamos una presentación clara</h3>
-            </div>
-          </div>
-          <div class="provider-form-grid">
-          <label class="input-group">
-            <span>Bio corta</span>
-            <input name="providerBio" type="text" maxlength="180" value="${escapeHtml(detail?.bio ?? "")}" placeholder="Ej: trabajos de pintura, arreglos y mantenimiento del hogar">
-          </label>
-          <label class="input-group">
-            <span>Presentación o título profesional</span>
-            <input name="providerPublicHeadline" type="text" maxlength="120" value="${escapeHtml(detail?.public_headline ?? "")}" placeholder="Opcional. Usalo si aplica a tu oficio o profesión.">
-            <small>Si tenés matrícula, título o habilitación relacionada, podés aclararlo sin prometer validación pública.</small>
-          </label>
-          <label class="input-group">
-            <span>Video o sala online</span>
-            <input name="providerVideoIntroUrl" type="url" maxlength="240" value="${escapeHtml(detail?.video_intro_url ?? "")}" placeholder="Link profesional, sitio o sala online">
-          </label>
-          <label class="input-group">
-            <span>Ciudad o localidad principal</span>
-            <input name="providerCity" type="text" maxlength="80" value="${escapeHtml(detail?.city ?? "")}" placeholder="Ej: Córdoba Capital" list="providerCityOptions">
-          </label>
-          <label class="input-group">
-            <span>Provincia</span>
-            <select name="providerProvince">
-              <option value="">Elegí provincia</option>
-              ${provinceOptions.map((province) => `<option value="${escapeHtml(province)}" ${String(detail?.province ?? "") === province ? "selected" : ""}>${escapeHtml(province)}</option>`).join("")}
-            </select>
-          </label>
-          <label class="input-group">
-            <span>Área donde podés trabajar</span>
-            <input name="providerAddressText" type="text" maxlength="140" value="${escapeHtml(detail?.address_text ?? "")}" placeholder="Ej: Nueva Córdoba, Centro y zonas cercanas">
-            <small>Esto ayuda a mostrar tu servicio donde corresponde. Después podés ajustar cobertura.</small>
-          </label>
-          <datalist id="providerCityOptions">
-            ${cityOptions.map((item) => `<option value="${escapeHtml(item.city)}" label="${escapeHtml(item.province)}"></option>`).join("")}
-          </datalist>
-        </div>
-        <label class="input-group provider-field-wide">
-          <span>Resumen profesional</span>
-          <textarea name="providerProfessionalSummary" maxlength="600" rows="3" placeholder="Conta tu especialidad, alcance, experiencia y como coordinas el servicio sin prometer resultados">${escapeHtml(detail?.professional_summary ?? "")}</textarea>
-        </label>
-        <div class="provider-ai-description-tools">
-          <button class="btn-secondary" data-provider-business-action="improve-provider-description" type="button">Mejorar con MIMI</button>
-          <div class="provider-description-suggestion" id="providerDescriptionSuggestion" hidden></div>
-        </div>
-        <input name="maxHoursPerService" type="hidden" value="${escapeHtml(String(detail?.max_hours_per_service ?? 8))}">
-          <div class="provider-wizard-nav">
-            <button class="btn-secondary" data-provider-business-action="provider-setup-prev" type="button">Atras</button>
-            <button class="btn-primary" data-provider-business-action="provider-setup-next" type="button">Siguiente</button>
-          </div>
-        </section>
-
-        <section class="provider-step-card" data-provider-setup-step="3">
-          <div class="block-header compact">
-            <div>
-              <span class="eyebrow">Etapa 3</span>
-              <h3>Oficio o profesion sugerida</h3>
-              <p class="muted">Podes elegir mas de una categoria si ofreces varios servicios.</p>
-            </div>
-          </div>
-          <div class="provider-editor-grid provider-category-editor-grid">
-            ${categories
-              .map((category) => {
-                const current = pricingByCategory.get(category.id);
-                const filtered = selectedCategoryIds.size && !selectedCategoryIds.has(category.id);
-
-                return `
-                  <article class="provider-editor-card ${filtered ? "is-filtered-out" : ""}" data-category-editor-card data-category-id="${escapeHtml(category.id)}">
-                    <label class="provider-check-item">
-                      <input type="checkbox" name="categoryActive:${escapeHtml(category.id)}" ${selectedCategoryIds.has(category.id) || current ? "checked" : ""}>
-                      <span>${escapeHtml(category.name)}</span>
-                    </label>
-                    <label class="input-group">
-                      <span>Precio por hora</span>
-                      <input name="price:${escapeHtml(category.id)}" type="number" min="0" step="100" value="${escapeHtml(String(current?.price_per_hour ?? ""))}" placeholder="0">
-                    </label>
-                    <div class="provider-inline-fields">
-                      <label class="input-group">
-                        <span>Min</span>
-                        <input name="min:${escapeHtml(category.id)}" type="number" min="1" max="12" value="${escapeHtml(String(current?.minimum_hours ?? 1))}">
-                      </label>
-                      <label class="input-group">
-                        <span>Max</span>
-                        <input name="max:${escapeHtml(category.id)}" type="number" min="1" max="12" value="${escapeHtml(String(current?.maximum_hours ?? detail?.max_hours_per_service ?? 8))}">
-                      </label>
-                    </div>
-                  </article>
-                `;
-              })
-              .join("")}
-          </div>
-          <div class="provider-wizard-nav">
-            <button class="btn-secondary" data-provider-business-action="provider-setup-prev" type="button">Atras</button>
-            <button class="btn-primary" data-provider-business-action="provider-setup-next" type="button">Siguiente</button>
-          </div>
-        </section>
-
-        <section class="provider-step-card" data-provider-setup-step="4">
-          <div class="block-header compact">
-            <div>
-              <span class="eyebrow">Etapa 4</span>
-              <h3>Que vendes y como lo cobras</h3>
-              <p class="muted">MIMI solo facilita la conexion. Vos definis si cobras por hora, visita, trabajo, sesion, unidad o metro, y si atendes online, presencial o mixto.</p>
-            </div>
-          </div>
-          <div class="provider-editor-grid">
-            ${[...offerings, null]
-              .map((offering, index) => renderOfferingEditorV2(offering, index, offeringCategories, { addonsEnabled }))
-              .join("")}
-          </div>
-          <div class="provider-wizard-nav">
-            <button class="btn-secondary" data-provider-business-action="provider-setup-prev" type="button">Atras</button>
-            <button class="btn-primary" data-provider-business-action="provider-setup-next" type="button">Siguiente</button>
-          </div>
-        </section>
-
-        <section class="provider-step-card provider-optional-media" data-provider-setup-step="5">
-          <span class="eyebrow">Etapa 5: fotos o ejemplos opcionales</span>
-          <h3>Mostra tu trabajo si queres</h3>
-          <p class="muted">Este paso es opcional. Podes cargar ejemplos mas adelante; no bloquea la configuracion del oficio.</p>
-          <input type="file" name="providerExamples" accept="image/*" multiple>
-          <div class="provider-wizard-nav">
-            <button class="btn-secondary" data-provider-business-action="provider-setup-prev" type="button">Atras</button>
-            <button class="btn-primary" data-provider-business-action="provider-setup-next" type="button">Siguiente</button>
-          </div>
-        </section>
-
-        <section class="provider-step-card provider-review-card" data-provider-setup-step="6">
-          <span class="eyebrow">Etapa 6: revision final</span>
-          <h3>Revisa antes de publicar</h3>
-          <p class="muted">Confirma que el rubro, la descripcion, la zona y el precio representan lo que realmente ofreces. MIMI facilita la conexion entre partes; no contrata, no certifica y no garantiza servicios.</p>
-          <div class="provider-profile-quality provider-insight-card">
-            <div>
-              <span class="eyebrow">Estado de tu perfil</span>
-              <h3>${escapeHtml(quality.label)}</h3>
-              <p class="muted">Esto solo lo ves vos. Sirve para saber si falta informacion para que tu perfil se entienda mejor.</p>
-            </div>
-            <strong>${quality.score}%</strong>
-            ${quality.tips.length ? `<ul>${quality.tips.map((tip) => `<li>${escapeHtml(tip)}</li>`).join("")}</ul>` : ""}
-          </div>
-          <div class="provider-wizard-nav">
-            <button class="btn-secondary" data-provider-business-action="provider-setup-prev" type="button">Atras</button>
-            <button class="btn-primary" data-provider-business-action="provider-setup-next" type="button">Siguiente</button>
-          </div>
-        </section>
-
-        <section class="provider-step-card provider-final-step" data-provider-setup-step="7">
-          <span class="eyebrow">Etapa 7: terminos</span>
-          <h3>Ultimo paso</h3>
-          <label class="provider-check-item provider-terms-box">
-            <input name="providerTermsAccepted" type="checkbox" required>
-            <span>Acepto los <a href="../terminos.html" target="_blank" rel="noopener">Terminos y Condiciones para prestadores</a> y la Politica de Privacidad. Entiendo que MIMI es una plataforma tecnologica intermediaria.</span>
-          </label>
-          <div class="provider-wizard-nav">
-            <button class="btn-secondary" data-provider-business-action="provider-setup-prev" type="button">Atras</button>
-            <button class="btn-primary provider-save-button" type="submit">Guardar y publicar mi servicio</button>
-          </div>
-        </section>
-      </form>
-
-      ${renderOfferingsSummary(offerings)}
-    </section>
+     </section>
   `;
 }
 
