@@ -89,6 +89,68 @@ MODULOS.forEach(({ modulo, consumidores }) => {
   });
 });
 
+// -------------------------------------------------------------- una sola instancia por modulo
+//
+// Un modulo compartido tiene que pedirse SIEMPRE con el mismo especificador. Con dos distintos,
+// el navegador lo carga dos veces y cada copia tiene su propio estado. Eso rompio la sesion del
+// prestador: main-provider.js pedia supabase.js?v=2026.06.05.2 y el resto de la app lo pedia con
+// ?v=2026.05.17.2, asi que habia DOS clientes de Supabase y DOS GoTrueClient sobre la misma clave
+// de sesion. La sesion se caia sola cada tanto, la app abria el overlay de login encima del panel
+// y el panel quedaba sin responder a ningun toque.
+const COMPARTIDOS = ["supabase.js", "pricing-models.js"];
+
+// Lo que importa es que DENTRO DEL PANEL haya una sola instancia: la entrada del panel y todo lo
+// que vive en src/services/ se cargan en la misma pagina, asi que tienen que coincidir. Que el
+// cliente use otro ?v= no molesta, porque es otra pagina.
+const ENTRADAS_DEL_PANEL = ["mimi-servicios/src/main-provider.js", "mimi-servicios/src/ui/render-provider.js"];
+
+function especificadoresDe(modulo) {
+  // Se busca como texto y no con una expresion regular: dentro de un template literal el `\?`
+  // se pierde y el `?` pasa a ser un cuantificador, con lo que no encuentra nada.
+  const marca = `${modulo}?v=`;
+  const porArchivo = new Map();
+
+  const recorrer = (dir) => {
+    for (const entrada of fs.readdirSync(dir, { withFileTypes: true })) {
+      const completo = path.join(dir, entrada.name);
+      if (entrada.isDirectory()) {
+        if (!/node_modules|\.git/.test(entrada.name)) recorrer(completo);
+        continue;
+      }
+      if (!entrada.name.endsWith(".js")) continue;
+
+      const texto = fs.readFileSync(completo, "utf8");
+      let desde = texto.indexOf(marca);
+      while (desde >= 0) {
+        const inicioVersion = desde + marca.length;
+        const finVersion = texto.indexOf('"', inicioVersion);
+        if (finVersion < 0) break;
+        porArchivo.set(
+          path.relative(root, completo).split(path.sep).join("/"),
+          texto.slice(inicioVersion, finVersion)
+        );
+        desde = texto.indexOf(marca, finVersion);
+      }
+    }
+  };
+
+  recorrer(path.join(root, "mimi-servicios/src"));
+  return porArchivo;
+}
+
+COMPARTIDOS.forEach((modulo) => {
+  const porArchivo = especificadoresDe(modulo);
+  const delPanel = ENTRADAS_DEL_PANEL.filter((f) => porArchivo.has(f)).map((f) => porArchivo.get(f));
+  const deServicios = [...porArchivo.entries()].filter(([f]) => f.startsWith("mimi-servicios/src/services/")).map(([, v]) => v);
+  const valores = [...new Set([...delPanel, ...deServicios])];
+
+  check(
+    `${modulo}: el panel y sus servicios piden la misma instancia (${valores.join(", ") || "sin referencias"})`,
+    valores.length <= 1,
+    `entradas del panel: ${delPanel.join(", ") || "-"} | src/services: ${[...new Set(deServicios)].join(", ") || "-"}`
+  );
+});
+
 console.log("");
 console.log(`Resultado: ${passes} OK, ${failures} fallos`);
 process.exit(failures ? 1 : 0);
