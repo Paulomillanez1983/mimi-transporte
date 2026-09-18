@@ -142,7 +142,7 @@ const ETIQUETA_KIND = Object.fromEntries(KINDS.map((k) => [k.value, k.label]));
  * Monta el editor debajo de la tarjeta de la prestación.
  * Devuelve true si montó (o ya estaba montado).
  */
-export function mountPriceBookEditor(tarjeta) {
+export function mountPriceBookEditor(tarjeta, build = "") {
   if (!tarjeta || montados.has(tarjeta)) return false;
   const offeringId = tarjeta.getAttribute("data-offering-id")
     || tarjeta.querySelector('input[name$=":id"]')?.value;
@@ -154,7 +154,7 @@ export function mountPriceBookEditor(tarjeta) {
   caja.style.cssText = "margin-top:12px;padding:12px;border:1px solid rgba(0,0,0,.12);border-radius:12px;background:#fbfcfe;";
 
   const titulo = document.createElement("strong");
-  titulo.textContent = "Tu cuadro tarifario";
+  titulo.textContent = build ? `Tu cuadro tarifario · ${build}` : "Tu cuadro tarifario";
   titulo.style.cssText = "display:block;font-size:14px;margin-bottom:2px;";
 
   const ayuda = document.createElement("small");
@@ -361,13 +361,13 @@ export function mountPriceBookEditor(tarjeta) {
 }
 
 /** Se monta sola cuando aparece el editor de prestaciones, y se re-monta si se redibuja. */
-export function autoMountPriceBookEditor() {
+export function autoMountPriceBookEditor(build = "") {
   const intentar = () => {
     const tarjetas = document.querySelectorAll("[data-offering-id]");
     let monto = false;
     tarjetas.forEach((t) => {
       if (montados.has(t)) return;
-      if (mountPriceBookEditor(t)) monto = true;
+      if (mountPriceBookEditor(t, build)) monto = true;
     });
     if (monto) estadoConsola();
   };
