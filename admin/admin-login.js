@@ -1,4 +1,4 @@
-import supabaseAdminService from "./supabase-admin-client.js?v=2026.05.14.2";
+import supabaseAdminService from "./supabase-admin-client.js?v=2026.05.15.4";
 
 const loginBtn = document.getElementById("googleLoginBtn");
 const loginError = document.getElementById("loginError");

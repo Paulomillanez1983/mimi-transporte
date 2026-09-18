@@ -44,9 +44,17 @@ class AdminServicesProviders {
     this.uploadingAction = false;
     this.alertedProviders = new Set();
     this.suppressedRiskKeys = new Set();
+    this.notificationRealtimeChannel = null;
+    this.notificationRealtimeRefreshTimer = null;
     this._actionsBound = false;
     this._filtersBound = false;
     this._searchTimer = null;
+  }
+
+  clampPageSize(value) {
+    const parsed = Number(value || 30);
+    if (!Number.isFinite(parsed)) return 30;
+    return Math.min(Math.max(parsed, 10), 50);
   }
 
   escapeHtml(value = "") {
@@ -109,6 +117,154 @@ class AdminServicesProviders {
 
   getRequestEvents(provider) {
     return Array.isArray(provider?.svc_request_events) ? provider.svc_request_events : [];
+  }
+
+  getNotifications(provider) {
+    return Array.isArray(provider?.svc_notifications) ? provider.svc_notifications : [];
+  }
+
+  latestKycNotification(provider) {
+    return this.getNotifications(provider)
+      .filter((item) => String(item?.type || "").toUpperCase() === "PROVIDER_KYC_REVIEW")
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0] || null;
+  }
+
+  notificationDeviceState(provider) {
+    const devices = this.getDevices(provider);
+    const activeDevices = devices.filter((device) => device.active !== false);
+    const pushReady = activeDevices.filter((device) =>
+      device.notifications_enabled !== false && device.push_configured === true
+    );
+    const latest = activeDevices[0] || devices[0] || null;
+
+    if (!devices.length) {
+      return {
+        className: "no-device",
+        label: "Sin dispositivo",
+        detail: "No hay ningun dispositivo registrado para esta cuenta de prestador."
+      };
+    }
+
+    if (!pushReady.length) {
+      return {
+        className: "no-push",
+        label: "Sin push activo",
+        detail: `Ultima senal del prestador: ${this.formatDate(latest?.last_seen_at || latest?.updated_at)}. Debe abrir MIMIGO Pro con esta misma cuenta y activar notificaciones.`
+      };
+    }
+
+    return {
+      className: "ready",
+      label: `${pushReady.length} push activo${pushReady.length === 1 ? "" : "s"}`,
+      detail: `Ultima senal: ${this.formatDate(latest?.last_seen_at || latest?.updated_at)}.`
+    };
+  }
+
+  notificationReceiptState(notification, provider = null) {
+    const deviceState = provider ? this.notificationDeviceState(provider) : null;
+    if (!notification) {
+      return {
+        className: "missing",
+        label: "Sin notificacion",
+        detail: deviceState?.detail || "Todavia no hay acuse registrado para esta decision.",
+        ticks: ""
+      };
+    }
+
+    if (notification.read_at) {
+      return {
+        className: "read",
+        label: "Leida",
+        detail: `El prestador abrio la notificacion ${this.formatDate(notification.read_at)}.`,
+        ticks: "&#10003;&#10003;"
+      };
+    }
+
+    if (notification.received_at) {
+      return {
+        className: "received",
+        label: "Recibida",
+        detail: `El dispositivo del prestador confirmo recepcion ${this.formatDate(notification.received_at)}.`,
+        ticks: "&#10003;&#10003;"
+      };
+    }
+
+    const status = String(notification.delivery_status || "").toUpperCase();
+
+    if (notification.delivered_at || ["SENT", "PARTIAL"].includes(status)) {
+      return {
+        className: "sent",
+        label: "Enviada",
+        detail: `Push/in-app creado ${this.formatDate(notification.created_at)}. Esperando acuse del prestador.`,
+        ticks: "&#10003;"
+      };
+    }
+
+    if (["NO_DEVICE", "NO_PUSH_TOKEN"].includes(status) || deviceState?.className === "no-device" || deviceState?.className === "no-push") {
+      return {
+        className: "no-device",
+        label: deviceState?.label || "Sin dispositivo",
+        detail: `${this.formatDate(notification.created_at)}: ${deviceState?.detail || "No hay un token push activo para esta cuenta."}`,
+        ticks: "!"
+      };
+    }
+
+    if (status === "FAILED") {
+      return {
+        className: "failed",
+        label: "Push fallo",
+        detail: `No se pudo entregar el push creado ${this.formatDate(notification.created_at)}. El prestador lo vera al abrir la app si usa esta cuenta.`,
+        ticks: "!"
+      };
+    }
+
+    return {
+      className: "pending",
+      label: "Esperando app",
+      detail: `Notificacion creada ${this.formatDate(notification.created_at)}. Aun sin acuse del prestador.`,
+      ticks: ""
+    };
+  }
+
+  renderNotificationReceipt(provider) {
+    const notification = this.latestKycNotification(provider);
+    const receipt = this.notificationReceiptState(notification, provider);
+    const deviceState = this.notificationDeviceState(provider);
+    const action = notification?.data_json?.action || notification?.data?.action || "";
+    const title = notification?.title || "Decision administrativa";
+
+    return `
+      <section class="provider-notification-receipt ${this.escapeHtml(receipt.className)}" aria-label="Estado de entrega de notificacion">
+        <div>
+          <span class="provider-receipt-eyebrow">Notificacion al prestador</span>
+          <strong>${this.escapeHtml(title)}</strong>
+          <small>${this.escapeHtml(action ? this.actionCopy(action) : "Ultima decision enviada")}</small>
+          <em>${this.escapeHtml(receipt.detail)}</em>
+          <em class="provider-receipt-device">${this.escapeHtml(deviceState.label)} - ${this.escapeHtml(deviceState.detail)}</em>
+        </div>
+        <span class="provider-receipt-ticks ${this.escapeHtml(receipt.className)}" aria-label="${this.escapeHtml(receipt.label)}">${receipt.ticks}</span>
+      </section>
+    `;
+  }
+
+  notificationActionFeedback(result, sentMessage, missingMessage) {
+    const status = String(result?.notification_delivery_status || "").toUpperCase();
+    if (!result?.notification_created) {
+      return { message: missingMessage, tone: "warning" };
+    }
+    if (["NO_DEVICE", "NO_PUSH_TOKEN"].includes(status)) {
+      return {
+        message: "Decision guardada. La cuenta destino no tiene push activo; el aviso queda en la app y se acusa cuando el prestador la abra con esa cuenta.",
+        tone: "warning"
+      };
+    }
+    if (status === "FAILED") {
+      return {
+        message: "Decision guardada. El push fallo; el aviso queda en la app y se acusa cuando el prestador la abra.",
+        tone: "warning"
+      };
+    }
+    return { message: sentMessage, tone: "success" };
   }
 
   providerLetter(provider) {
@@ -588,7 +744,10 @@ class AdminServicesProviders {
 
     const text = await response.text();
     const json = text ? JSON.parse(text) : null;
-    if (!response.ok) throw new Error(json?.error || json?.message || `Error ${response.status}`);
+    if (!response.ok) {
+      const detail = json?.details?.message || json?.details?.details || json?.message || "";
+      throw new Error([json?.error || `Error ${response.status}`, detail].filter(Boolean).join(": "));
+    }
     return json;
   }
 
@@ -640,6 +799,46 @@ class AdminServicesProviders {
     this.bindActions();
     this.bindSearch();
     await this.load();
+    this.setupNotificationRealtime();
+  }
+
+  setupNotificationRealtime() {
+    const client = supabaseAdminService.client;
+    if (!client?.channel || this.notificationRealtimeChannel) return;
+
+    this.notificationRealtimeChannel = client
+      .channel("admin:provider-kyc-notifications")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "svc_notifications"
+        },
+        (payload) => this.onNotificationReceiptChange(payload)
+      )
+      .subscribe();
+  }
+
+  onNotificationReceiptChange(payload) {
+    const row = payload?.new || payload?.old;
+    if (!row || String(row.type || "").toUpperCase() !== "PROVIDER_KYC_REVIEW") return;
+
+    const provider = this.providers.find((item) => String(item.user_id || "") === String(row.user_id || ""));
+    if (!provider) return;
+
+    const notifications = this.getNotifications(provider).filter((item) => String(item.id) !== String(row.id));
+    provider.svc_notifications = [row, ...notifications]
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+      .slice(0, 50);
+
+    window.clearTimeout(this.notificationRealtimeRefreshTimer);
+    this.notificationRealtimeRefreshTimer = window.setTimeout(() => {
+      this.renderList();
+      if (String(provider.id) === String(this.selectedId)) {
+        this.renderDetail({ fromUserSelection: false });
+      }
+    }, 120);
   }
 
   async load({ keepSelection = false } = {}) {
@@ -659,10 +858,11 @@ class AdminServicesProviders {
       this.alphaBuckets = Array.isArray(result?.alphaBuckets) ? result.alphaBuckets : [];
       this.pagination = {
         page: Number(result?.pagination?.page || this.pagination.page),
-        pageSize: Number(result?.pagination?.pageSize || this.pagination.pageSize),
+        pageSize: this.clampPageSize(result?.pagination?.pageSize || this.pagination.pageSize),
         total: Number(result?.pagination?.total || 0),
         hasMore: Boolean(result?.pagination?.hasMore)
       };
+      if (this.pageSizeSelect) this.pageSizeSelect.value = String(this.pagination.pageSize);
 
       if (!keepSelection || !this.providers.some((provider) => provider.id === this.selectedId)) {
         this.selectedId = this.providers[0]?.id || null;
@@ -711,6 +911,7 @@ class AdminServicesProviders {
     document.querySelectorAll("[data-provider-filter]").forEach((btn) => {
       const isActive = btn.dataset.providerFilter === this.activeFilter;
       btn.classList.toggle("is-active", isActive);
+      btn.classList.toggle("active", isActive);
       btn.setAttribute("aria-pressed", isActive ? "true" : "false");
     });
   }
@@ -842,6 +1043,7 @@ class AdminServicesProviders {
       const updatedAt = profile.updated_at || provider.updated_at || provider.created_at;
       const activity = this.activitySummary(provider);
       const taskSummary = this.taskSummary(this.reviewTasks(provider));
+      const receipt = this.notificationReceiptState(this.latestKycNotification(provider), provider);
 
       return `
         <button class="provider-queue-row ${isSelected ? "is-selected" : ""} risk-${this.escapeHtml(taskSummary.severity)}" type="button" data-provider-select="${providerId}">
@@ -859,6 +1061,7 @@ class AdminServicesProviders {
               <span class="score-pill compact">${score}</span>
             </span>
             <small class="provider-queue-risk">${this.escapeHtml(taskSummary.severity === "ok" ? "Sin alertas" : `${taskSummary.count} alertas`)}</small>
+            <small class="provider-queue-receipt ${this.escapeHtml(receipt.className)}"><span>${receipt.ticks}</span>${this.escapeHtml(receipt.label)}</small>
             <small class="provider-queue-activity">${activity.total} servicios - ${activity.rating ? activity.rating.toFixed(1) : "SR"} rating</small>
             <small class="provider-queue-date">${this.escapeHtml(this.formatDate(latestCheck.created_at || updatedAt))}</small>
           </span>
@@ -949,6 +1152,8 @@ class AdminServicesProviders {
           <div><strong>Ubicacion</strong><span>${this.escapeHtml(this.locationText(provider))}</span></div>
           <div><strong>Dispositivo</strong><span>${this.escapeHtml(latestDevice.platform || profile.last_verified_device_id || "No registrado")}</span></div>
           </section>
+
+          ${this.renderNotificationReceipt(provider)}
 
           <section class="provider-score-panel ${this.escapeHtml(scoreState)}" aria-label="Score de revision">
           <div>
@@ -1163,7 +1368,8 @@ class AdminServicesProviders {
     });
 
     this.pageSizeSelect?.addEventListener("change", (event) => {
-      this.pagination.pageSize = Number(event.target.value || 30);
+      this.pagination.pageSize = this.clampPageSize(event.target.value || 30);
+      event.target.value = String(this.pagination.pageSize);
       this.pagination.page = 1;
       this.load({ keepSelection: true });
     });
@@ -1281,12 +1487,16 @@ class AdminServicesProviders {
             notes
           });
           await this.insertAuditLog(`admin.provider.${action}`, provider, { action, document_type: documentType, document_id: documentId, notes });
-          this.showFeedback(
+          const feedback = this.notificationActionFeedback(
+            result,
             action === "request_document_correction"
-              ? (result?.notification_created ? "Documento observado y notificacion enviada al prestador." : "Documento observado. No se pudo crear notificacion automatica.")
-              : "Documento marcado como aprobado.",
-            action === "request_document_correction" && !result?.notification_created ? "warning" : "success"
+              ? "Documento observado. Notificacion enviada; esperando recepcion del prestador."
+              : "Documento marcado como aprobado y notificado.",
+            action === "request_document_correction"
+              ? "Documento observado. No se pudo crear notificacion automatica."
+              : "Documento marcado como aprobado. No se pudo crear notificacion automatica."
           );
+          this.showFeedback(feedback.message, feedback.tone);
           this.alertedProviders.clear();
           await this.load({ keepSelection: true });
         } catch (error) {
@@ -1341,12 +1551,16 @@ class AdminServicesProviders {
             notes
           });
           await this.insertAuditLog(`admin.provider.${action}.bulk`, provider, { action, documents: selectedDocs, notes });
-          this.showFeedback(
+          const feedback = this.notificationActionFeedback(
+            result,
             action === "request_document_correction"
-              ? (result?.notification_created ? "Correccion multiple enviada y notificada al prestador." : "Correccion multiple guardada. No se pudo crear notificacion automatica.")
-              : "Documentos seleccionados marcados como aprobados.",
-            action === "request_document_correction" && !result?.notification_created ? "warning" : "success"
+              ? "Correccion multiple enviada; esperando recepcion del prestador."
+              : "Documentos seleccionados marcados como aprobados y notificados.",
+            action === "request_document_correction"
+              ? "Correccion multiple guardada. No se pudo crear notificacion automatica."
+              : "Documentos seleccionados marcados como aprobados. No se pudo crear notificacion automatica."
           );
+          this.showFeedback(feedback.message, feedback.tone);
           this.alertedProviders.clear();
           await this.load({ keepSelection: true });
         } catch (error) {
@@ -1389,12 +1603,12 @@ class AdminServicesProviders {
           notes
         });
         await this.insertAuditLog(`admin.provider.${action}`, provider, { action, notes });
-        this.showFeedback(
-          result?.notification_created
-            ? "Decision guardada y notificacion enviada al prestador."
-            : "Decision guardada. No se pudo crear la notificacion automatica; revisa soporte si el usuario consulta.",
-          result?.notification_created ? "success" : "warning"
+        const feedback = this.notificationActionFeedback(
+          result,
+          "Decision guardada. Notificacion enviada; esperando recepcion del prestador.",
+          "Decision guardada. No se pudo crear la notificacion automatica; revisa soporte si el usuario consulta."
         );
+        this.showFeedback(feedback.message, feedback.tone);
         this.alertedProviders.clear();
         await this.load();
       } catch (error) {

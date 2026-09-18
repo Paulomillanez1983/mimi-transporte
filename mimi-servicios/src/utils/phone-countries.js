@@ -87,6 +87,9 @@ export function detectDefaultCountry(countries = []) {
 
 export async function normalizePhoneNumber(rawPhone, country) {
   const raw = String(rawPhone || "").trim();
+  const argentinaPhone = normalizeArgentinaMobile(raw, country);
+  if (argentinaPhone) return argentinaPhone;
+
   const tools = await getPhoneTools();
 
   if (tools?.parsePhoneNumberFromString) {
@@ -94,6 +97,11 @@ export async function normalizePhoneNumber(rawPhone, country) {
     if (!parsed?.isValid?.()) {
       throw new Error("phone_invalid");
     }
+    const parsedArgentinaPhone = normalizeArgentinaMobile(parsed.number, {
+      iso: parsed.country || country?.iso,
+      dialCode: `+${parsed.countryCallingCode}`
+    });
+    if (parsedArgentinaPhone) return parsedArgentinaPhone;
     return {
       phoneNumber: parsed.number,
       countryCode: `+${parsed.countryCallingCode}`,
@@ -113,6 +121,61 @@ export async function normalizePhoneNumber(rawPhone, country) {
     phoneNumber: withDial,
     countryCode: country?.dialCode || "+54",
     countryIso: country?.iso || "AR",
+    nationalNumber: digits
+  };
+}
+
+export function normalizeArgentinaMobile(rawPhone, country = {}) {
+  const iso = String(country?.iso || "").toUpperCase();
+  const dialCode = String(country?.dialCode || "").replace(/[^\d+]/g, "");
+  const raw = String(rawPhone || "").trim();
+  const cleaned = raw.replace(/[^\d+]/g, "");
+  let digits = cleaned.replace(/\D/g, "");
+  const shouldNormalizeArgentina =
+    iso === "AR" ||
+    dialCode === "+54" ||
+    cleaned.startsWith("+54") ||
+    (!cleaned.startsWith("+") && digits.startsWith("54") && digits.length >= 12);
+
+  if (!shouldNormalizeArgentina) return null;
+  if (!digits) throw new Error("phone_invalid");
+
+  if (cleaned.startsWith("+")) {
+    if (digits.startsWith("549")) {
+      digits = digits.slice(3);
+    } else if (digits.startsWith("54")) {
+      digits = digits.slice(2);
+    } else {
+      throw new Error("phone_invalid");
+    }
+  } else if (digits.startsWith("54") && digits.length >= 12) {
+    digits = digits.slice(2);
+  }
+
+  digits = digits.replace(/^0+/, "");
+  if (digits.startsWith("9") && digits.length === 11) {
+    digits = digits.slice(1);
+  }
+  if (digits.length === 12) {
+    for (const areaLength of [2, 3, 4]) {
+      if (digits.slice(areaLength, areaLength + 2) === "15") {
+        const candidate = `${digits.slice(0, areaLength)}${digits.slice(areaLength + 2)}`;
+        if (candidate.length === 10) {
+          digits = candidate;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!/^[1-9][0-9]{9}$/.test(digits)) {
+    throw new Error("phone_invalid");
+  }
+
+  return {
+    phoneNumber: `+549${digits}`,
+    countryCode: "+54",
+    countryIso: "AR",
     nationalNumber: digits
   };
 }

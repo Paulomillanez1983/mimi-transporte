@@ -1,4 +1,11 @@
 import { appConfig } from "../config.js";
+import {
+  estimateClientCancellationSync,
+  primeCancellationRules
+} from "../services/cancellation-policy.js?v=2026.09.18.1";
+
+// Las reglas de cancelación se cargan una sola vez por sesión de pantalla.
+let cancellationRulesPrimed = false;
 
 const stateLabels = {
   SEARCHING: "Buscando prestador",
@@ -1056,6 +1063,37 @@ export function renderProviderActiveService(state) {
       0
   );
   const activePaymentLabel = providerPaymentStatusLabel(activeService?.payment_status ?? activeService?.payment?.status);
+  const activePlatformFee = Number(
+    activeDetails.platform_fee ??
+      activeService?.platform_fee_snapshot ??
+      0
+  );
+  const activeClientTotal = Number(
+    activeDetails.total_price ??
+      activeService?.total_price_snapshot ??
+      activeProviderAmount + activePlatformFee
+  );
+  // Si el cliente cancela, al prestador le queda el 70% del cargo. El monto sale de
+  // cancellation_rules y no está hardcodeado acá: si las reglas todavía no se
+  // cargaron, no se muestra el número en vez de mostrar uno inventado.
+  const cancellationEstimate = ["PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED"].includes(
+    String(activeService?.status || "")
+  )
+    ? estimateClientCancellationSync({ status: activeService.status, totalPaid: activeClientTotal })
+    : null;
+  const cancellationNotice = activeService?.status === "IN_PROGRESS"
+    ? `<p class="muted" data-cancellation-notice>Servicio en curso: el cliente ya no puede cancelar, solo reclamar.</p>`
+    : cancellationEstimate && cancellationEstimate.providerShare > 0
+      ? `<p class="muted" data-cancellation-notice>Si el cliente cancela ahora, se te reconocen <strong>${currency(
+          cancellationEstimate.providerShare
+        )}</strong> por el viaje.</p>`
+      : "";
+  if (!cancellationRulesPrimed) {
+    cancellationRulesPrimed = true;
+    primeCancellationRules().catch(() => {
+      cancellationRulesPrimed = false;
+    });
+  }
 
   providerActiveService.innerHTML = activeService
     ? `
@@ -1108,6 +1146,7 @@ export function renderProviderActiveService(state) {
 
   providerActions.innerHTML = activeService
     ? [
+        cancellationNotice,
         ["ACCEPTED", "SCHEDULED"].includes(activeService.status)
           ? `<button class="btn-primary" data-provider-flow="en-route" type="button">En camino</button>`
           : "",
@@ -1663,6 +1702,49 @@ function providerOfferingActiveAddons(offering = {}) {
     .filter((addon) => addon && addon.is_active !== false && String(addon.name || "").trim());
 }
 
+function normalizeProviderFeatureId(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function providerAddonsAllowedIdsFromMetadata(metadata = {}) {
+  const parsed = typeof metadata === "string"
+    ? (() => {
+        try {
+          return JSON.parse(metadata);
+        } catch (_) {
+          return {};
+        }
+      })()
+    : metadata;
+  const rawIds = parsed?.enabled_provider_ids ?? parsed?.allowed_provider_ids ?? parsed?.providers;
+  return Array.isArray(rawIds)
+    ? rawIds.map(normalizeProviderFeatureId).filter(Boolean)
+    : [];
+}
+
+function providerServiceAddonsEnabledForState(state = {}) {
+  const config = state.provider?.serviceAddons ?? {};
+  if (config.enabled === true) return true;
+
+  const flag = config.flag ?? config.remoteFlag ?? null;
+  const scope = String(flag?.scope ?? "").toLowerCase();
+  if (flag?.enabled !== true || scope !== "provider") return false;
+
+  const allowedIds = new Set(providerAddonsAllowedIdsFromMetadata(flag.metadata_json ?? flag.metadata ?? {}));
+  if (!allowedIds.size) return false;
+
+  const offerings = Array.isArray(state.provider?.business?.offerings) ? state.provider.business.offerings : [];
+  const currentIds = [
+    state.session?.providerId,
+    config.providerId,
+    state.provider?.profile?.id,
+    state.provider?.business?.profile?.provider_id,
+    ...offerings.map((offering) => offering?.provider_id)
+  ].map(normalizeProviderFeatureId).filter(Boolean);
+
+  return currentIds.some((id) => allowedIds.has(id));
+}
+
 function providerOfferingAddonPriceLabel(addon = {}) {
   const model = String(addon.pricing_model || "FIXED").toUpperCase();
   const amount = Number(addon.price || 0);
@@ -1697,7 +1779,7 @@ function renderProviderOfferingAddonsEditor(offering = null, index = 0) {
         <div class="provider-service-addons-editor-head">
           <div>
             <strong>Adicionales</strong>
-            <small>Publica el servicio y despues vas a poder sumar opciones como urgencia, materiales o traslado.</small>
+          <small>Los adicionales se pueden agregar despues de publicar el servicio.</small>
           </div>
           <span>Beta</span>
         </div>
@@ -1716,11 +1798,11 @@ function renderProviderOfferingAddonsEditor(offering = null, index = 0) {
       <div class="provider-service-addons-editor-head">
         <div>
           <strong>Adicionales</strong>
-          <small>Suma opciones para que el cliente entienda mejor tu servicio. No se cobran automaticamente todavia.</small>
+          <small>Suma opciones para que el cliente entienda mejor tu servicio. Los adicionales se guardan por el flujo auditado de MIMIGO.</small>
         </div>
         <div class="provider-service-addons-editor-actions">
           <span>Beta</span>
-          <button type="button" data-provider-business-action="focus-new-service-addon">Agregar adicional</button>
+          <button type="button" data-provider-business-action="focus-new-service-addon">+ Agregar adicional</button>
         </div>
       </div>
       <div class="provider-service-addons-editor-list">
@@ -2879,6 +2961,12 @@ function renderProviderServicesHome({
         </div>
         <div class="provider-services-mini-list">
           ${activeOfferings.map((offering) => renderServiceCard(offering)).join("")}
+          ${inactiveOfferings.length ? `
+            <div class="provider-services-section-label" data-provider-services-paused-label>
+              <strong>Servicios desactivados</strong>
+              <small>No aparecen en busquedas hasta que los reactives.</small>
+            </div>
+          ` : ""}
           ${inactiveOfferings.map((offering) => renderServiceCard(offering, { inactive: true })).join("")}
           ${!offerings.length ? `
             <article class="provider-services-empty-state" data-provider-services-empty="all">
@@ -3063,7 +3151,7 @@ function renderProviderBusiness(state) {
   const guidedService = state.provider?.guidedService ?? {};
   const guidedEnabled = isProviderGuidedServiceEnabled(guidedService);
   const guidedPanelOpen = Boolean(guidedEnabled && guidedService?.panelOpen);
-  const addonsEnabled = Boolean(state.provider?.serviceAddons?.enabled);
+  const addonsEnabled = providerServiceAddonsEnabledForState(state);
   const detail = business.profile ?? null;
   const pricing = business.pricing ?? [];
   const offerings = business.offerings ?? [];
@@ -3226,7 +3314,8 @@ function renderProviderBusiness(state) {
   const providerLocationLng = profileMetadata.provider_base_location_lng ?? providerLocation.lng ?? "";
   const providerLocationAccuracy = profileMetadata.provider_base_location_accuracy_m ?? providerLocation.accuracy_m ?? "";
   const providerLocationSource = profileMetadata.provider_base_location_source ?? providerLocation.source ?? "";
-  const shouldOpenProfileDetails = !providerFirstNameValue || !selectedProvince || !selectedCity || !currentAddressInputValue;
+  const shouldKeepProfileCompact = true;
+  const shouldOpenProfileDetails = !shouldKeepProfileCompact && (!providerFirstNameValue || !selectedProvince || !selectedCity || !currentAddressInputValue);
   const hasAdvancedPriceData = Boolean(
     firstOffering?.unit_name ||
     firstOffering?.price_per_hour ||
@@ -3243,9 +3332,9 @@ function renderProviderBusiness(state) {
   );
   const shouldOpenDiscoveryStep = !isEditingOffering && !hasSelectedRubros;
   const shouldOpenServiceDetails = isEditingOffering || (hasSelectedRubros && (!firstOffering?.title || !hasAnyPriceValue));
-  const shouldOpenAddressStep = !currentAddressInputValue;
-  const shouldOpenZoneStep = !selectedProvince || !selectedCity;
-  const shouldOpenPublicProfileStep = !providerFirstNameValue || !detail?.bio;
+  const shouldOpenAddressStep = !shouldKeepProfileCompact && !currentAddressInputValue;
+  const shouldOpenZoneStep = !shouldKeepProfileCompact && (!selectedProvince || !selectedCity);
+  const shouldOpenPublicProfileStep = !shouldKeepProfileCompact && (!providerFirstNameValue || !detail?.bio);
   const showServicePreview = !isAddingOffering || !offerings.length;
   const showProfileSection = true;
   const legal = providerLegalStatus(state);
@@ -3257,6 +3346,13 @@ function renderProviderBusiness(state) {
   const readinessDone = readinessItems.filter((item) => item.done).length;
   const nextReadinessIndex = readinessItems.findIndex((item) => !item.done);
   const readinessProgress = Math.round((readinessDone / readinessItems.length) * 100);
+  const builderStepItems = [
+    { step: "1", label: "Servicio", detail: hasSelectedRubros ? "Rubro listo" : "Elegir rubro" },
+    { step: "2", label: "Precio", detail: firstOffering?.title && hasAnyPriceValue ? "Listo" : "Falta precio" },
+    { step: "3", label: "Adicionales", detail: addonsEnabled ? "Disponible" : "No activo" },
+    { step: "4", label: "Zona", detail: selectedProvince && selectedCity ? "Lista" : "Pendiente" },
+    { step: "5", label: "Perfil", detail: providerFirstNameValue ? "Basico" : "Pendiente" }
+  ];
 
   if (!legal.accepted) {
     container.innerHTML = `
@@ -3293,10 +3389,20 @@ function renderProviderBusiness(state) {
           <div>
             <span class="eyebrow">Modo foco Servicios</span>
             <h3>${isEditingOffering ? "Editar servicio" : "Agregar servicio"}</h3>
-            <p>Completa solo lo esencial. Perfil, documentos y datos largos pueden mejorarse despues.</p>
+            <p>Completa lo minimo para publicar claro. Perfil, documentos y datos largos pueden mejorarse despues.</p>
           </div>
           <button class="provider-service-composer-close" type="button" data-provider-business-action="close-provider-service-composer" aria-label="Cerrar y volver a Tus servicios">x</button>
         </section>
+
+        <nav class="provider-service-builder-roadmap" aria-label="Pasos para publicar servicio">
+          ${builderStepItems.map((item) => `
+            <span class="${item.detail === "Pendiente" || item.detail === "Falta precio" || item.detail === "Elegir rubro" ? "is-pending" : ""}">
+              <i>${escapeHtml(item.step)}</i>
+              <strong>${escapeHtml(item.label)}</strong>
+              <small>${escapeHtml(item.detail)}</small>
+            </span>
+          `).join("")}
+        </nav>
 
         <section class="provider-service-readiness" aria-label="Estado de publicacion" style="--provider-readiness:${readinessProgress}%">
           <div class="provider-service-readiness-head">
@@ -3518,27 +3624,50 @@ function renderProviderBusiness(state) {
         </section>
         </details>
 
+        ${addonsEnabled ? `
+        <details class="provider-flow-step provider-flow-step-addons" ${isEditingOffering ? "open" : ""}>
+          <summary class="provider-flow-summary">
+            <span>3</span>
+            <div>
+              <strong>Adicionales</strong>
+              <small>Suma opciones para que el cliente entienda mejor tu servicio.</small>
+            </div>
+            <em>${firstOffering?.id ? "Opcional" : "Disponible al publicar"}</em>
+          </summary>
+          <section class="provider-simple-card provider-addons-builder-card">
+            <div class="provider-simple-card-heading">
+              <span>3</span>
+              <div>
+                <strong>Adicionales simples</strong>
+                <small>Opciones como urgencia, materiales o trabajo en altura. Se guardan por el flujo auditado de MIMIGO.</small>
+              </div>
+            </div>
+            ${renderProviderOfferingAddonsEditor(firstOffering, 0)}
+          </section>
+        </details>
+        ` : ""}
+
         ${showProfileSection ? `
-        <section class="provider-simple-card provider-profile-collapsible">
+        <section class="provider-simple-card provider-profile-collapsible provider-work-zone-collapsible">
           <details class="provider-profile-details" ${shouldOpenProfileDetails ? "open" : ""}>
             <summary class="provider-profile-summary">
-              <span class="provider-profile-summary-step">3</span>
+              <span class="provider-profile-summary-step">4</span>
               <div>
                 <strong>Donde trabajas</strong>
-                <small>${shouldOpenProfileDetails ? "Completa lo minimo para ubicar tu servicio." : "Listo. Abrilo solo si queres editar zona o perfil."}</small>
+                <small>Compacto. Podes completar zona y perfil luego para mejorar tu visibilidad.</small>
               </div>
               <em>${shouldOpenProfileDetails ? "Pendiente" : "Listo"}</em>
             </summary>
             <div class="provider-profile-details-body">
           <div class="provider-profile-section-intro">
-            <strong>Mejora tu perfil para aparecer mejor</strong>
+            <strong>Que hago, donde trabajo y como me presento</strong>
             <small>No bloquea el alta salvo datos criticos. Podes completar perfil, zona y presentacion despues.</small>
           </div>
 
           <div class="provider-profile-stepper">
             <details class="provider-location-editor-step" ${shouldOpenAddressStep ? "open" : ""}>
               <summary class="provider-location-step-summary">
-                <span>3.1</span>
+                <span>4.1</span>
                 <div>
                   <strong>Tu zona de trabajo</strong>
                   <small>${escapeHtml(displayAddressText)}</small>
@@ -3573,7 +3702,7 @@ function renderProviderBusiness(state) {
 
             <details class="provider-location-editor-step" ${shouldOpenZoneStep ? "open" : ""}>
               <summary class="provider-location-step-summary">
-                <span>3.2</span>
+                <span>4.2</span>
                 <div>
                   <strong>Provincia y ciudad</strong>
                   <small>${selectedProvince && selectedCity ? `${escapeHtml(selectedCity)}, ${escapeHtml(selectedProvince)}` : "Elegir zona de trabajo"}</small>
@@ -3623,10 +3752,10 @@ function renderProviderBusiness(state) {
 
             <details class="provider-location-editor-step" ${shouldOpenPublicProfileStep ? "open" : ""}>
               <summary class="provider-location-step-summary">
-                <span>3.3</span>
+                <span>5</span>
                 <div>
                   <strong>Perfil publico</strong>
-                  <small>${providerFirstNameValue ? `${escapeHtml(providerFirstNameValue)} - ${escapeHtml(detail?.bio || "Bio pendiente")}` : "Nombre, bio y especialidad"}</small>
+                  <small>${providerFirstNameValue ? `${escapeHtml(providerFirstNameValue)} - ${escapeHtml(detail?.bio || "Bio pendiente")}` : "Podés completar tu perfil luego para mejorar tu visibilidad"}</small>
                 </div>
                 <em>${shouldOpenPublicProfileStep ? "Pendiente" : "Listo"}</em>
               </summary>

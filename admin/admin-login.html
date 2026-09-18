@@ -227,7 +227,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script type="module">
-    import supabaseAdminService from "./supabase-admin-client.js?v=2026.05.14.2";
+    import supabaseAdminService from "./supabase-admin-client.js?v=2026.05.15.4";
 
     const googleLoginBtn = document.getElementById("googleLoginBtn");
     const loginLoading = document.getElementById("loginLoading");
@@ -339,6 +339,11 @@
       setError("");
       setLoading(true, "Abriendo Google...");
       setEnvHint("Iniciando OAuth con Google...");
+      let redirectResetTimer = window.setTimeout(() => {
+        setLoading(false);
+        setError("No pudimos abrir Google. Revisá si Supabase está respondiendo e intentá nuevamente.");
+        setEnvHint("OAuth no respondió a tiempo.");
+      }, 12000);
 
       try {
         const ready = await supabaseAdminService.init();
@@ -349,6 +354,10 @@
 
         await supabaseAdminService.signInWithGoogle();
       } catch (err) {
+        if (redirectResetTimer) {
+          window.clearTimeout(redirectResetTimer);
+          redirectResetTimer = null;
+        }
         console.error("[admin-login.handleGoogleLogin]", err);
         setLoading(false);
         setError(err instanceof Error ? err.message : "No pudimos iniciar sesion con Google.");

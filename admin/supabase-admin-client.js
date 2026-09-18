@@ -229,10 +229,11 @@ class SupabaseAdminService {
 
     const redirectTo = this.getRedirectUrl("./admin-panel.html");
 
-    const { error } = await this.client.auth.signInWithOAuth({
+    const { data, error } = await this.client.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo,
+        skipBrowserRedirect: true,
         queryParams: {
           prompt: "select_account"
         }
@@ -243,6 +244,13 @@ class SupabaseAdminService {
       console.error("[SupabaseAdminService.signInWithGoogle]", error);
       throw error;
     }
+
+    if (data?.url) {
+      window.location.assign(data.url);
+      return;
+    }
+
+    throw new Error("No pudimos generar la URL de Google.");
   }
 
   async signOut() {

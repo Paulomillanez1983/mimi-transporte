@@ -1,8 +1,9 @@
-import { getSupabaseClient } from "./supabase.js";
+import { getSupabaseClient } from "./supabase.js?v=2026.05.17.2";
 import {
   disconnectRealtime as disconnectManagedRealtime,
   subscribeScopedChannel
 } from "./realtime-manager.js";
+import { MIMI_REALTIME_ENABLED } from "./runtime-config.js";
 
 let channels = [];
 
@@ -186,7 +187,7 @@ function subscribeProviderOffers(providerId, onOffer) {
         count(onOffer)
       )
       .subscribe(),
-      { critical: true }
+      { pauseWhenHidden: true }
     )
   );
 }
@@ -200,6 +201,10 @@ export function subscribeToClientRealtime({
   onTracking,
   onRequest
 }) {
+  if (!MIMI_REALTIME_ENABLED) {
+    return () => {};
+  }
+
   const supabase = getSupabaseClient();
 
   if (!supabase) {
@@ -226,6 +231,10 @@ export function subscribeToProviderRealtime({
   onRequest,
   onOffer
 }) {
+  if (!MIMI_REALTIME_ENABLED) {
+    return () => {};
+  }
+
   const supabase = getSupabaseClient();
 
   if (!supabase) {

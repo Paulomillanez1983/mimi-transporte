@@ -183,7 +183,7 @@
   <script src="./env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script type="module">
-    import { getCurrentSession } from "./src/services/supabase.js?v=2026.05.14.9";
+    import { getCurrentSession, markProviderRegistrationIntent } from "./src/services/supabase.js?v=2026.06.05.2";
 
     const allowedProviderReturnTo = new Set([
       "/prestador",
@@ -205,15 +205,24 @@
       const lock = JSON.stringify({ mode, target: "prestador.html", source: "provider-callback", startedAt: Date.now() });
       sessionStorage.setItem("mimi_services_provider_auth_lock", lock);
       localStorage.setItem("mimi_services_provider_auth_lock", lock);
+      markProviderRegistrationIntent("provider_callback");
       sessionStorage.removeItem("mimi_services_client_auth_lock");
       localStorage.removeItem("mimi_services_client_auth_lock");
     } catch (_) {}
 
     async function finishAuth() {
+      let session = null;
       try {
-        await getCurrentSession();
+        session = await getCurrentSession();
       } catch (error) {
         console.warn("[MIMI provider auth callback] session recovery warning:", error);
+      }
+
+      if (!session?.user) {
+        const fallback = new URL("/prestador", window.location.origin);
+        fallback.searchParams.set("auth_error", "session");
+        window.location.replace(fallback.toString());
+        return;
       }
 
       window.location.replace(target);

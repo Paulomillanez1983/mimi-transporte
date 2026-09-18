@@ -21,6 +21,7 @@ let lastRoadRouteCoordinates = [];
 let providerSimulationFrame = null;
 let providerSimulation = null;
 let mapLibreAssetsPromise = null;
+let clientMarkerDragEndHandler = null;
 
 const SERVICE_ROUTE_SOURCE = "mimi-services-tracking-route";
 const PROVIDER_SIMULATION_SPEED_MPS = 7;
@@ -291,6 +292,7 @@ function startProviderSimulation({
 }
 
 function removeMap() {
+  setClientMarkerAdjustment(false);
   try {
     map?.remove?.();
   } catch {
@@ -304,6 +306,59 @@ function removeMap() {
   lastRoadRouteAt = 0;
   lastRoadRouteCoordinates = [];
   stopProviderSimulation();
+}
+
+export function setClientMarkerAdjustment(enabled, onDragEnd = null) {
+  if (!clientMarker) return false;
+
+  if (clientMarkerDragEndHandler) {
+    try {
+      clientMarker.off?.("dragend", clientMarkerDragEndHandler);
+    } catch {
+      // noop
+    }
+    clientMarkerDragEndHandler = null;
+  }
+
+  try {
+    clientMarker.setDraggable?.(Boolean(enabled));
+  } catch {
+    return false;
+  }
+
+  const element = clientMarker.getElement?.();
+  element?.classList.toggle("is-draggable", Boolean(enabled));
+  element?.setAttribute(
+    "title",
+    enabled ? "Arrastra para ajustar el punto del servicio" : "Domicilio del cliente"
+  );
+
+  if (enabled && typeof onDragEnd === "function") {
+    clientMarkerDragEndHandler = () => {
+      const lngLat = clientMarker.getLngLat?.();
+      const lat = Number(lngLat?.lat);
+      const lng = Number(lngLat?.lng);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        onDragEnd({ lat, lng });
+      }
+    };
+    clientMarker.on?.("dragend", clientMarkerDragEndHandler);
+  }
+
+  return true;
+}
+
+export function focusClientServicePosition(position, zoom = 17) {
+  const next = normalizePosition(position);
+  if (!map || !isValidLngLat(next)) return false;
+  map.easeTo({
+    center: [next.lng, next.lat],
+    zoom,
+    duration: 520,
+    essential: true
+  });
+  scheduleMapResize(map, [40, 180]);
+  return true;
 }
 
 export async function initMap(containerId, initialCenter, zoom) {

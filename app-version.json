@@ -1,26 +1,25 @@
 {
   "client": {
-    "version": "2026.05.18.4",
+    "version": "2026.09.18.2",
     "min_supported_version": "2026.05.13.8",
     "critical": false,
     "force_update": false,
-    "message": "Agregamos cancelacion segura de solicitud y pago pendiente."
+    "icon_revision": "mimigo-visual-v10",
+    "message": "Catálogo de rubros con acentos + política de cancelación: ahora ves cuánto se descuenta y cuánto se te devuelve antes de cancelar."
   },
   "provider": {
-    "version": "2026.05.18.4",
-    "min_supported_version": "2026.05.18.4",
-    "critical": false,
+    "version": "2026.09.18.1",
+    "min_supported_version": "2026.05.14.11",
+    "critical": true,
     "force_update": false,
-    "message": "Alineamos MIMI GO Pro y desactivamos instalacion duplicada."
+    "icon_revision": "mimigo-status-badge-v11",
+    "message": "El panel te avisa cuánto se te reconoce por el viaje si el cliente cancela, y que con el servicio en curso ya no se puede cancelar."
   },
   "admin": {
-    "version": "2026.05.14.2",
-    "min_supported_version": "2026.05.14.2",
+    "version": "2026.05.15.enterprise.5",
+    "min_supported_version": "2026.05.14.3",
     "critical": false,
     "force_update": false,
-    "message": "Mejoramos seguridad del panel admin y actualizamos el modulo financiero."
+    "message": "Panel administrador con consultas financieras acotadas y menor carga sobre Supabase."
   }
 }
-
-
-

@@ -1,5 +1,10 @@
 import { appConfig } from "./config.js";
-import { initMap, updateClientMap } from "./services/map.js";
+import {
+  focusClientServicePosition,
+  initMap,
+  setClientMarkerAdjustment,
+  updateClientMap
+} from "./services/map.js";
 import {
   bootstrapSession,
   createRequest,
@@ -9,28 +14,36 @@ import {
   loadConversationForRequest,
   loadClientRequestInsights,
   loadClientPhoneStatus,
+  loadCustomerTrustProfile,
   evaluateAuthRisk,
   getServicePin,
   loadMessages,
   loadNotifications,
+  approveSecurityChallenge,
+  createCustomerIdentityUploadIntent,
+  processCustomerIdentityVerification,
   registerDevice,
   resolveServiceIntent,
   searchProviders,
   sendMessage,
+  startSecurityVerification,
   startClientPhoneVerification,
+  requestCustomerIdentityVerification,
+  submitCustomerIdentityEvidence,
   submitServiceReview,
   updateRequestStatus,
   verifyClientPhoneCode
-} from "./services/service-api.js";
+} from "./services/service-api.js?v=2026.05.19.7";
 import {
   buscarDireccionServicio,
   guardarFeedbackGeocodingServicio,
   obtenerRecentServicePlaces,
   resolverDireccionActualServicio
-} from "./services/service-geocoding.js";
+} from "./services/service-geocoding.js?v=2026.05.19.7";
 import { subscribeToClientRealtime } from "./services/realtime.js";
 import { playNotificationSound } from "./services/sound.js";
 import {
+  clearAuthRedirectIntent,
   getSupabaseClient,
   hasProviderAuthIntent,
   hasSupabaseEnv,
@@ -38,8 +51,17 @@ import {
   signInWithGoogle,
   signOut,
   subscribeToAuthChanges
-} from "./services/supabase.js";
-import { getMimiPushToken } from "./services/push.js";
+} from "./services/supabase.js?v=2026.05.17.2";
+import {
+  cancellationBlockedReason,
+  invalidateCancellationRulesCache,
+  requestCancellationConfirmation
+} from "./services/cancellation-policy.js?v=2026.09.18.1";
+import {
+  getMimiPushToken,
+  rememberPushTokenRegistration,
+  shouldRegisterPushToken
+} from "./services/push.js?v=2026.05.17.2";
 import {
   loadCmsBanners,
   loadCmsFaqs,
@@ -49,30 +71,74 @@ import {
 } from "./services/pocketbase-cms.js";
 import { initObservability, markPerformance } from "./services/observability.js";
 import {
+  MIMI_BOOT_PUSH_REGISTRATION_ENABLED,
+  MIMI_REALTIME_ENABLED
+} from "./services/runtime-config.js";
+import { recordCriticalRiskEvent } from "./security/risk-events.js";
+import {
+  actions,
   patchState,
   setState,
   state,
   subscribe
 } from "./state/app-state.js";
-import { renderClientScreen } from "./ui/render-client.js?v=2026.05.18.4";
+import { renderClientScreen } from "./ui/render-client.js?v=2026.05.19.7";
 import { cancelPayment, createPaymentIntent, getPaymentStatus } from "./payments/payment-api.js";
 import {
   detectDefaultCountry,
   loadPhoneCountries,
   normalizePhoneNumber
 } from "./utils/phone-countries.js";
+import {
+  optimizeDocumentImageFile,
+  qualityMessage
+} from "./utils/document-image-quality.js?v=2026.05.15.9";
 
 let addressLookupToken = 0;
 let intentLookupToken = 0;
 let realtimeSubscription = null;
 let authSubscription = null;
+let authLoginInFlight = false;
+let authLoginResetTimer = null;
+let clientPushRefreshAt = 0;
+let clientPushRefreshEventsBound = false;
 let phoneCollectorAbortController = null;
 let deferredClientInstallPrompt = null;
+const customerIdentityDraft = new Map();
+let clientSupportMessages = [];
+let locationConfirmResolver = null;
+let locationAdjustDraft = null;
 
+// OJO: este valor y `app-version.json -> client.version` tienen que subir JUNTOS.
+// Si app-version.json queda por encima de este número, el cartel de "Actualizar"
+// aparece en cada apertura de la PWA y nunca se apaga.
+const MIMI_CLIENT_BUILD = "2026.09.18.2";
+const MIMI_CLIENT_ICON_REVISION = "mimigo-visual-v10";
+const GPS_ACCURACY_TARGET_M = 30;
+const GPS_ACCURACY_REVIEW_M = 80;
+const GPS_ACCURACY_REJECT_M = 250;
+const CLIENT_PENDING_CHECKOUT_KEY = "mimi_client_pending_checkout";
+const MIMI_CLIENT_UPDATE_ASSETS = [
+  `/manifest-clientes.json?v=${MIMI_CLIENT_ICON_REVISION}`,
+  `/mimi-servicios/manifest.json?v=${MIMI_CLIENT_ICON_REVISION}`,
+  `/assets/icons/mimigo-client-icon-v10-192.png?v=${MIMI_CLIENT_ICON_REVISION}`,
+  `/assets/icons/mimigo-client-icon-v10-512.png?v=${MIMI_CLIENT_ICON_REVISION}`,
+  `/assets/icons/mimigo-client-icon-v10-512-maskable.png?v=${MIMI_CLIENT_ICON_REVISION}`,
+  `/mimi-servicios/assets/icons/mimigo-client-icon-v10-192.png?v=${MIMI_CLIENT_ICON_REVISION}`,
+  `/mimi-servicios/assets/icons/mimigo-client-badge-v10-96.png?v=${MIMI_CLIENT_ICON_REVISION}`
+];
+const AUTH_LOGIN_REDIRECT_TIMEOUT_MS = 12000;
 const CLIENT_ONBOARDING_KEY = "mimi_services_client_onboarding_seen";
-const PWA_INSTALLED_KEY = "mimi_services_pwa_installed";
-const PWA_INSTALL_DISMISSED_KEY = "mimi_services_install_dismissed_until";
+const PWA_INSTALLED_KEY = "mimi_go_client_pwa_installed";
+const PWA_INSTALL_DISMISSED_KEY = "mimi_go_client_install_dismissed_until";
 const CATEGORY_USAGE_KEY = "mimi_services_category_usage_v1";
+const LEGACY_SW_PATHS = [
+  "/mimi-servicios/sw-2026.js",
+  "/service-worker.js",
+  "/service-worker-clientes.js"
+];
+
+window.MIMI_CLIENT_BUILD = MIMI_CLIENT_BUILD;
 
 initObservability("client");
 markPerformance("client_module_loaded");
@@ -113,92 +179,6 @@ function sanitizeServiceRequestPayload(request = {}) {
   delete clean.service_pin_attempts;
   delete clean.service_pin_locked_until;
   return clean;
-}
-
-const SERVICE_PIN_FETCH_STATUSES = new Set([
-  "ACCEPTED",
-  "SCHEDULED",
-  "PROVIDER_EN_ROUTE",
-  "PROVIDER_ARRIVED"
-]);
-
-const CLIENT_SELF_CANCEL_STATUSES = new Set([
-  "SEARCHING",
-  "PENDING_PROVIDER_RESPONSE",
-  "PENDING",
-  "ACCEPTED",
-  "SCHEDULED",
-  "PROVIDER_EN_ROUTE"
-]);
-
-const PAYMENT_CANCELABLE_STATUSES = new Set([
-  "PENDING",
-  "CHECKOUT_CREATED",
-  "REJECTED"
-]);
-
-const PAYMENT_APPROVED_STATUSES = new Set([
-  "APPROVED",
-  "CAPTURED",
-  "SETTLED"
-]);
-
-function activeRequestStatus(request = {}) {
-  return String(request?.status || "").toUpperCase();
-}
-
-function canClientSelfCancelRequest(request = {}) {
-  return Boolean(request?.id) && CLIENT_SELF_CANCEL_STATUSES.has(activeRequestStatus(request));
-}
-
-function canCancelPaymentLocally(payment = null) {
-  return Boolean(payment?.id) && PAYMENT_CANCELABLE_STATUSES.has(String(payment?.status || "").toUpperCase());
-}
-
-function shouldFetchServicePin(request = {}) {
-  return Boolean(request?.id) && SERVICE_PIN_FETCH_STATUSES.has(activeRequestStatus(request));
-}
-
-async function fetchServicePinForRequest(request, source = "hydrate") {
-  if (!shouldFetchServicePin(request)) return null;
-
-  try {
-    return await getServicePin(request.id);
-  } catch (error) {
-    console.warn(`[MIMI] No se pudo obtener PIN de servicio (${source}):`, error);
-    return null;
-  }
-}
-
-async function refreshServicePinForRequest(request, source = "realtime") {
-  const requestId = request?.id;
-
-  if (!requestId) return;
-
-  if (!shouldFetchServicePin(request)) {
-    if (state.client.activeRequest?.id === requestId) {
-      patchState("client.insights.servicePin", null);
-    }
-    return;
-  }
-
-  const servicePin = await fetchServicePinForRequest(request, source);
-
-  if (state.client.activeRequest?.id === requestId) {
-    patchState("client.insights.servicePin", servicePin);
-  }
-}
-
-function openMercadoPagoCheckout(payment, source = "manual") {
-  if (!payment?.checkout_url) return false;
-
-  try {
-    sessionStorage.setItem("mimigo_last_checkout_payment_id", String(payment.id || ""));
-    sessionStorage.setItem("mimigo_last_checkout_source", source);
-  } catch (_) {}
-
-  window.location.assign(payment.checkout_url);
-  return true;
 }
 
 const INTENT_CATEGORY_RULES = [
@@ -369,7 +349,7 @@ function serviceModeLabel(value) {
   if (mode === "ONLINE") return "Online";
   if (mode === "HYBRID") return "Online o presencial";
   if (mode === "IN_PERSON") return "Presencial";
-  return "A coordinar";
+  return "Por definir";
 }
 
 function providerPricingModel(provider, pricing = null) {
@@ -443,6 +423,9 @@ function amountFromProvider(provider, pricing = null) {
 }
 
 const MIMI_PLATFORM_FEE_PERCENT = 30;
+const QUOTE_PRICING_LABEL = "Cotizar antes de confirmar";
+const QUOTE_PENDING_TOTAL_LABEL = "Pendiente de cotización";
+const QUOTE_CLIENT_HELP = "El prestador te enviará un presupuesto dentro de MIMIGO antes de confirmar.";
 
 function roundCurrencyAmount(value, currency = "ARS") {
   const amount = Number(value || 0);
@@ -484,15 +467,21 @@ function buildLocalPricing(provider, { requestedHours = 1, quantity = 1, basePri
       provider?.session_duration_minutes ??
       provider?.duration_minutes ??
       null,
-    price_label: isQuote ? "A coordinar" : null
+    price_label: isQuote ? QUOTE_PENDING_TOTAL_LABEL : null
   };
 }
 
 function formatPricingTotal(pricing) {
-  if (pricing?.price_label === "A coordinar" || String(pricing?.pricing_model || "").toUpperCase() === "QUOTE") {
-    return "A coordinar";
+  const priceLabel = String(pricing?.price_label || "");
+  if (priceLabel === "A coordinar" || priceLabel === QUOTE_PENDING_TOTAL_LABEL || String(pricing?.pricing_model || "").toUpperCase() === "QUOTE") {
+    return QUOTE_PENDING_TOTAL_LABEL;
   }
   return formatCurrency(pricing?.total_price, pricing?.currency || "ARS");
+}
+
+function pricingRequiresQuote(pricing) {
+  const priceLabel = String(pricing?.price_label || "");
+  return priceLabel === "A coordinar" || priceLabel === QUOTE_PENDING_TOTAL_LABEL || String(pricing?.pricing_model || "").toUpperCase() === "QUOTE";
 }
 
 function compactServiceAddress(value) {
@@ -529,6 +518,177 @@ function compactServiceAddress(value) {
     .filter(Boolean)
     .filter((part, index, arr) => arr.indexOf(part) === index)
     .join(" - ");
+}
+
+function friendlyLocationAddress(resolved, fallback = "Ubicacion detectada") {
+  const raw =
+    resolved?.short_label ||
+    resolved?.display_name ||
+    resolved?.direccion ||
+    fallback;
+  const text = compactServiceAddress(raw);
+  const coordinatePair = /-?\d{1,2}\.\d{3,}\s*,\s*-?\d{1,3}\.\d{3,}/;
+  if (coordinatePair.test(text) && (/ubicacion actual/i.test(text) || text.length <= 80)) {
+    return fallback;
+  }
+  return text || fallback;
+}
+
+function setAddressInputs({ address, lat, lng }) {
+  const addressInput = document.getElementById("serviceAddressInput");
+  const latInput = document.getElementById("serviceLatInput");
+  const lngInput = document.getElementById("serviceLngInput");
+
+  if (addressInput) addressInput.value = address || "";
+  if (latInput) latInput.value = Number.isFinite(Number(lat)) ? String(lat) : "";
+  if (lngInput) lngInput.value = Number.isFinite(Number(lng)) ? String(lng) : "";
+}
+
+function clearServiceLocationSelection() {
+  setAddressInputs({ address: "", lat: null, lng: null });
+  patchState("requestDraft.address", "");
+  patchState("requestDraft.lat", null);
+  patchState("requestDraft.lng", null);
+  clearLocationMetadata();
+  renderServiceAddressSuggestions([]);
+  toggleClearAddressButton();
+}
+
+function openLocationConfirmDialog({ address, accuracyM }) {
+  const overlay = document.getElementById("locationConfirmOverlay");
+  const addressEl = document.getElementById("locationConfirmAddress");
+  const metaEl = document.getElementById("locationConfirmMeta");
+
+  if (!overlay || !addressEl || !metaEl) return Promise.resolve("use");
+
+  addressEl.textContent = address || "Ubicacion detectada";
+  metaEl.textContent = accuracyM
+    ? `Punto aproximado por GPS. Si no coincide, ajustalo en el mapa.`
+    : "Confirmalo o ajustalo en el mapa.";
+  overlay.hidden = false;
+
+  return new Promise((resolve) => {
+    locationConfirmResolver = resolve;
+    overlay.querySelector("[data-location-confirm='use']")?.focus?.();
+  });
+}
+
+function closeLocationConfirm(action = "manual") {
+  const overlay = document.getElementById("locationConfirmOverlay");
+  overlay?.setAttribute("hidden", "");
+  const resolver = locationConfirmResolver;
+  locationConfirmResolver = null;
+  resolver?.(action);
+}
+
+function updateLocationAdjustPanel({ address, accuracyM } = {}) {
+  const panel = document.getElementById("locationAdjustPanel");
+  const addressEl = document.getElementById("locationAdjustAddress");
+  const metaEl = document.getElementById("locationAdjustMeta");
+  if (!panel || !addressEl || !metaEl) return;
+
+  addressEl.textContent = address || "Mueve el pin hasta el punto exacto";
+  metaEl.textContent = accuracyM
+    ? `GPS aproximado a ${accuracyM} m. Arrastra el marcador si la calle o numeracion no coincide.`
+    : "Arrastra el marcador si la calle o numeracion no coincide.";
+  panel.hidden = false;
+}
+
+async function updateAdjustedLocationFromPin(position) {
+  const lat = Number(position?.lat);
+  const lng = Number(position?.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || !locationAdjustDraft) return;
+
+  locationAdjustDraft.lat = lat;
+  locationAdjustDraft.lng = lng;
+  updateLocationAdjustPanel({ address: "Buscando calle cercana...", accuracyM: null });
+
+  const resolved = await resolverDireccionActualServicio(lat, lng, {
+    allowDirectFallback: true,
+    bias: { lat, lng }
+  });
+  const address = friendlyLocationAddress(resolved, "Ubicacion ajustada en el mapa");
+
+  locationAdjustDraft.address = address;
+  locationAdjustDraft.geocodeSource = resolved?.source || "map-adjust";
+  setAddressInputs({ address, lat, lng });
+  patchState("requestDraft.address", address);
+  patchState("requestDraft.lat", lat);
+  patchState("requestDraft.lng", lng);
+  patchLocationMetadata({
+    source: "map_adjusting",
+    geocodeSource: locationAdjustDraft.geocodeSource,
+    quality: "pin_adjusting",
+    confirmedAt: null,
+    needsReview: true
+  });
+  updateLocationAdjustPanel({ address, accuracyM: null });
+}
+
+async function startLocationAdjustment({ lat, lng, address, accuracyM, geocodeSource }) {
+  locationAdjustDraft = { lat, lng, address, accuracyM, geocodeSource };
+  setAddressInputs({ address, lat, lng });
+  patchState("requestDraft.address", address);
+  patchState("requestDraft.lat", lat);
+  patchState("requestDraft.lng", lng);
+  patchLocationMetadata({
+    accuracyM,
+    source: "gps_adjusting",
+    geocodeSource,
+    quality: "pin_adjusting",
+    confirmedAt: null,
+    needsReview: true
+  });
+  updateLocationAdjustPanel({ address, accuracyM });
+  setClientView("activity", { behavior: "smooth" });
+  await ensureClientMap();
+  updateClientMap({
+    servicePosition: { lat, lng },
+    providerPosition: state.tracking.providerPosition
+  });
+  focusClientServicePosition({ lat, lng }, 17);
+  setClientMarkerAdjustment(true, updateAdjustedLocationFromPin);
+  document.getElementById("clientMap")?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+}
+
+function stopLocationAdjustment() {
+  setClientMarkerAdjustment(false);
+  const panel = document.getElementById("locationAdjustPanel");
+  if (panel) panel.hidden = true;
+}
+
+function confirmAdjustedLocation() {
+  if (!locationAdjustDraft) return;
+  const { lat, lng, address, accuracyM, geocodeSource } = locationAdjustDraft;
+  setAddressInputs({ address, lat, lng });
+  patchState("requestDraft.address", address);
+  patchState("requestDraft.lat", lat);
+  patchState("requestDraft.lng", lng);
+  patchLocationMetadata({
+    accuracyM: accuracyM ?? null,
+    source: "map_adjusted",
+    geocodeSource: geocodeSource || "map-adjust",
+    quality: "pin_adjusted",
+    confirmedAt: new Date().toISOString(),
+    needsReview: false
+  });
+  locationAdjustDraft = null;
+  stopLocationAdjustment();
+  renderServiceAddressSuggestions([]);
+  toggleClearAddressButton();
+  setInfo("Ubicacion ajustada y confirmada.");
+}
+
+function useManualAddressAfterLocation() {
+  locationAdjustDraft = null;
+  stopLocationAdjustment();
+  clearServiceLocationSelection();
+  setClientView("home", { behavior: "smooth" });
+  window.setTimeout(() => {
+    const input = document.getElementById("serviceAddressInput");
+    input?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    input?.focus?.();
+  }, 120);
 }
 
 function upsertConfirmQuantityField(overlay, provider, pricing, onQuantityChange) {
@@ -609,10 +769,17 @@ function openRequestConfirmation(provider, initialPricing) {
 
   if (sessionDuration) {
     const minutes = Number(pricing?.session_duration_minutes ?? pricing?.sessionDurationMinutes ?? 0);
-    sessionDuration.textContent = minutes > 0 ? `${minutes} min` : "A coordinar";
+    sessionDuration.textContent = minutes > 0 ? `${minutes} min` : "Por definir";
   }
 
   const totalEl = document.getElementById("confirmTotalPrice");
+  const pricingHelpEl = document.getElementById("confirmPricingHelp");
+  const syncPricingHelp = () => {
+    if (!pricingHelpEl) return;
+    const needsQuote = pricingRequiresQuote(pricing);
+    pricingHelpEl.hidden = !needsQuote;
+    pricingHelpEl.textContent = needsQuote ? `${QUOTE_PRICING_LABEL}: ${QUOTE_CLIENT_HELP}` : "";
+  };
   const refreshTotal = (nextQuantity = pricing.unit_quantity || 1) => {
     pricing = buildLocalPricing(provider, {
       requestedHours: requestedHoursForCurrentCategory(),
@@ -620,9 +787,11 @@ function openRequestConfirmation(provider, initialPricing) {
       basePricing: pricing
     });
     if (totalEl) totalEl.textContent = formatPricingTotal(pricing);
+    syncPricingHelp();
   };
 
   if (totalEl) totalEl.textContent = formatPricingTotal(pricing);
+  syncPricingHelp();
   upsertConfirmQuantityField(overlay, provider, pricing, refreshTotal);
 
   overlay.hidden = false;
@@ -713,7 +882,18 @@ function hasConfirmedServiceAddress() {
   const address = String(state.requestDraft.address || "").trim();
   const lat = Number(state.requestDraft.lat);
   const lng = Number(state.requestDraft.lng);
-  return address.length >= 5 && Number.isFinite(lat) && Number.isFinite(lng);
+  const accuracyM = normalizeLocationAccuracy(state.requestDraft.locationAccuracyM);
+  const needsReview = Boolean(state.requestDraft.locationNeedsReview);
+  const reviewed = Boolean(state.requestDraft.locationConfirmedAt);
+  const blockedByAccuracy = accuracyM !== null && accuracyM > GPS_ACCURACY_REJECT_M;
+
+  return (
+    address.length >= 5 &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    !blockedByAccuracy &&
+    (!needsReview || reviewed)
+  );
 }
 
 function requireConfirmedServiceAddress() {
@@ -735,6 +915,35 @@ function requireConfirmedServiceAddress() {
   }, 80);
 
   return false;
+}
+
+async function removeConflictingServiceWorkers(expectedScopePath) {
+  if (!("serviceWorker" in navigator) || !navigator.serviceWorker.getRegistrations) return;
+
+  try {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(
+      registrations.map(async (registration) => {
+        const scopePath = new URL(registration.scope).pathname;
+        const scriptPath = new URL(
+          registration.active?.scriptURL ||
+          registration.waiting?.scriptURL ||
+          registration.installing?.scriptURL ||
+          "",
+          window.location.origin
+        ).pathname;
+
+        const isExpected = scopePath === expectedScopePath && scriptPath === "/sw-client.js";
+        const isLegacy = LEGACY_SW_PATHS.includes(scriptPath) || scopePath === "/mimi-servicios/";
+
+        if (!isExpected && isLegacy) {
+          await registration.unregister();
+        }
+      })
+    );
+  } catch (error) {
+    console.warn("[MIMI Cliente] No se pudieron limpiar service workers previos:", error);
+  }
 }
 
 function setAiPromptVisualState(nextState, enabled = true) {
@@ -908,6 +1117,34 @@ function setButtonLoading(button, loading, loadingLabel, idleLabel = null) {
   button.textContent = loading ? loadingLabel : button.dataset.idleLabel;
 }
 
+function setAuthLoginBusy(loading) {
+  document.querySelectorAll("[data-auth-action='login']").forEach((button) => {
+    button.disabled = Boolean(loading);
+    button.classList?.toggle("is-loading", Boolean(loading));
+    button.setAttribute("aria-busy", String(Boolean(loading)));
+  });
+}
+
+function resetAuthLoginBusy() {
+  authLoginInFlight = false;
+  setAuthLoginBusy(false);
+}
+
+function clearAuthLoginResetTimer() {
+  if (!authLoginResetTimer) return;
+  window.clearTimeout(authLoginResetTimer);
+  authLoginResetTimer = null;
+}
+
+function scheduleAuthLoginReset() {
+  clearAuthLoginResetTimer();
+  authLoginResetTimer = window.setTimeout(() => {
+    authLoginResetTimer = null;
+    resetAuthLoginBusy();
+    setInfo(null, "No pudimos abrir Google. Revisá si el navegador bloqueó la redirección e intentá nuevamente.");
+  }, AUTH_LOGIN_REDIRECT_TIMEOUT_MS);
+}
+
 async function runClientAction(key, button, loadingLabel, idleLabel, action) {
   if (clientPendingActions.has(key)) {
     return null;
@@ -974,21 +1211,463 @@ function setInstallButtonVisible(visible) {
   }
 }
 
+async function handleClientSecurityChallengeAction(sourceUrl = window.location.href) {
+  let url;
+  try {
+    url = new URL(sourceUrl, window.location.origin);
+  } catch (_) {
+    return false;
+  }
+
+  const challengeId = url.searchParams.get("auth_challenge");
+  const action = url.searchParams.get("auth_action") || "open";
+  if (!challengeId) return false;
+
+  if (action !== "approve" && action !== "reject") {
+    setInfo("Abrimos MIMIGO para confirmar tu acceso.");
+    return true;
+  }
+
+  try {
+    await approveSecurityChallenge({
+      role: "client",
+      challengeId,
+      action
+    });
+    setInfo(action === "approve" ? "Acceso aprobado en este dispositivo." : "Acceso rechazado.");
+  } catch (error) {
+    setInfo(null, normalizeAuthError(error, "No pudimos confirmar esta verificación."));
+  } finally {
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete("auth_challenge");
+    cleanUrl.searchParams.delete("auth_action");
+    window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+  }
+
+  return true;
+}
+
+function setupClientSecurityChallengeListeners() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      if (event.data?.type === "AUTH_CHALLENGE_ACTION" && event.data?.url) {
+        handleClientSecurityChallengeAction(event.data.url);
+      }
+    });
+  }
+
+  handleClientSecurityChallengeAction();
+}
+
+function ensureClientUpdateBanner() {
+  let banner = document.getElementById("mimiClientUpdateBanner");
+  if (banner) return banner;
+
+  banner = document.createElement("section");
+  banner.id = "mimiClientUpdateBanner";
+  banner.className = "mimi-update-banner";
+  banner.hidden = true;
+  banner.setAttribute("aria-hidden", "true");
+  banner.setAttribute("role", "status");
+  banner.innerHTML = `
+    <div class="mimi-update-copy">
+      <strong>Nueva versión disponible</strong>
+      <span>Actualizá MIMIGO para ver las mejoras.</span>
+    </div>
+    <button class="mimi-update-cta" id="mimiClientUpdateButton" type="button">Actualizar</button>
+  `;
+  document.body.appendChild(banner);
+  document.getElementById("mimiClientUpdateButton")?.addEventListener("click", () => {
+    applyClientUpdate();
+  });
+  return banner;
+}
+
+function showClientUpdateBanner({ critical = false } = {}) {
+  const banner = ensureClientUpdateBanner();
+  banner.hidden = false;
+  banner.dataset.critical = String(Boolean(critical));
+  banner.setAttribute("aria-hidden", "false");
+
+  const title = banner.querySelector("strong");
+  const copy = banner.querySelector("span");
+  if (title) title.textContent = critical ? "Actualización necesaria" : "Nueva versión disponible";
+  if (copy) {
+    copy.textContent = critical
+      ? "Necesitamos actualizar MIMIGO para continuar."
+      : "Actualizá MIMIGO para ver las mejoras.";
+  }
+}
+
+function hideClientUpdateBanner() {
+  const banner = document.getElementById("mimiClientUpdateBanner");
+  if (!banner) return;
+  banner.hidden = true;
+  banner.setAttribute("aria-hidden", "true");
+  banner.dataset.updating = "false";
+}
+
+async function cleanupClientCachesForUpdate() {
+  if (!("caches" in window)) return;
+  const keys = await caches.keys();
+  await Promise.all(
+    keys
+      .filter((key) => key.startsWith("mimi-go-client-") || key.startsWith("mimi-servicios-client-"))
+      .map((key) => caches.delete(key))
+  );
+}
+
+async function warmClientVisualAssetsForUpdate() {
+  const stamp = Date.now();
+  await Promise.allSettled(
+    MIMI_CLIENT_UPDATE_ASSETS.map((asset) => {
+      const url = new URL(asset, window.location.origin);
+      url.searchParams.set("mimi_icon_revision", MIMI_CLIENT_ICON_REVISION);
+      url.searchParams.set("t", String(stamp));
+      return fetch(url.toString(), {
+        cache: "reload",
+        credentials: "same-origin"
+      });
+    })
+  );
+}
+
+async function applyClientUpdate() {
+  const button = document.getElementById("mimiClientUpdateButton");
+  setButtonLoading(button, true, "Actualizando...", "Actualizar");
+
+  try {
+    sessionStorage.setItem("mimi_client_apply_update", "1");
+    const registration = await navigator.serviceWorker?.getRegistration?.("/servicios");
+    await registration?.update?.();
+    const worker = registration?.waiting || registration?.installing || registration?.active;
+    worker?.postMessage?.({ type: "SKIP_WAITING" });
+    await cleanupClientCachesForUpdate();
+    await warmClientVisualAssetsForUpdate();
+  } catch (error) {
+    console.warn("[MIMI Cliente] No se pudo preparar actualización:", error);
+  } finally {
+    window.location.reload();
+  }
+}
+
+function compareBuildVersions(a, b) {
+  const left = String(a || "").split(".").map((part) => Number(part) || 0);
+  const right = String(b || "").split(".").map((part) => Number(part) || 0);
+  for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
+    const diff = (left[index] || 0) - (right[index] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+async function checkClientAppVersion() {
+  if (appConfig.securityFlags?.ENABLE_UPDATE_BANNER === false) return;
+  try {
+    const response = await fetch(`/app-version.json?app=client&t=${Date.now()}`, {
+      cache: "no-store"
+    });
+    if (!response.ok) return;
+    const payload = await response.json();
+    const remote = payload?.client;
+    const remoteVersion = String(remote?.version || "");
+    const minSupported = String(remote?.min_supported_version || "");
+    const isBelowMinimum =
+      remote?.force_update &&
+      minSupported &&
+      compareBuildVersions(MIMI_CLIENT_BUILD, minSupported) < 0;
+    const remoteIsNewer =
+      remoteVersion &&
+      compareBuildVersions(remoteVersion, MIMI_CLIENT_BUILD) > 0;
+
+    if (remoteVersion && (remoteIsNewer || isBelowMinimum)) {
+      if (sessionStorage.getItem("mimi_client_apply_update") === "1") {
+        hideClientUpdateBanner();
+        return;
+      }
+      const forceUpdate = Boolean(
+        appConfig.securityFlags?.ENABLE_FORCE_UPDATE ||
+        isBelowMinimum
+      );
+      showClientUpdateBanner({ critical: forceUpdate || Boolean(remote?.critical) });
+    } else {
+      sessionStorage.removeItem("mimi_client_apply_update");
+      hideClientUpdateBanner();
+    }
+  } catch (error) {
+    console.warn("[MIMI Cliente] No se pudo revisar versión:", error);
+  }
+}
+
+function setupClientUpdateManager() {
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("app_update") === "1") {
+      url.searchParams.delete("app_update");
+      window.history.replaceState({}, "", url.toString());
+      setTimeout(applyClientUpdate, 250);
+    }
+  } catch (_) {}
+
+  if ("serviceWorker" in navigator) {
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (sessionStorage.getItem("mimi_client_apply_update") !== "1") return;
+      if (refreshing) return;
+      refreshing = true;
+      sessionStorage.removeItem("mimi_client_apply_update");
+      window.location.reload();
+    });
+  }
+
+  window.addEventListener("focus", () => {
+    checkClientAppVersion();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") checkClientAppVersion();
+  });
+
+  setTimeout(checkClientAppVersion, 1800);
+  window.setInterval(checkClientAppVersion, 10 * 60 * 1000);
+}
+
 function dismissClientOnboarding() {
   localStorage.setItem(CLIENT_ONBOARDING_KEY, "1");
   patchState("ui.showClientOnboarding", false);
 }
 
 function normalizeAuthError(error, fallbackMessage) {
-  if (error?.code === "AUTH_REQUIRED") {
-    return "Necesitás iniciar sesión con Google para continuar.";
+  const code = String(error?.code || error?.message || error?.details?.error || "");
+
+  if (code === "AUTH_REQUIRED") {
+    return "Necesitas iniciar sesion con Google para continuar.";
   }
 
-  if (error?.message === "SERVICE_LOCATION_REQUIRED") {
-    return "Necesitamos una dirección valida del servicio para buscar prestadores.";
+  if (code === "SERVICE_LOCATION_REQUIRED") {
+    return "Necesitamos una direccion valida del servicio para buscar prestadores.";
+  }
+
+  const messages = {
+    AUTH_SESSION_TIMEOUT: "No pudimos confirmar tu sesion. Cerra y volve a iniciar con Google.",
+    PAYMENT_INTENT_EMPTY: "La solicitud se creo, pero Mercado Pago no devolvio un checkout. Reintenta el pago desde el panel.",
+    PAYMENT_STATUS_EMPTY: "No pudimos leer el estado del pago. Reintenta en unos segundos.",
+    PAYMENT_CANCEL_EMPTY: "No pudimos cancelar el pago. Reintenta o contacta soporte.",
+    PAYMENT_SETUP_FAILED: "No pudimos preparar el pago. Reintenta desde el detalle de pago.",
+    PAYMENT_PROVIDER_UNAVAILABLE: "Mercado Pago no esta disponible ahora. Reintenta o contacta soporte.",
+    PAYMENT_PROVIDER_DISABLED: "Los pagos reales no estan habilitados para esta operacion.",
+    payment_provider_unavailable: "Mercado Pago no esta disponible ahora. Reintenta o contacta soporte.",
+    payment_provider_disabled: "Los pagos reales no estan habilitados para esta operacion.",
+    request_already_active: "Ya tenes una solicitud activa. Revisala o cancelala antes de pedir otro servicio.",
+    provider_not_available: "Ese prestador ya no esta disponible. Actualiza la busqueda.",
+    provider_not_eligible: "No pudimos confirmar ese prestador para esta solicitud.",
+    FUNCTION_NOT_FOUND: "Falta una funcion del backend para completar esta accion.",
+    functions_unavailable: "El backend no respondio. Reintenta en unos segundos."
+  };
+
+  if (messages[code]) return messages[code];
+
+  if (/failed to fetch|network|timeout/i.test(code)) {
+    return "No pudimos conectar con el backend. Revisa la conexion e intenta nuevamente.";
   }
 
   return error?.message || fallbackMessage;
+}
+
+function isActiveClientRequest(request = state.client.activeRequest) {
+  const status = String(request?.status || "").toUpperCase();
+  return Boolean(request) && !["COMPLETED", "CANCELLED", "EXPIRED"].includes(status);
+}
+
+function paymentTotalFromRequest(request = state.client.activeRequest, fallback = 0) {
+  return Number(
+    request?.total_price_snapshot ??
+    request?.totalPrice ??
+    request?.total_price ??
+    fallback ??
+    0
+  );
+}
+
+function buildPaymentSetupFailure({ request, total, currency, error }) {
+  return {
+    id: null,
+    service_request_id: request?.id ?? request?.request_id ?? null,
+    total_amount: Number(total || 0),
+    currency: currency || request?.currency || "ARS",
+    status: "PAYMENT_SETUP_FAILED",
+    error_code: error?.code || error?.message || "PAYMENT_SETUP_FAILED",
+    error_message: normalizeAuthError(error, "No pudimos preparar el pago."),
+    sync_warning: "payment_setup_failed"
+  };
+}
+
+function paymentStatusValue(payment) {
+  return String(payment?.status || "").toUpperCase();
+}
+
+function requestStatusValue(request = state.client.activeRequest) {
+  return String(request?.status || "").toUpperCase();
+}
+
+function isApprovedPaymentStatus(status) {
+  return ["APPROVED", "CAPTURED", "SETTLED"].includes(String(status || "").toUpperCase());
+}
+
+function isClientPaymentCancellable(payment) {
+  return Boolean(payment?.id) && ["PENDING", "CHECKOUT_CREATED", "REJECTED"].includes(paymentStatusValue(payment));
+}
+
+function isClientRequestCancellable(request = state.client.activeRequest) {
+  return Boolean(request?.id) && !["COMPLETED", "CANCELLED", "EXPIRED"].includes(requestStatusValue(request));
+}
+
+function checkoutStorageTargets() {
+  return [window.sessionStorage, window.localStorage].filter(Boolean);
+}
+
+function readPendingCheckoutMarker() {
+  for (const storage of checkoutStorageTargets()) {
+    try {
+      const raw = storage.getItem(CLIENT_PENDING_CHECKOUT_KEY);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") return parsed;
+    } catch (_) {
+      storage.removeItem(CLIENT_PENDING_CHECKOUT_KEY);
+    }
+  }
+  return null;
+}
+
+function rememberPendingCheckout(payment, request = state.client.activeRequest) {
+  const paymentId = String(payment?.id || "").trim();
+  if (!paymentId) return;
+
+  const marker = {
+    paymentId,
+    requestId: request?.id ?? request?.request_id ?? payment?.service_request_id ?? null,
+    checkoutUrl: clientCheckoutUrl(payment),
+    status: paymentStatusValue(payment) || null,
+    isTest: payment?.is_test === true,
+    providerName: payment?.provider_name ?? null,
+    build: MIMI_CLIENT_BUILD,
+    createdAt: Date.now()
+  };
+
+  for (const storage of checkoutStorageTargets()) {
+    try {
+      storage.setItem(CLIENT_PENDING_CHECKOUT_KEY, JSON.stringify(marker));
+    } catch (_) {
+      // Storage is best-effort; the live request still hydrates from Supabase.
+    }
+  }
+}
+
+function clearPendingCheckoutMarker(paymentId = null) {
+  for (const storage of checkoutStorageTargets()) {
+    try {
+      if (!paymentId) {
+        storage.removeItem(CLIENT_PENDING_CHECKOUT_KEY);
+        continue;
+      }
+      const raw = storage.getItem(CLIENT_PENDING_CHECKOUT_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (!parsed?.paymentId || parsed.paymentId === paymentId) {
+        storage.removeItem(CLIENT_PENDING_CHECKOUT_KEY);
+      }
+    } catch (_) {
+      storage.removeItem(CLIENT_PENDING_CHECKOUT_KEY);
+    }
+  }
+}
+
+function clientCheckoutUrl(payment) {
+  const rawUrl = String(payment?.checkout_url || "").trim();
+  if (!rawUrl) return null;
+
+  try {
+    const url = new URL(rawUrl, window.location.href);
+    if (!["https:", "http:"].includes(url.protocol)) return null;
+    if (url.hostname === "mock-payments.mimi.local") return null;
+    return url.href;
+  } catch (_) {
+    return null;
+  }
+}
+
+function redirectClientToCheckout(payment, { source = "client_checkout_action", auto = false } = {}) {
+  const checkoutUrl = clientCheckoutUrl(payment);
+  if (!checkoutUrl) return false;
+
+  rememberPendingCheckout(payment);
+
+  recordCriticalRiskEvent("confirm_payment", {
+    actorRole: "client",
+    source,
+    paymentId: payment?.id ?? null,
+    amount: payment?.total_amount ?? null,
+    isTest: payment?.is_test ?? null,
+    providerName: payment?.provider_name ?? null
+  });
+
+  setInfo(auto
+    ? "Redirigiendo a Mercado Pago sandbox para completar el pago..."
+    : "Abriendo checkout de Mercado Pago...");
+
+  window.setTimeout(() => {
+    window.location.assign(checkoutUrl);
+  }, 50);
+
+  return true;
+}
+
+async function createPaymentForActiveRequest({ openCheckout = false } = {}) {
+  const request = state.client.activeRequest;
+  const requestId = request?.id ?? request?.request_id ?? null;
+  const total = paymentTotalFromRequest(request, state.client.insights?.paymentIntent?.total_amount);
+
+  if (!requestId) {
+    throw new Error("No hay una solicitud activa para pagar.");
+  }
+
+  if (!(total > 0)) {
+    setInfo("Esta solicitud no requiere pago ahora. Si necesita presupuesto, el pago aparece cuando el prestador lo confirme.");
+    return null;
+  }
+
+  try {
+    const payment = await createPaymentIntent({
+      serviceRequestId: requestId,
+      contextType: "SERVICE_REQUEST"
+    });
+    patchState("client.insights.paymentIntent", payment);
+    recordCriticalRiskEvent("confirm_payment", {
+      actorRole: "client",
+      source: "client_retry_payment_intent",
+      paymentId: payment?.id ?? null,
+      serviceRequestId: requestId,
+      amount: total
+    });
+    setInfo(payment?.checkout_url
+      ? "Pago preparado. Abri el checkout seguro para confirmar."
+      : "Pago preparado. Actualiza el estado si el checkout todavia no aparece.");
+    if (openCheckout) {
+      redirectClientToCheckout(payment, {
+        source: "client_retry_checkout_redirect",
+        auto: false
+      });
+    }
+    return payment;
+  } catch (error) {
+    patchState("client.insights.paymentIntent", buildPaymentSetupFailure({
+      request,
+      total,
+      currency: request?.currency,
+      error
+    }));
+    throw error;
+  }
 }
 
 async function refreshClientServiceHistory() {
@@ -1004,6 +1683,259 @@ async function refreshClientServiceHistory() {
   });
 
   return history;
+}
+
+async function refreshCustomerTrustProfile({ quiet = true } = {}) {
+  if (!state.session.userId || appConfig.securityFlags?.ENABLE_CUSTOMER_TRUST_CENTER === false) return null;
+
+  const result = await loadCustomerTrustProfile();
+
+  setState((draft) => {
+    draft.client.trustProfile = result?.profile || draft.client.trustProfile || null;
+    draft.client.verificationRequests = result?.verification_requests || [];
+    draft.client.identityChecks = result?.identity_checks || [];
+    draft.client.verificationEvents = result?.verification_events || [];
+    draft.client.riskSignals = result?.risk_signals || [];
+    draft.client.trustUnavailable = result?.ok === false
+      ? (result?.error || "customer_trust_unavailable")
+      : null;
+  });
+
+  if (!quiet && result?.ok !== false) {
+    setInfo("Centro de confianza actualizado.");
+  }
+
+  return result;
+}
+
+async function uploadCustomerIdentityEvidenceFile({ requestId, evidenceType, file, metadata = {}, reasonRequired, consentAccepted }) {
+  const safeType = String(evidenceType || "");
+  if (!["dni_front", "selfie"].includes(safeType)) {
+    throw new Error("Selecciona DNI frente y selfie para continuar.");
+  }
+  if (!file) {
+    throw new Error("Falta una imagen para verificar identidad.");
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    throw new Error("La imagen supera 8 MB. Usa una foto mas liviana.");
+  }
+
+  const intent = await createCustomerIdentityUploadIntent({
+    evidence_type: safeType,
+    mime_type: file.type || "image/jpeg",
+    reason_required: reasonRequired,
+    consent_accepted: consentAccepted
+  });
+
+  const signedToken = intent?.upload_token || intent?.token || null;
+
+  if (!intent?.upload_url && !signedToken) {
+    throw new Error("No pudimos preparar una URL segura para subir la imagen.");
+  }
+
+  const supabase = getSupabaseClient();
+  const storage = supabase.storage.from(intent.storage_bucket || "customer-verification-documents");
+
+  if (signedToken && intent.storage_path && storage?.uploadToSignedUrl) {
+    const { error } = await storage.uploadToSignedUrl(intent.storage_path, signedToken, file, {
+      contentType: file.type || "image/jpeg",
+      upsert: true
+    });
+    if (error) throw error;
+  } else if (intent.upload_url) {
+    const response = await fetch(intent.upload_url, {
+      method: "PUT",
+      headers: { "Content-Type": file.type || "image/jpeg" },
+      body: file
+    });
+    if (!response.ok) {
+      throw new Error(`UPLOAD_${response.status}`);
+    }
+  }
+
+  return submitCustomerIdentityEvidence({
+    request_id: requestId || intent.request_id,
+    evidence_type: safeType,
+    storage_bucket: intent.storage_bucket || "customer-verification-documents",
+    storage_path: intent.storage_path,
+    mime_type: file.type || "image/jpeg",
+    file_size_bytes: file.size || null,
+    capture_width: metadata.optimized_width || null,
+    capture_height: metadata.optimized_height || null,
+    consent_accepted: consentAccepted,
+    metadata_json: metadata
+  });
+}
+
+function renderCustomerIdentityPreview(evidenceType, entry) {
+  const targetId = evidenceType === "selfie" ? "customerIdentityPreviewSelfie" : "customerIdentityPreviewDni";
+  const target = document.getElementById(targetId);
+  if (!target) return;
+
+  if (!entry) {
+    target.className = "client-trust-preview is-empty";
+    target.textContent = evidenceType === "selfie" ? "Selfie pendiente" : "DNI frente pendiente";
+    return;
+  }
+
+  const status = entry.quality?.status || "review";
+  target.className = `client-trust-preview is-${status}`;
+  target.innerHTML = `
+    <img src="${entry.previewUrl}" alt="${evidenceType === "selfie" ? "Preview selfie optimizada" : "Preview DNI optimizado"}" />
+    <strong>${evidenceType === "selfie" ? "Selfie optimizada" : "DNI optimizado"}</strong>
+    <span>${qualityMessage(entry.quality)} Score ${entry.quality?.score ?? "--"}/100.</span>
+  `;
+}
+
+async function handleCustomerIdentityFileSelection(input) {
+  const evidenceType = input?.dataset?.customerIdentityInput;
+  const file = input?.files?.[0] || null;
+  if (!evidenceType || !file) return;
+  if (appConfig.securityFlags?.ENABLE_CUSTOMER_KYC === false) {
+    setInfo(null, "La verificacion de identidad esta temporalmente pausada.");
+    return;
+  }
+
+  try {
+    setInfo("Optimizando imagen para revision...");
+    const optimized = appConfig.securityFlags?.ENABLE_DOCUMENT_AUTO_OPTIMIZATION === false
+      ? {
+          file,
+          optimized: false,
+          previewUrl: URL.createObjectURL(file),
+          quality: { ok: true, status: "review", score: 70, warnings: ["optimization_disabled"], errors: [] },
+          metadata: { original_size_bytes: file.size || null }
+        }
+      : await optimizeDocumentImageFile(file, {
+          documentType: evidenceType,
+          quality: evidenceType === "selfie" ? 0.94 : 0.96
+        });
+
+    const previous = customerIdentityDraft.get(evidenceType);
+    if (previous?.previewUrl) URL.revokeObjectURL(previous.previewUrl);
+
+    customerIdentityDraft.set(evidenceType, optimized);
+    renderCustomerIdentityPreview(evidenceType, optimized);
+
+    if (optimized.quality?.status === "rejected") {
+      setInfo(null, qualityMessage(optimized.quality));
+    } else {
+      setInfo(qualityMessage(optimized.quality));
+    }
+  } catch (error) {
+    console.warn("[MIMI Cliente] No se pudo optimizar documento:", error);
+    setInfo(null, "No pudimos preparar esa imagen. Proba con una foto JPG, PNG o WEBP clara.");
+  }
+}
+
+async function handleCustomerTrustAction(action, target) {
+  if (!state.session.userId) {
+    setInfo(null, "Inicia sesion para usar el Centro de confianza.");
+    return;
+  }
+  if (appConfig.securityFlags?.ENABLE_CUSTOMER_TRUST_CENTER === false) {
+    setInfo(null, "El Centro de confianza esta temporalmente pausado.");
+    return;
+  }
+
+  try {
+    if (action === "refresh") {
+      await refreshCustomerTrustProfile({ quiet: false });
+      return;
+    }
+
+    const reason = target?.dataset?.reason || "voluntary_trust_upgrade";
+
+    if (action === "request_verification") {
+      if (appConfig.securityFlags?.ENABLE_CUSTOMER_KYC === false) {
+        setInfo(null, "La verificacion de identidad esta temporalmente pausada.");
+        return;
+      }
+      await requestCustomerIdentityVerification(reason);
+      await refreshCustomerTrustProfile({ quiet: true });
+      setInfo("Solicitud de verificacion creada. Subi DNI frente y selfie solo si queres continuar ahora.");
+      recordCriticalRiskEvent("client_identity_verification_requested", {
+        actorRole: "client",
+        source: "client_trust_center",
+        reason
+      });
+      return;
+    }
+
+    if (action === "submit_identity") {
+      if (appConfig.securityFlags?.ENABLE_CUSTOMER_KYC === false) {
+        setInfo(null, "La verificacion de identidad esta temporalmente pausada.");
+        return;
+      }
+      const consentAccepted = Boolean(document.getElementById("customerIdentityConsent")?.checked);
+      if (!consentAccepted) {
+        setInfo(null, "Necesitamos tu consentimiento explicito antes de subir DNI y selfie.");
+        return;
+      }
+
+      const dniEntry = customerIdentityDraft.get("dni_front");
+      const selfieEntry = customerIdentityDraft.get("selfie");
+      const dniFile = dniEntry?.file || document.querySelector('[data-customer-identity-input="dni_front"]')?.files?.[0] || null;
+      const selfieFile = selfieEntry?.file || document.querySelector('[data-customer-identity-input="selfie"]')?.files?.[0] || null;
+      if (!dniFile || !selfieFile) {
+        setInfo(null, "Carga DNI frente y selfie antes de enviar.");
+        return;
+      }
+      if (dniEntry?.quality?.status === "rejected" || selfieEntry?.quality?.status === "rejected") {
+        setInfo(null, "Una de las imagenes no cumple calidad minima. Repetila antes de enviar.");
+        return;
+      }
+
+      actions.setLoading?.(true);
+      setInfo("Subiendo evidencia segura...");
+      const requestResult = await requestCustomerIdentityVerification(reason).catch((error) => {
+        if (String(error?.code || error?.message || "").includes("already")) return null;
+        throw error;
+      });
+      const current = requestResult || await loadCustomerTrustProfile();
+      const requestId =
+        current?.request?.id ||
+        current?.current_request?.id ||
+        current?.verification_requests?.[0]?.id ||
+        state.client.verificationRequests?.[0]?.id ||
+        null;
+
+      const dniResult = await uploadCustomerIdentityEvidenceFile({
+        requestId,
+        evidenceType: "dni_front",
+        file: dniFile,
+        metadata: dniEntry?.metadata || {},
+        reasonRequired: reason,
+        consentAccepted
+      });
+      const selfieResult = await uploadCustomerIdentityEvidenceFile({
+        requestId: requestId || dniResult?.request_id,
+        evidenceType: "selfie",
+        file: selfieFile,
+        metadata: selfieEntry?.metadata || {},
+        reasonRequired: reason,
+        consentAccepted
+      });
+
+      await processCustomerIdentityVerification({
+        request_id: selfieResult?.request_id || dniResult?.request_id || requestId,
+        consent_accepted: consentAccepted
+      });
+
+      await refreshCustomerTrustProfile({ quiet: true });
+      recordCriticalRiskEvent("client_identity_verification_submitted", {
+        actorRole: "client",
+        source: "client_trust_center",
+        reason
+      });
+      setInfo("Verificacion enviada. Si requiere revision manual, te avisamos el resultado.");
+    }
+  } catch (error) {
+    console.warn("[MIMI Cliente] Trust Center action failed", error);
+    setInfo(null, normalizeAuthError(error, "No pudimos procesar la verificacion. Intenta nuevamente."));
+  } finally {
+    actions.setLoading?.(false);
+  }
 }
 
 function paintReviewStars() {
@@ -1040,8 +1972,19 @@ function openReviewDialog(requestId) {
   selectedReviewRating = 5;
 
   const overlay = document.getElementById("reviewOverlay");
+  const reviewTitle = document.getElementById("reviewTitle");
   const title = document.getElementById("reviewServiceTitle");
   const status = document.getElementById("reviewStatusText");
+  const form = document.getElementById("reviewForm");
+  const submitButton = document.getElementById("reviewSubmitButton");
+
+  form?.classList.remove("is-review-saved");
+  if (reviewTitle) reviewTitle.textContent = "Califica tu experiencia";
+  if (submitButton) {
+    submitButton.textContent = "Guardar calificacion";
+    submitButton.type = "submit";
+    delete submitButton.dataset.reviewClose;
+  }
 
   if (title) {
     const category = request.svc_categories?.name || request.category_name || "Servicio";
@@ -1058,9 +2001,38 @@ function openReviewDialog(requestId) {
 
 function closeReviewDialog() {
   const overlay = document.getElementById("reviewOverlay");
+  document.getElementById("reviewForm")?.classList.remove("is-review-saved");
   if (overlay) overlay.hidden = true;
   pendingReviewRequestId = null;
   selectedReviewRating = 5;
+}
+
+function showReviewSuccessDialog(stars = selectedReviewRating) {
+  const overlay = document.getElementById("reviewOverlay");
+  const reviewTitle = document.getElementById("reviewTitle");
+  const title = document.getElementById("reviewServiceTitle");
+  const status = document.getElementById("reviewStatusText");
+  const form = document.getElementById("reviewForm");
+  const submitButton = document.getElementById("reviewSubmitButton");
+  const safeStars = Math.max(1, Math.min(5, Number(stars || selectedReviewRating || 5)));
+
+  if (!overlay) {
+    setInfo(`Gracias por calificar. Guardamos ${safeStars} de 5 estrellas.`);
+    return;
+  }
+
+  form?.classList.add("is-review-saved");
+  if (reviewTitle) reviewTitle.textContent = "Gracias por calificar";
+  if (title) title.textContent = `${safeStars} de 5 estrellas guardadas`;
+  if (status) status.textContent = "Le avisamos al prestador dentro de MIMIGO.";
+  if (submitButton) {
+    submitButton.textContent = "Listo";
+    submitButton.type = "button";
+    submitButton.dataset.reviewClose = "true";
+  }
+
+  overlay.hidden = false;
+  window.setTimeout(() => closeReviewDialog(), 1500);
 }
 
 async function submitCurrentReview() {
@@ -1101,7 +2073,7 @@ async function submitCurrentReview() {
         draft.meta.error = null;
       });
 
-      closeReviewDialog();
+      showReviewSuccessDialog(result?.review?.stars ?? selectedReviewRating);
       await refreshClientServiceHistory();
       setupRealtime(null, null);
       return result;
@@ -1168,6 +2140,13 @@ function toggleDrawer(id, force) {
 
   if (open) {
     drawer.removeAttribute("inert");
+
+    if (id === "supportDrawer") {
+      const thread = document.getElementById("supportThread");
+      if (thread && !thread.innerHTML.trim()) {
+        renderSupportThread(clientSupportMessages);
+      }
+    }
 
     if (!suppressDrawerHistory) {
       ensureMimiBackState();
@@ -1251,16 +2230,23 @@ function buildDeviceId() {
 
 async function registerCurrentDevice({ prompt = false } = {}) {
   if (!state.session.userId) return;
+  if (!prompt && !MIMI_BOOT_PUSH_REGISTRATION_ENABLED) return;
 
   try {
-    const pushToken = await getMimiPushToken({ prompt });
+    const pushToken = await getMimiPushToken({ prompt, surface: "client" });
+    if (!pushToken && !prompt) return;
+    if (pushToken && !shouldRegisterPushToken("client", pushToken, { prompt })) {
+      return;
+    }
     await registerDevice({
+      role: "client",
       deviceId: buildDeviceId(),
       pushToken,
       platform: "web",
       notificationsEnabled: Boolean(pushToken),
       marketingOptIn: false
     });
+    if (pushToken) rememberPushTokenRegistration("client", pushToken);
   } catch (error) {
     console.warn("[MIMI Cliente] device registration skipped:", error?.message ?? error);
   }
@@ -1364,10 +2350,31 @@ function renderSupportThread(messages = []) {
 }
 
 function retryDeviceRegistrationAfterUserGesture() {
+  if (!MIMI_BOOT_PUSH_REGISTRATION_ENABLED) return;
   if (!("Notification" in window) || Notification.permission !== "granted") return;
   document.addEventListener("click", () => {
     registerCurrentDevice({ prompt: false }).catch(() => {});
   }, { once: true });
+}
+
+function setupClientPushAutoRefresh() {
+  if (clientPushRefreshEventsBound) return;
+  clientPushRefreshEventsBound = true;
+
+  const refresh = () => {
+    if (!MIMI_BOOT_PUSH_REGISTRATION_ENABLED) return;
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    const now = Date.now();
+    if (clientPushRefreshAt && now - clientPushRefreshAt < 6 * 60 * 60 * 1000) return;
+    clientPushRefreshAt = now;
+    registerCurrentDevice({ prompt: false }).catch(() => {});
+  };
+
+  window.addEventListener("focus", refresh);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") refresh();
+  });
+  window.addEventListener("online", refresh);
 }
 
 async function showClientForegroundNotification(title, body, data = {}) {
@@ -1376,12 +2383,14 @@ async function showClientForegroundNotification(title, body, data = {}) {
     const registration = await navigator.serviceWorker?.ready;
     const options = {
       body: body || "",
-      icon: "./assets/icons/mimigo-client-icon-192.png",
-      badge: "./assets/icons/mimigo-client-icon-32.png",
+      icon: "./assets/icons/mimigo-client-icon-v10-192.png",
+      badge: "./assets/icons/mimigo-client-badge-v10-96.png",
       tag: data?.tag || `mimi-client-${data?.request_id || Date.now()}`,
       renotify: true,
+      silent: false,
+      vibrate: [180, 80, 180],
       data: {
-        url: "./cliente.html",
+        url: "/servicios",
         ...(data || {})
       }
     };
@@ -1399,6 +2408,40 @@ async function showClientForegroundNotification(title, body, data = {}) {
 function parseNumberOrFallback(value, fallback = null) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizeLocationAccuracy(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed) : null;
+}
+
+function locationQualityFromAccuracy(accuracyM) {
+  const safeAccuracy = normalizeLocationAccuracy(accuracyM);
+  if (safeAccuracy === null) return "unknown";
+  if (safeAccuracy <= GPS_ACCURACY_TARGET_M) return "gps_high";
+  if (safeAccuracy <= GPS_ACCURACY_REVIEW_M) return "gps_usable";
+  if (safeAccuracy <= GPS_ACCURACY_REJECT_M) return "gps_user_confirmed";
+  return "gps_rejected";
+}
+
+function patchLocationMetadata({
+  accuracyM = null,
+  source = null,
+  geocodeSource = null,
+  quality = null,
+  confirmedAt = null,
+  needsReview = false
+} = {}) {
+  patchState("requestDraft.locationAccuracyM", normalizeLocationAccuracy(accuracyM));
+  patchState("requestDraft.locationSource", source);
+  patchState("requestDraft.geocodeSource", geocodeSource);
+  patchState("requestDraft.locationQuality", quality);
+  patchState("requestDraft.locationConfirmedAt", confirmedAt);
+  patchState("requestDraft.locationNeedsReview", Boolean(needsReview));
+}
+
+function clearLocationMetadata() {
+  patchLocationMetadata();
 }
 
 function syncDraftFromForm() {
@@ -1698,6 +2741,13 @@ async function selectServiceAddressSuggestion(index) {
   patchState("requestDraft.address", address);
   patchState("requestDraft.lat", lat);
   patchState("requestDraft.lng", lng);
+  patchLocationMetadata({
+    source: "address_suggestion",
+    geocodeSource: item.source || "geocodificar",
+    quality: "geocoded",
+    confirmedAt: new Date().toISOString(),
+    needsReview: false
+  });
 
   updateClientMapWhenReady({
     servicePosition: { lat, lng },
@@ -1720,6 +2770,7 @@ async function handleServiceAddressInput(event) {
 
   patchState("requestDraft.lat", null);
   patchState("requestDraft.lng", null);
+  clearLocationMetadata();
 
   if (value.length < 2) {
     renderServiceAddressSuggestions(
@@ -1748,6 +2799,7 @@ function handleClearServiceAddress() {
   patchState("requestDraft.address", "");
   patchState("requestDraft.lat", null);
   patchState("requestDraft.lng", null);
+  clearLocationMetadata();
 
   renderServiceAddressSuggestions([]);
   toggleClearAddressButton();
@@ -1766,7 +2818,6 @@ async function handleUseCurrentServiceLocation() {
     // Usamos watchPosition: el primer fix suele venir de WiFi/IP (~50-200m),
     // y los siguientes del GPS (~5-20m). Esperamos hasta que la precisión sea
     // <= 30m o pasen 15s. maximumAge:0 fuerza un fix fresco (no del cache).
-    const ACCURACY_TARGET_M = 30;
     const MAX_WAIT_MS = 15000;
     const position = await new Promise((resolve, reject) => {
       let watchId = null;
@@ -1790,7 +2841,7 @@ async function handleUseCurrentServiceLocation() {
           if (!bestPosition || pos.coords.accuracy < bestPosition.coords.accuracy) {
             bestPosition = pos;
           }
-          if (pos.coords.accuracy <= ACCURACY_TARGET_M) {
+          if (pos.coords.accuracy <= GPS_ACCURACY_TARGET_M) {
             finish(pos);
           }
         },
@@ -1811,13 +2862,21 @@ async function handleUseCurrentServiceLocation() {
       );
     });
 
-    console.log(`[MIMI] GPS accuracy: ${Math.round(position.coords.accuracy)}m`);
+    const accuracyM = normalizeLocationAccuracy(position.coords.accuracy);
+    console.log(`[MIMI] GPS accuracy: ${accuracyM ?? "unknown"}m`);
 
     const lat = Number(position.coords.latitude);
     const lng = Number(position.coords.longitude);
     const addressInput = document.getElementById("serviceAddressInput");
     const latInput = document.getElementById("serviceLatInput");
     const lngInput = document.getElementById("serviceLngInput");
+
+    if (accuracyM !== null && accuracyM > GPS_ACCURACY_REJECT_M) {
+      clearServiceLocationSelection();
+      throw new Error(
+        "No pudimos ubicarte con suficiente precision. Escribi tu direccion y elegi una sugerencia."
+      );
+    }
 
     if (addressInput) addressInput.value = "Ubicando dirección...";
     if (latInput) latInput.value = String(lat);
@@ -1833,13 +2892,35 @@ async function handleUseCurrentServiceLocation() {
     });
 
     const resolved = await resolverDireccionActualServicio(lat, lng, {
+      allowDirectFallback: true,
       bias: { lat, lng }
     });
 
-    const displayAddress =
-      resolved?.display_name ||
-      resolved?.dirección ||
-      "Mi ubicación actual";
+    const displayAddress = friendlyLocationAddress(
+      resolved,
+      "Ubicacion detectada cerca de tu punto actual"
+    );
+
+    const needsReview = accuracyM !== null && accuracyM > GPS_ACCURACY_REVIEW_M;
+    if (needsReview) {
+      const action = await openLocationConfirmDialog({ address: displayAddress, accuracyM });
+
+      if (action === "manual") {
+        useManualAddressAfterLocation();
+        return;
+      }
+
+      if (action === "adjust") {
+        await startLocationAdjustment({
+          lat,
+          lng,
+          address: displayAddress,
+          accuracyM,
+          geocodeSource: resolved?.source || "coords-fallback"
+        });
+        return;
+      }
+    }
 
     if (addressInput) addressInput.value = displayAddress;
     if (latInput) latInput.value = String(lat);
@@ -1848,6 +2929,18 @@ async function handleUseCurrentServiceLocation() {
     patchState("requestDraft.address", displayAddress);
     patchState("requestDraft.lat", lat);
     patchState("requestDraft.lng", lng);
+    patchLocationMetadata({
+      accuracyM,
+      source: "gps",
+      geocodeSource: resolved?.source || "coords-fallback",
+      quality: locationQualityFromAccuracy(accuracyM),
+      confirmedAt: new Date().toISOString(),
+      needsReview
+    });
+
+    if (needsReview) {
+      setInfo(`Ubicacion confirmada con precision aproximada de ${accuracyM} m.`);
+    }
 
     renderServiceAddressSuggestions([]);
     toggleClearAddressButton();
@@ -1891,7 +2984,13 @@ async function hydrateLiveContext(activeRequestOverride) {
         providerCategories: []
       };
 
-  const servicePin = await fetchServicePinForRequest(activeRequest, "hydrate");
+  const pinVisibleStatuses = ["ACCEPTED", "SCHEDULED", "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED"];
+  const servicePin = activeRequest?.id && pinVisibleStatuses.includes(String(activeRequest.status || "").toUpperCase())
+    ? await getServicePin(activeRequest.id).catch((error) => {
+        console.warn("[MIMI] No se pudo obtener PIN de servicio:", error);
+        return null;
+      })
+    : null;
 
   setState((draft) => {
     draft.client.activeRequest = activeRequest
@@ -1993,7 +3092,7 @@ function renderClientCmsVisuals({ banners = [], homeSections = [], faqs = [] } =
   const supporting = firstActiveCmsItem(homeSections);
 
   if (panel && primary) {
-    setElementText(kicker, safeClientCmsCopy(primary.placement === "provider" ? "MIMI Partners" : "MIMI Servicios", "MIMI Servicios", 40));
+    setElementText(kicker, safeClientCmsCopy(primary.placement === "provider" ? "GoPro" : "MIMIGO", "MIMIGO", 40));
     setElementText(title, safeClientCmsCopy(primary.title, "Servicios disponibles en MIMI", 120));
     setElementText(
       body,
@@ -2074,8 +3173,7 @@ async function bootstrapAsyncData() {
   const session = await bootstrapSession();
 
   if (session.isAuthenticated && hasProviderAuthIntent()) {
-    window.location.replace("./prestador.html");
-    return;
+    clearAuthRedirectIntent();
   }
 
   let categories = [];
@@ -2128,6 +3226,13 @@ async function bootstrapAsyncData() {
     }
   });
 
+  if (session.isAuthenticated) {
+    recordCriticalRiskEvent("client_login", {
+      actorRole: "client",
+      source: "client_bootstrap"
+    });
+  }
+
   const notifications = await loadNotifications(session.userId);
 
   setState((draft) => {
@@ -2136,7 +3241,9 @@ async function bootstrapAsyncData() {
 
   await hydrateLiveContext();
   await refreshClientServiceHistory();
+  await refreshCustomerTrustProfile({ quiet: true });
   await registerCurrentDevice({ prompt: false });
+  setupClientPushAutoRefresh();
   retryDeviceRegistrationAfterUserGesture();
 
   if (!hasSupabaseEnv()) {
@@ -2218,18 +3325,41 @@ function registerInstallPrompt() {
 }
 
 async function handleAuthPrimary() {
-  if (!hasSupabaseEnv()) {
-    patchState("ui.appEntered", true);
-    setInfo(
-      "Entraste en modo demo. Cuando cargues tus claves de Supabase se habilita el flujo real."
-    );
-    return;
+  if (authLoginInFlight) return;
+  authLoginInFlight = true;
+  setAuthLoginBusy(true);
+  clearAuthLoginResetTimer();
+  let waitingForRedirect = false;
+
+  try {
+    if (!appConfig.supabaseUrl || !appConfig.supabaseAnonKey) {
+      patchState("ui.appEntered", true);
+      setInfo(
+        "Entraste en modo demo. Cuando cargues tus claves de Supabase se habilita el flujo real."
+      );
+      return;
+    }
+
+    if (!hasSupabaseEnv()) {
+      setInfo(null, "No pudimos cargar el inicio de sesión. Actualizá la página e intentá nuevamente.");
+      return;
+    }
+
+    const consent = await confirmExternalGoogleAuth();
+    if (!consent) return;
+
+    waitingForRedirect = true;
+    scheduleAuthLoginReset();
+    await signInWithGoogle({ mode: "client" });
+  } catch (error) {
+    waitingForRedirect = false;
+    clearAuthLoginResetTimer();
+    throw error;
+  } finally {
+    if (!waitingForRedirect) {
+      resetAuthLoginBusy();
+    }
   }
-
-  const consent = await confirmExternalGoogleAuth();
-  if (!consent) return;
-
-  await signInWithGoogle({ mode: "client" });
 }
 
 function confirmExternalGoogleAuth() {
@@ -2253,7 +3383,11 @@ function confirmExternalGoogleAuth() {
       resolve(value);
     };
 
-    const onContinue = () => cleanup(true);
+    const onContinue = () => {
+      continueButton.disabled = true;
+      continueButton.setAttribute("aria-busy", "true");
+      cleanup(true);
+    };
     const onCancel = () => cleanup(false);
     const onOverlayClick = (event) => {
       if (event.target === overlay) cleanup(false);
@@ -2267,6 +3401,8 @@ function confirmExternalGoogleAuth() {
     overlay.addEventListener("click", onOverlayClick);
     window.addEventListener("keydown", onKeyDown);
     document.body.classList.add("auth-consent-open");
+    continueButton.disabled = false;
+    continueButton.removeAttribute("aria-busy");
     overlay.hidden = false;
     window.setTimeout(() => continueButton.focus(), 30);
   });
@@ -2275,6 +3411,18 @@ function confirmExternalGoogleAuth() {
 async function handleSearchSubmit(event) {
   event.preventDefault();
   syncDraftFromForm();
+
+  if (hasSupabaseEnv() && !state.session.userId) {
+    setState((draft) => {
+      draft.client.providers = [];
+      draft.ui.hasCompletedClientSearch = false;
+      draft.meta.lastSearchAt = new Date().toISOString();
+      draft.meta.info = null;
+      draft.meta.error = "Inicia sesion para buscar prestadores reales y enviar solicitudes.";
+    });
+    setClientView("providers");
+    return;
+  }
 
   if (!requireConfirmedServiceAddress()) return;
 
@@ -2382,6 +3530,12 @@ async function ensureSelectedCategoryHasBackendId() {
 
 async function handleProviderSelection(providerId) {
   console.log("[MIMI Solicitar] step 1: clicked provider", { providerId });
+  if (isActiveClientRequest()) {
+    setInfo(null, "Ya tenes una solicitud activa. Revisala o cancelala antes de pedir otro servicio.");
+    setClientView("services");
+    return false;
+  }
+
   if (!requireConfirmedServiceAddress()) return false;
 
   const provider = state.client.providers.find(
@@ -2446,6 +3600,12 @@ async function handleProviderSelection(providerId) {
     address: state.requestDraft.address,
     serviceLat: state.requestDraft.lat,
     serviceLng: state.requestDraft.lng,
+    locationAccuracyM: state.requestDraft.locationAccuracyM,
+    locationSource: state.requestDraft.locationSource,
+    geocodeSource: state.requestDraft.geocodeSource,
+    locationQuality: state.requestDraft.locationQuality,
+    locationConfirmedAt: state.requestDraft.locationConfirmedAt,
+    locationNeedsReview: state.requestDraft.locationNeedsReview,
     requestType: state.requestDraft.requestType,
     scheduledFor: state.requestDraft.scheduledFor || null,
     requestedHours,
@@ -2463,6 +3623,20 @@ async function handleProviderSelection(providerId) {
     priceLabel: pricing.price_label
   });
   console.log("[MIMI Solicitar] step 5 OK: request created", { request });
+  recordCriticalRiskEvent("service_request_created", {
+    actorRole: "client",
+    source: "client_create_request",
+    requestId: request?.id ?? request?.request_id ?? null,
+    selectedProviderId: provider?.provider_id ?? null,
+    categoryId: state.ui.selectedCategoryId,
+    requestType: state.requestDraft.requestType,
+    locationSource: state.requestDraft.locationSource,
+    locationQuality: state.requestDraft.locationQuality,
+    locationAccuracyM: state.requestDraft.locationAccuracyM,
+    scheduled: Boolean(state.requestDraft.scheduledFor),
+    amount: pricing?.total_price ?? null,
+    currency: pricing?.currency ?? null
+  });
   setRequestProgress({
     visible: true,
     step: "notifying",
@@ -2472,11 +3646,12 @@ async function handleProviderSelection(providerId) {
   });
 
   let paymentIntent = null;
+  let paymentSetupError = null;
 
   // Solo crear payment intent si hay un total > 0.
   // Usamos el total del REQUEST guardado (snapshot real), no el local.
   // Si la edge function lo guardó en 0 (ej: quote_required sin precio), saltamos
-  // el payment intent — lo creamos después cuando se acuerde el monto.
+  // el payment intent; la Fase 2 debe crear el pago cuando exista presupuesto aceptado.
   const totalForPayment = Number(
     request?.total_price_snapshot ??
     request?.totalPrice ??
@@ -2490,13 +3665,31 @@ async function handleProviderSelection(providerId) {
         serviceRequestId: request?.id ?? request?.request_id,
         contextType: "SERVICE_REQUEST"
       });
+      recordCriticalRiskEvent("confirm_payment", {
+        actorRole: "client",
+        source: "client_create_payment_intent",
+        paymentId: paymentIntent?.id ?? null,
+        serviceRequestId: request?.id ?? request?.request_id ?? null,
+        amount: totalForPayment
+      });
       console.log("[MIMI Solicitar] step 6 OK: payment intent created");
     } catch (error) {
-      console.warn("[MIMI Go] No se pudo crear intento de pago mock/payment-agnostic.", error);
+      paymentSetupError = error;
+      console.warn("[MIMI Go] No se pudo crear intento de pago para servicios.", error);
     }
   } else {
-    console.log("[MIMI Solicitar] step 6 SKIPPED: precio a coordinar (total=0). Payment se crea cuando se defina el monto.");
+    console.log("[MIMI Solicitar] step 6 SKIPPED: cotización pendiente (total=0). Payment se crea cuando haya presupuesto aceptado.");
   }
+
+  const paymentRecovery =
+    !paymentIntent && totalForPayment > 0
+      ? buildPaymentSetupFailure({
+          request,
+          total: totalForPayment,
+          currency: pricing.currency,
+          error: paymentSetupError || new Error("PAYMENT_SETUP_FAILED")
+        })
+      : null;
 
   setState((draft) => {
     draft.client.selectedProvider = provider;
@@ -2515,7 +3708,7 @@ async function handleProviderSelection(providerId) {
       price_label: pricing.price_label ?? null,
       conversation_id: request?.conversation_id ?? null
     };
-    draft.client.insights.paymentIntent = paymentIntent;
+    draft.client.insights.paymentIntent = paymentIntent || paymentRecovery;
     draft.client.insights.providerProfile = {
       bio: provider.bio ?? null,
       city: provider.city ?? null,
@@ -2529,11 +3722,31 @@ async function handleProviderSelection(providerId) {
       lat: draft.requestDraft.lat,
       lng: draft.requestDraft.lng
     };
-    draft.meta.error = null;
-    draft.meta.info = paymentIntent?.checkout_url
-      ? "Solicitud creada. Pago requerido para confirmar. Abrilo en Mercado Pago y volve a MIMIGO para verificarlo."
-      : "Solicitud creada correctamente.";
+    draft.meta.error = paymentRecovery
+      ? "Solicitud creada, pero no pudimos preparar el pago. Reintentalo desde Detalle de pago."
+      : null;
+    draft.meta.info = paymentRecovery
+      ? null
+      : paymentIntent?.checkout_url
+        ? "Pago requerido para confirmar. Abrí el checkout seguro y volvé para verificar el estado."
+        : "Solicitud creada correctamente.";
   });
+
+  if (paymentIntent?.checkout_url && redirectClientToCheckout(paymentIntent, {
+    source: "client_auto_checkout_after_request",
+    auto: true
+  })) {
+    setRequestProgress({
+      visible: true,
+      step: "payment",
+      title: "Abriendo Mercado Pago",
+      message: "Te llevamos al checkout sandbox para confirmar el pago de prueba.",
+      providerName
+    });
+    await delay(220);
+    pushRegistration.catch(() => {});
+    return true;
+  }
 
   setRequestProgress({
     visible: true,
@@ -2546,11 +3759,117 @@ async function handleProviderSelection(providerId) {
   setClientView("services", { behavior: "auto" });
   await delay(Math.max(360, 820 - (Date.now() - progressStartedAt)));
   hideRequestProgress();
-  if (paymentIntent?.checkout_url) {
-    setInfo("Pago requerido para confirmar. Te llevamos a Mercado Pago y despues volves a MIMIGO para verificarlo.");
-    openMercadoPagoCheckout(paymentIntent, "request_created");
-  }
   pushRegistration.catch(() => {});
+  return true;
+}
+
+async function cancelActiveClientRequest({
+  requestReason = "cancelled_from_client_ui",
+  paymentReason = "cancelled_before_payment_confirmation",
+  source = "client_cancel_request"
+} = {}) {
+  const request = state.client.activeRequest;
+  const requestId = request?.id ?? request?.request_id ?? null;
+  const payment = state.client.insights?.paymentIntent;
+  const paymentStatus = paymentStatusValue(payment);
+
+  if (!requestId) {
+    console.warn("[MIMI Cancel] BLOCKED: no hay request activo en state.client.activeRequest");
+    setInfo(null, "No hay una solicitud activa para cancelar.");
+    return false;
+  }
+
+  if (!isClientRequestCancellable(request)) {
+    setInfo(null, "Esta solicitud ya no se puede cancelar desde la app.");
+    return false;
+  }
+
+  // Con el PIN ya validado el servicio arrancó: no se cancela, se reclama.
+  const activeStatus = requestStatusValue(request);
+  const blockedReason = cancellationBlockedReason(activeStatus);
+  if (blockedReason) {
+    setInfo(null, blockedReason);
+    return false;
+  }
+
+  // Si ya pagó, la cancelación puede tener cargo: el cliente tiene que ver el monto
+  // ANTES de aceptar. Antes esto estaba bloqueado de plano ("contactá a soporte"), así
+  // que un cliente que ya había pagado no tenía ninguna forma de cancelar desde la app.
+  if (isApprovedPaymentStatus(paymentStatus)) {
+    const confirmation = await requestCancellationConfirmation({
+      status: activeStatus,
+      totalPaid: paymentTotalFromRequest(request, payment?.total_amount),
+      providerName: request?.provider_name ?? request?.providerName ?? null
+    });
+    if (!confirmation.confirmed) return false;
+    console.log("[MIMI Cancel] cliente confirmó con cargo visible", confirmation.policy);
+  }
+
+  let cancelledPayment = null;
+  if (isClientPaymentCancellable(payment)) {
+    console.log("[MIMI Cancel] cancelling pending payment first", { paymentId: payment.id, paymentStatus });
+    try {
+      cancelledPayment = await cancelPayment(payment.id, paymentReason);
+      patchState("client.insights.paymentIntent", cancelledPayment);
+    } catch (error) {
+      console.error("[MIMI Cancel] payment cancel failed:", error);
+      setInfo(
+        null,
+        `No pudimos cerrar el checkout pendiente: ${normalizeAuthError(error, "reintenta en unos segundos")}. Por seguridad no cancelamos la solicitud.`
+      );
+      throw error;
+    }
+  }
+
+  console.log("[MIMI Cancel] calling cancel edge", { requestId, source });
+  const result = await updateRequestStatus(appConfig.functions.cancelRequest, {
+    request_id: requestId,
+    reason: requestReason
+  });
+  console.log("[MIMI Cancel] cancel edge response", result);
+
+  clearPendingCheckoutMarker(payment?.id ?? null);
+  invalidateCancellationRulesCache();
+
+  // Los números que valen son los que devolvió el servidor, no los del cartel:
+  // entre el preview y la cancelación el estado de la solicitud pudo cambiar.
+  const serverFee = Number(result?.cancellation_fee ?? 0);
+  const serverRefund = Number(result?.refund_due ?? 0);
+  const refundFailed = Boolean(result?.refund?.attempted) && result?.refund?.ok === false;
+
+  setState((draft) => {
+    if (draft.client.activeRequest) {
+      draft.client.activeRequest.status = "CANCELLED";
+      draft.client.activeRequest.cancelled_at = new Date().toISOString();
+    }
+    if (cancelledPayment) {
+      draft.client.insights.paymentIntent = cancelledPayment;
+    } else if (draft.client.insights?.paymentIntent && !isApprovedPaymentStatus(draft.client.insights.paymentIntent.status)) {
+      draft.client.insights.paymentIntent = {
+        ...draft.client.insights.paymentIntent,
+        status: "CANCELLED"
+      };
+    }
+    draft.client.selectedProvider = null;
+    draft.meta.info = refundFailed
+      ? `Cancelaste el servicio. El reembolso de ${formatCurrency(serverRefund)} quedó pendiente: lo estamos revisando y te avisamos.`
+      : serverFee > 0
+        ? `Solicitud cancelada. Se descontaron ${formatCurrency(serverFee)} y se te devuelven ${formatCurrency(serverRefund)}.`
+        : "Solicitud cancelada. Se te devuelve el total, sin cargo.";
+    draft.meta.error = null;
+  });
+
+  recordCriticalRiskEvent("service_request_cancelled", {
+    actorRole: "client",
+    source,
+    requestId,
+    paymentId: payment?.id ?? null,
+    paymentStatus: paymentStatus || null
+  });
+
+  await hydrateLiveContext();
+  setClientView("services", { behavior: "auto" });
+  setInfo("Solicitud cancelada correctamente. Si queres, podes pedir otro servicio.");
   return true;
 }
 
@@ -2575,76 +3894,19 @@ async function handleRequestAction(action) {
   if (action !== "cancel") return;
 
   const requestId = state.client.activeRequest?.id;
-  const payment = state.client.insights?.paymentIntent ?? null;
-  console.log("[MIMI Cancel] step 1: cancel clicked", {
-    requestId,
-    hasActiveRequest: !!state.client.activeRequest,
-    requestStatus: state.client.activeRequest?.status,
-    paymentId: payment?.id,
-    paymentStatus: payment?.status
-  });
-
-  if (!requestId) {
-    console.warn("[MIMI Cancel] BLOCKED: no hay request activo en state.client.activeRequest");
-    setInfo(null, "No hay una solicitud activa para cancelar.");
-    return;
-  }
-
-  if (!canClientSelfCancelRequest(state.client.activeRequest)) {
-    setInfo(null, "Esta solicitud ya no se puede cancelar desde la app. Contacta soporte para revisar el caso.");
-    return;
-  }
-
-  const paymentStatus = String(payment?.status || "").toUpperCase();
-  if (payment?.id && PAYMENT_APPROVED_STATUSES.has(paymentStatus)) {
-    setInfo(null, "El pago ya fue confirmado. Contacta soporte para cancelar y revisar la devolucion.");
-    return;
-  }
+  console.log("[MIMI Cancel] step 1: cancel clicked", { requestId, hasActiveRequest: !!state.client.activeRequest });
 
   try {
-    console.log("[MIMI Cancel] step 2: calling cancel edge");
-    const result = await updateRequestStatus(appConfig.functions.cancelRequest, {
-      request_id: requestId,
-      reason: "cancelled_from_client_ui"
+    await cancelActiveClientRequest({
+      requestReason: "cancelled_from_client_ui",
+      paymentReason: "cancelled_from_client_ui",
+      source: "client_request_action_cancel"
     });
-    console.log("[MIMI Cancel] step 2 OK: cancel edge response", result);
   } catch (err) {
-    console.error("[MIMI Cancel] step 2 FAIL:", err);
-    setInfo(null, `No se pudo cancelar: ${err?.message || "error desconocido"}`);
+    console.error("[MIMI Cancel] FAIL:", err);
+    if (!state.meta.error) setInfo(null, `No se pudo cancelar: ${err?.message || "error desconocido"}`);
     throw err;
   }
-
-  let paymentCancelled = false;
-  let paymentCancelFailed = false;
-  if (canCancelPaymentLocally(payment)) {
-    try {
-      console.log("[MIMI Cancel] step 3: cancelling pending payment", { paymentId: payment.id });
-      const updatedPayment = await cancelPayment(payment.id, "service_request_cancelled_from_client_ui");
-      paymentCancelled = String(updatedPayment?.status || "").toUpperCase() === "CANCELLED";
-      patchState("client.insights.paymentIntent", updatedPayment);
-    } catch (paymentError) {
-      paymentCancelFailed = true;
-      console.warn("[MIMI Cancel] payment cancel failed:", paymentError);
-      setInfo("Solicitud cancelada. No pudimos cerrar el pago pendiente automaticamente; soporte puede revisarlo.");
-    }
-  }
-
-  setState((draft) => {
-    if (draft.client.activeRequest) {
-      draft.client.activeRequest.status = "CANCELLED";
-    }
-    draft.client.selectedProvider = null;
-    draft.meta.info = payment?.id
-      ? paymentCancelled
-        ? "Solicitud y pago pendiente cancelados correctamente."
-        : paymentCancelFailed
-          ? "Solicitud cancelada. El pago pendiente quedo para revision."
-        : "Solicitud cancelada correctamente."
-      : "Solicitud cancelada correctamente.";
-  });
-
-  await hydrateLiveContext();
-  console.log("[MIMI Cancel] step 4 OK: state actualizado y context refrescado");
 }
 
 function openProviderSortSheet() {
@@ -2680,116 +3942,175 @@ function selectProviderSortMode(mode) {
 async function handlePaymentAction(action) {
   const payment = state.client.insights?.paymentIntent;
 
-  if (!payment?.id) {
-    throw new Error("No hay intento de pago activo.");
+  if (action === "create" || action === "retry") {
+    await createPaymentForActiveRequest({ openCheckout: true });
+    return;
   }
 
-  if (action === "checkout") {
-    if (payment.checkout_url) {
-      openMercadoPagoCheckout(payment, "payment_button");
+  if (action === "cancel") {
+    if (state.client.activeRequest?.id) {
+      await cancelActiveClientRequest({
+        requestReason: "cancelled_before_payment_confirmation",
+        paymentReason: "cancelled_before_payment_confirmation",
+        source: "client_payment_panel_cancel_request"
+      });
       return;
     }
 
-    setInfo("Pago requerido para confirmar. No encontramos el link de checkout, actualiza el estado del pago.");
+    if (payment?.id) {
+      const updated = await cancelPayment(payment.id, "cancelled_from_payment_panel");
+      clearPendingCheckoutMarker(payment.id);
+      patchState("client.insights.paymentIntent", updated);
+      setInfo("Pago cancelado. Si todavia necesitas el servicio, podes preparar un nuevo pago.");
+      return;
+    }
+  }
+
+  if (!payment?.id) {
+    const error = new Error("PAYMENT_SETUP_FAILED");
+    error.code = "PAYMENT_SETUP_FAILED";
+    throw error;
+  }
+
+  if (action === "checkout") {
+    if (redirectClientToCheckout(payment, {
+      source: "client_manual_checkout_redirect",
+      auto: false
+    })) {
+      return;
+    }
+
+    setInfo("Checkout preparado. Cuando el proveedor de pago devuelva URL, aca redirige al checkout seguro.");
     return;
   }
 
   if (action === "refresh") {
     const updated = await getPaymentStatus(payment.id);
     patchState("client.insights.paymentIntent", updated);
-    const status = String(updated?.status || "").toUpperCase();
-    if (["APPROVED", "CAPTURED", "SETTLED"].includes(status)) {
-      setInfo("Pago confirmado. Mercado Pago aprobo la operacion.");
+    if (updated?.status === "APPROVED") {
+      setInfo("Pago confirmado.");
     } else if (updated?.sync_warning) {
-      setInfo("Estamos verificando el pago. Conservamos el estado local hasta recibir confirmacion de Mercado Pago.");
-    } else if (["REJECTED", "CANCELLED", "FAILED"].includes(status)) {
-      setInfo(null, "Pago no completado. Podes volver a intentarlo desde MIMIGO.");
+      setInfo("Pago pendiente. Todavía no recibimos confirmación de Mercado Pago.");
     } else {
-      setInfo("Pago pendiente. El servicio se confirma cuando Mercado Pago informa aprobacion.");
+      setInfo("Pago actualizado. Si sigue pendiente, revisá el checkout o intentá nuevamente.");
     }
     return;
   }
 
-  if (action === "cancel") {
-    if (state.client.activeRequest?.id) {
-      await handleRequestAction("cancel");
-      return;
-    }
-    const updated = await cancelPayment(payment.id);
-    patchState("client.insights.paymentIntent", updated);
-  }
 }
 
 async function handlePaymentReturnFromUrl(sourceUrl = window.location.href) {
-  const url = new URL(sourceUrl, window.location.origin);
-  const paymentResult = String(
-    url.searchParams.get("payment") ||
-      url.searchParams.get("collection_status") ||
-      url.searchParams.get("status") ||
-      ""
-  ).toLowerCase();
+  let url;
+  try {
+    url = new URL(sourceUrl, window.location.origin);
+  } catch (_) {
+    return false;
+  }
 
-  const handledReturnModes = new Set([
-    "payment=success",
-    "payment=failure",
-    "payment=pending",
-    "success",
-    "approved",
-    "failure",
-    "failed",
-    "rejected",
-    "pending"
-  ]);
-  const directMode = url.searchParams.get("payment") ? `payment=${paymentResult}` : paymentResult;
-  if (!handledReturnModes.has(directMode)) return false;
+  const params = url.searchParams;
+  const explicitPaymentReturn =
+    params.has("payment") ||
+    params.has("collection_status") ||
+    params.has("status") ||
+    params.has("payment_id") ||
+    params.has("preference_id") ||
+    params.has("external_reference");
+  if (!explicitPaymentReturn) return false;
 
-  const providerPaymentId =
-    url.searchParams.get("payment_id") ||
-    url.searchParams.get("collection_id") ||
-    url.searchParams.get("provider_payment_id") ||
-    "";
-  const preferenceId = url.searchParams.get("preference_id") || "";
+  const paymentReturn = String(params.get("payment") || params.get("collection_status") || params.get("status") || "").toLowerCase();
+  const isSuccess = ["payment=success", "success", "approved"].includes(paymentReturn) || params.get("payment") === "success";
+  const isFailure = ["payment=failure", "failure", "rejected", "cancelled", "canceled", "cancel", "null"].includes(paymentReturn) || params.get("payment") === "failure";
+  const isPending = ["payment=pending", "pending", "in_process"].includes(paymentReturn) || params.get("payment") === "pending";
+  const providerPaymentId = params.get("payment_id") || params.get("collection_id") || "";
+  const preferenceId = params.get("preference_id") || "";
+  const pendingCheckout = readPendingCheckoutMarker();
   const localPaymentId =
-    url.searchParams.get("external_reference") ||
+    params.get("external_reference") ||
     state.client.insights?.paymentIntent?.id ||
+    pendingCheckout?.paymentId ||
     "";
 
-  if (directMode === "payment=failure" || ["failure", "failed", "rejected"].includes(paymentResult)) {
-    setInfo(null, "Pago no completado. Si Mercado Pago rechazo o cancelaste el pago, podes intentarlo nuevamente.");
-  } else if (directMode === "payment=pending" || paymentResult === "pending") {
-    setInfo("Pago pendiente. Mercado Pago todavia esta procesando la operacion.");
-  } else {
-    setInfo("Estamos verificando el pago con Mercado Pago.");
+  const cleanUrl = new URL(window.location.href);
+  [
+    "payment",
+    "collection_status",
+    "status",
+    "payment_id",
+    "collection_id",
+    "preference_id",
+    "external_reference",
+    "merchant_order_id",
+    "site_id",
+    "processing_mode",
+    "merchant_account_id"
+  ].forEach((key) => cleanUrl.searchParams.delete(key));
+  window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+
+  if (!localPaymentId) {
+    setInfo(null, "Volviste de Mercado Pago, pero no encontramos un pago activo para verificar. Si la solicitud sigue activa, podes cancelarla desde el panel.");
+    setClientView("services", { behavior: "auto" });
+    return true;
   }
 
-  if (localPaymentId) {
-    try {
-      const updated = await getPaymentStatus(localPaymentId, {
-        providerPaymentId,
-        preferenceId
-      });
-      patchState("client.insights.paymentIntent", updated);
-      const status = String(updated?.status || "").toUpperCase();
-      if (["APPROVED", "CAPTURED", "SETTLED"].includes(status)) {
-        setInfo("Pago confirmado. Mercado Pago aprobo la operacion.");
-      } else if (["REJECTED", "CANCELLED", "FAILED"].includes(status)) {
-        setInfo(null, "Pago no completado. Podes volver a intentarlo desde MIMIGO.");
-      } else if (updated?.sync_warning) {
-        setInfo("Estamos verificando el pago. Seguimos mostrando el estado local hasta recibir confirmacion.");
-      } else {
-        setInfo("Pago pendiente. El pago todavia no esta aprobado.");
-      }
-    } catch (error) {
-      console.warn("[MIMI Pago] no se pudo sincronizar retorno Mercado Pago:", error);
-      setInfo("Estamos verificando el pago. Si no se actualiza, toca Actualizar pago en unos segundos.");
+  setInfo("Estamos verificando el pago con Mercado Pago...");
+
+  try {
+    const updated = await getPaymentStatus(localPaymentId, {
+      providerPaymentId,
+      preferenceId
+    });
+    patchState("client.insights.paymentIntent", updated);
+
+    if (updated?.status === "APPROVED") {
+      clearPendingCheckoutMarker(localPaymentId);
+      setInfo("Pago confirmado. Ya podemos continuar con la solicitud.");
+    } else if (isFailure || ["REJECTED", "CANCELLED"].includes(updated?.status)) {
+      if (updated?.status === "CANCELLED") clearPendingCheckoutMarker(localPaymentId);
+      setClientView("services", { behavior: "auto" });
+      setInfo(null, "Pago no completado. Podes volver al checkout o cancelar la solicitud desde Detalle de pago.");
+    } else if (isPending || updated?.status === "PENDING" || updated?.status === "CHECKOUT_CREATED") {
+      setClientView("services", { behavior: "auto" });
+      setInfo("Pago pendiente. Si no queres continuar, cancela la solicitud desde Detalle de pago.");
+    } else if (isSuccess) {
+      setInfo("Estamos verificando el pago. Todavía no figura aprobado en Mercado Pago.");
+    } else {
+      setInfo("Estado de pago actualizado.");
     }
+  } catch (error) {
+    console.warn("[MIMI Pago] No se pudo sincronizar retorno Mercado Pago:", error);
+    setInfo("Pago pendiente. No pudimos verificarlo ahora; intentá actualizar en unos segundos.");
   }
 
-  ["payment", "collection_status", "status", "payment_id", "collection_id", "provider_payment_id", "preference_id", "external_reference", "merchant_order_id"].forEach((key) => {
-    url.searchParams.delete(key);
-  });
-  history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
   return true;
+}
+
+function handlePendingCheckoutResume() {
+  const marker = readPendingCheckoutMarker();
+  if (!marker) return false;
+
+  const payment = state.client.insights?.paymentIntent;
+  const request = state.client.activeRequest;
+  const paymentStatus = paymentStatusValue(payment);
+  const markerPaymentId = String(marker.paymentId || "");
+  const activePaymentMatches = !payment?.id || !markerPaymentId || payment.id === markerPaymentId;
+
+  if (!activePaymentMatches) {
+    clearPendingCheckoutMarker(markerPaymentId);
+    return false;
+  }
+
+  if (isApprovedPaymentStatus(paymentStatus) || paymentStatus === "CANCELLED" || requestStatusValue(request) === "CANCELLED") {
+    clearPendingCheckoutMarker(markerPaymentId);
+    return false;
+  }
+
+  if (request?.id && ["PENDING", "CHECKOUT_CREATED", "REJECTED", ""].includes(paymentStatus)) {
+    setClientView("services", { behavior: "auto" });
+    setInfo("Volviste de Mercado Pago sin confirmar el pago. Podes reintentar el checkout o cancelar la solicitud desde Detalle de pago.");
+    return true;
+  }
+
+  return false;
 }
 
 
@@ -2907,7 +4228,9 @@ function bindBasicControls() {
   });
 
   document.querySelectorAll("[data-auth-action='login']").forEach((button) => {
-    button.addEventListener("click", async () => {
+    button.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       try {
         await handleAuthPrimary();
       } catch (error) {
@@ -3158,6 +4481,23 @@ function bindBasicControls() {
     }
   });
 
+  document.querySelectorAll("[data-location-confirm]").forEach((button) => {
+    button.addEventListener("click", () => {
+      closeLocationConfirm(button.dataset.locationConfirm || "manual");
+    });
+  });
+
+  document.querySelectorAll("[data-location-adjust]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const action = button.dataset.locationAdjust;
+      if (action === "confirm") {
+        confirmAdjustedLocation();
+      } else {
+        useManualAddressAfterLocation();
+      }
+    });
+  });
+
   document.getElementById("requestForm")?.addEventListener("submit", async (event) => {
     try {
       await handleSearchSubmit(event);
@@ -3205,8 +4545,15 @@ function bindBasicControls() {
     try {
       const conversationId = await ensureClientSupportConversation();
       const message = await sendMessage({ conversationId, body });
+      recordCriticalRiskEvent("support_message_sent", {
+        actorRole: "client",
+        source: "client_support_form",
+        conversationId,
+        messageId: message?.id ?? null
+      });
       const messages = await loadMessages(conversationId);
-      renderSupportThread(messages?.length ? messages : [message].filter(Boolean));
+      clientSupportMessages = messages?.length ? messages : [message].filter(Boolean);
+      renderSupportThread(clientSupportMessages);
       if (status) status.textContent = "Consulta enviada al equipo MIMI. Te respondemos por este chat.";
       input.value = "";
     } catch (error) {
@@ -3237,6 +4584,13 @@ function bindBasicControls() {
         return;
       }
 
+      const authLoginButton = event.target.closest("[data-auth-action='login']");
+      if (authLoginButton) {
+        event.preventDefault();
+        await handleAuthPrimary();
+        return;
+      }
+
       // BUG: body tiene data-client-view="home" como state global → closest() matcheaba
       // body para CUALQUIER click y disparaba setClientView() + return, bloqueando
       // todos los demás handlers (Solicitar, etc.). Restringimos a button/a explícitos.
@@ -3252,6 +4606,13 @@ function bindBasicControls() {
         if (viewButton.closest(".drawer")) {
           closeAllDrawers();
         }
+        return;
+      }
+
+      const trustActionButton = event.target.closest("[data-client-trust-action]");
+      if (trustActionButton) {
+        event.preventDefault();
+        await handleCustomerTrustAction(trustActionButton.dataset.clientTrustAction, trustActionButton);
         return;
       }
 
@@ -3451,13 +4812,27 @@ function bindBasicControls() {
       setInfo(null, normalizeAuthError(error, friendlyMsg));
     }
   });
+
+  document.querySelector(".app-shell")?.addEventListener("change", async (event) => {
+    const identityInput = event.target.closest("[data-customer-identity-input]");
+    if (!identityInput) return;
+    await handleCustomerIdentityFileSelection(identityInput);
+  });
 }
 function setupRealtime(
   requestId = state.client.activeRequest?.id ?? null,
   conversationId = currentConversationId()
 ) {
-  realtimeSubscription?.unsubscribe?.();
+  if (typeof realtimeSubscription === "function") {
+    realtimeSubscription();
+  } else {
+    realtimeSubscription?.unsubscribe?.();
+  }
   realtimeSubscription = null;
+
+  if (!MIMI_REALTIME_ENABLED) {
+    return;
+  }
 
   if (!state.session.userId) {
     return;
@@ -3526,8 +4901,6 @@ function setupRealtime(
           };
         }
       });
-
-      refreshServicePinForRequest(safePayload, "realtime_request_update");
     }
   });
 }
@@ -3646,6 +5019,8 @@ async function setupPhoneCollector(options = {}) {
   const smsConfigured = phoneStatus?.sms_configured !== false;
   let risk = null;
 
+  patchState("client.phoneVerificationUnavailable", smsConfigured ? null : "sms_provider_not_configured");
+
   if (profile) {
     patchState("session.clientProfileId", profile.id ?? null);
     patchState("session.userPhone", profile.phone_number ?? null);
@@ -3724,8 +5099,58 @@ async function openVerifiedPhoneCollectModal(
 
   const setLoading = (loading, label) => {
     submit.disabled = Boolean(loading);
+    resendButton?.toggleAttribute("disabled", Boolean(loading));
     submit.classList.toggle("is-loading", Boolean(loading));
     if (label) submit.textContent = label;
+  };
+
+  const otpDeliveryMessage = (response = {}) => (
+    response?.channel === "sms" || response?.fallback === true
+      ? "No pudimos enviarlo por WhatsApp. Te enviamos un SMS de respaldo."
+      : "Te enviamos un código por WhatsApp."
+  );
+
+  const fallbackActions = document.createElement("div");
+  fallbackActions.className = "phone-fallback-actions";
+  fallbackActions.hidden = true;
+  status.insertAdjacentElement("afterend", fallbackActions);
+
+  const isFallbackRequired = (response = {}) => (
+    response?.status === "fallback_required" ||
+    response?.reason === "whatsapp_not_enabled" ||
+    response?.code === "whatsapp_channel_disabled" ||
+    response?.error === "whatsapp_channel_disabled"
+  );
+
+  const fallbackCopy = (response = {}) => (
+    response?.message ||
+    "WhatsApp todavia no esta disponible para esta verificacion. Podes continuar por otro metodo."
+  );
+
+  const fallbackList = (response = {}) => {
+    const list = response?.available_fallbacks || response?.fallbacks || [];
+    return Array.isArray(list) ? list : [];
+  };
+
+  const clearFallbackOptions = () => {
+    fallbackActions.hidden = true;
+    fallbackActions.innerHTML = "";
+  };
+
+  const renderFallbackOptions = (response = {}) => {
+    const methods = fallbackList(response);
+    const smsAvailable = response?.sms_available === true || methods.includes("sms");
+    const emailAvailable = response?.email_available === true || methods.includes("email");
+
+    fallbackActions.innerHTML = `
+      <p>Podes seguir sin esperar la habilitacion de WhatsApp.</p>
+      <div class="phone-fallback-action-row">
+        ${emailAvailable ? `<button type="button" class="phone-fallback-btn is-secondary" data-phone-fallback="email">Verificar por email</button>` : ""}
+        ${smsAvailable ? `<button type="button" class="phone-fallback-btn is-primary" data-phone-fallback="sms">Enviar SMS</button>` : ""}
+        <button type="button" class="phone-fallback-btn is-ghost" data-phone-fallback="whatsapp">Intentar WhatsApp de nuevo</button>
+      </div>
+    `;
+    fallbackActions.hidden = false;
   };
 
   const renderSelectedCountry = () => {
@@ -3770,7 +5195,7 @@ async function openVerifiedPhoneCollectModal(
     }
     if (copy) {
       copy.textContent = isOtp
-        ? "Te enviamos un SMS. El código vence pronto por seguridad."
+        ? "Te enviamos un código por WhatsApp. El código vence pronto por seguridad."
         : (verifyExistingDevice
           ? "Detectamos un dispositivo nuevo. Confirmá tu teléfono una vez para confiar este equipo."
           : "Lo usamos para proteger tu cuenta y avisos importantes del servicio.");
@@ -3788,12 +5213,15 @@ async function openVerifiedPhoneCollectModal(
     form.removeEventListener("submit", onSubmit);
     closeButton?.removeEventListener("click", onCloseClick);
     resendButton?.removeEventListener("click", onResend);
+    fallbackActions.removeEventListener("click", onFallbackAction);
+    fallbackActions.remove();
     countryButton?.removeEventListener("click", onCountryButtonClick);
     countrySearch?.removeEventListener("input", onCountrySearch);
     countryList?.removeEventListener("click", onCountrySelect);
   };
 
-  const startOtp = async () => {
+  const startOtp = async (channel = "whatsapp") => {
+    clearFallbackOptions();
     const normalized = await normalizePhoneNumber(input.value, selectedCountry);
     pendingVerification = {
       phoneNumber: normalized.phoneNumber,
@@ -3805,8 +5233,14 @@ async function openVerifiedPhoneCollectModal(
       ...pendingVerification,
       purpose: forceChange
         ? "phone_change"
-        : (verifyExistingDevice ? "login_new_device" : "signup")
+        : (verifyExistingDevice ? "login_new_device" : "signup"),
+      channel
     });
+    if (isFallbackRequired(response)) {
+      renderFallbackOptions(response);
+      setStatus(fallbackCopy(response), "neutral");
+      return;
+    }
     if (response?.already_verified === true) {
       patchState("session.userPhone", pendingVerification.phoneNumber);
       patchState("session.userPhoneCountryCode", pendingVerification.countryCode);
@@ -3816,16 +5250,19 @@ async function openVerifiedPhoneCollectModal(
       return;
     }
     pendingVerification.attemptId = response?.attempt_id || response?.attemptId || null;
+    pendingVerification.channel = response?.channel || "whatsapp";
+    pendingVerification.fallback = response?.fallback === true;
     if (otpTarget) otpTarget.textContent = response?.masked_phone || pendingVerification.phoneNumber;
     setStep("otp");
-    setStatus("Código enviado por SMS.", "success");
+    if (copy) copy.textContent = `${otpDeliveryMessage(response)} El código vence pronto por seguridad.`;
+    setStatus(otpDeliveryMessage(response), "success");
   };
 
   const verifyOtp = async () => {
     const code = String(otpInput.value || "").replace(/\D/g, "");
     if (!/^\d{4,8}$/.test(code)) {
       otpInput.classList.add("is-invalid");
-      setStatus("Ingresá el código recibido por SMS.", "error");
+      setStatus("Ingresá el código recibido por WhatsApp o SMS.", "error");
       return;
     }
 
@@ -3841,6 +5278,13 @@ async function openVerifiedPhoneCollectModal(
     patchState("session.userPhone", profile?.phone_number ?? pendingVerification?.phoneNumber ?? null);
     patchState("session.userPhoneCountryCode", profile?.country_code ?? pendingVerification?.countryCode ?? null);
     patchState("session.userPhoneVerified", true);
+
+    if (!forceChange && !verifyExistingDevice) {
+      recordCriticalRiskEvent("client_register", {
+        actorRole: "client",
+        source: "client_phone_signup_verified"
+      });
+    }
 
     setStatus("Número verificado.", "success");
     window.setTimeout(() => close(true), 450);
@@ -3861,8 +5305,14 @@ async function openVerifiedPhoneCollectModal(
       }
     } catch (error) {
       const target = currentStep === "otp" ? otpInput : input;
-      target.classList.add("is-invalid");
-      setStatus(phoneVerificationErrorText(error), "error");
+      const fallbackResponse = error?.details || { code: error?.code || error?.message };
+      if (currentStep !== "otp" && isFallbackRequired(fallbackResponse)) {
+        renderFallbackOptions(fallbackResponse);
+        setStatus(fallbackCopy(fallbackResponse), "neutral");
+      } else {
+        target.classList.add("is-invalid");
+        setStatus(phoneVerificationErrorText(error), "error");
+      }
     } finally {
       setLoading(false, currentStep === "otp" ? "Verificar y continuar" : "Enviar código");
     }
@@ -3876,11 +5326,50 @@ async function openVerifiedPhoneCollectModal(
     setStatus("");
     setLoading(true, "Reenviando...");
     try {
-      await startOtp();
+      await startOtp(pendingVerification?.channel || "whatsapp");
     } catch (error) {
       setStatus(phoneVerificationErrorText(error), "error");
     } finally {
       setLoading(false, currentStep === "otp" ? "Verificar y continuar" : "Enviar código");
+    }
+  };
+
+  const onFallbackAction = async (event) => {
+    const button = event.target.closest?.("[data-phone-fallback]");
+    if (!button) return;
+    const method = button.dataset.phoneFallback;
+    setLoading(true, method === "sms" ? "Enviando SMS..." : method === "email" ? "Enviando email..." : "Reintentando...");
+    try {
+      if (method === "sms") {
+        setStatus("Te vamos a enviar un codigo por SMS. Usalo si no podes verificar por WhatsApp.", "neutral");
+        await startOtp("sms");
+        return;
+      }
+      if (method === "email") {
+        const result = await startSecurityVerification({
+          actorRole: "client",
+          purpose: verifyExistingDevice ? "login_new_device" : "phone_verification",
+          preferredChannel: "email"
+        });
+        setStatus(
+          result?.channel === "email"
+            ? "Te enviamos una verificacion por email para proteger tu cuenta. Para validar este telefono, usa WhatsApp o SMS."
+            : "No pudimos enviar el email ahora. Proba por SMS o intenta nuevamente.",
+          result?.channel === "email" ? "success" : "neutral"
+        );
+        return;
+      }
+      await startOtp("whatsapp");
+    } catch (error) {
+      const fallbackResponse = error?.details || { code: error?.code || error?.message };
+      if (isFallbackRequired(fallbackResponse)) {
+        renderFallbackOptions(fallbackResponse);
+        setStatus(fallbackCopy(fallbackResponse), "neutral");
+      } else {
+        setStatus(phoneVerificationErrorText(error), "error");
+      }
+    } finally {
+      setLoading(false, currentStep === "otp" ? "Verificar y continuar" : "Enviar codigo");
     }
   };
 
@@ -3927,6 +5416,7 @@ async function openVerifiedPhoneCollectModal(
   form.addEventListener("submit", onSubmit);
   closeButton?.addEventListener("click", onCloseClick);
   resendButton?.addEventListener("click", onResend);
+  fallbackActions.addEventListener("click", onFallbackAction);
   countryButton?.addEventListener("click", onCountryButtonClick);
   countrySearch?.addEventListener("input", onCountrySearch);
   countryList?.addEventListener("click", onCountrySelect);
@@ -3952,13 +5442,17 @@ function escapeHtml(value) {
 function phoneVerificationErrorText(error) {
   const code = error?.code || error?.message || error?.details?.error || "";
   if (String(code).startsWith("sms_provider_error")) {
-    return "El proveedor SMS no pudo procesar el envío. Intentá nuevamente.";
+    return "No pudimos enviar el código por WhatsApp ni por SMS. Intentá nuevamente.";
   }
   const messages = {
     AUTH_REQUIRED: "Iniciá sesión para verificar tu número.",
     phone_invalid: "Ingresá un número válido con código de país.",
     phone_already_used: "Ese número ya está verificado en otra cuenta.",
-    sms_provider_not_configured: "La verificación por SMS todavía no está configurada.",
+    sms_provider_not_configured: "No pudimos verificarte en este momento. Proba mas tarde o contacta soporte.",
+    whatsapp_channel_disabled: "WhatsApp todavia no esta disponible para esta verificacion. Podes continuar por otro metodo.",
+    sms_channel_disabled: "SMS todavia no esta disponible. Proba por email o intenta mas tarde.",
+    sms_recipient_unverified: "No pudimos enviar el código a este número. Contactá soporte si el problema continúa.",
+    otp_provider_timeout: "La verificación tardó demasiado. Intentá nuevamente.",
     otp_recently_sent: "Ya enviamos un código hace instantes. Esperá un minuto.",
     otp_blocked: "Por seguridad bloqueamos temporalmente nuevos códigos.",
     otp_phone_hour_limited: "Demasiados códigos para este número. Probá más tarde.",
@@ -3971,7 +5465,7 @@ function phoneVerificationErrorText(error) {
     otp_attempts_exceeded: "Se agotaron los intentos. Pedí un código nuevo.",
     otp_expired_or_missing: "El código venció. Pedí uno nuevo.",
     otp_not_found_or_expired: "El código venció. Pedí uno nuevo.",
-    otp_send_failed: "No pudimos enviar el SMS. Intentá nuevamente.",
+    otp_send_failed: "No pudimos enviar el código. Intentá nuevamente.",
     otp_verify_failed: "No pudimos validar el código. Intentá nuevamente."
   };
   return messages[code] || "No pudimos verificar el número. Intentá nuevamente.";
@@ -3990,19 +5484,36 @@ async function init() {
   setupCategoryPlaceholderExamples();
   setClientView(document.body.dataset.clientView || "home", { behavior: "auto" });
   registerInstallPrompt();
+  setupClientUpdateManager();
+  setupClientSecurityChallengeListeners();
   // Mapa diferido: se inicializa bajo demanda cuando hay ubicacion o tracking.
 
 const CLIENT_SW_ENABLED = true;
 
 if (CLIENT_SW_ENABLED && "serviceWorker" in navigator) {
+  await removeConflictingServiceWorkers("/servicios");
   navigator.serviceWorker
-    .register("./sw-2026.js")
+    .register("/sw-client.js", { scope: "/servicios" })
+    .then((registration) => {
+      registration.update?.();
+      registration.addEventListener?.("updatefound", () => {
+        const worker = registration.installing;
+        worker?.addEventListener?.("statechange", () => {
+          if (worker.state === "installed" && navigator.serviceWorker.controller) {
+            checkClientAppVersion();
+          }
+        });
+      });
+    })
     .catch((err) => {
       console.warn("[MIMI Cliente] Service Worker no registrado:", err);
     });
 }
   await bootstrapAsyncData();
-  await handlePaymentReturnFromUrl();
+  const handledPaymentReturn = await handlePaymentReturnFromUrl();
+  if (!handledPaymentReturn) {
+    handlePendingCheckoutResume();
+  }
 
   if (window.location.hash && window.location.hash.includes("access_token")) {
     history.replaceState(
@@ -4026,7 +5537,7 @@ if (CLIENT_SW_ENABLED && "serviceWorker" in navigator) {
       }
 
       if (event === "SIGNED_OUT") {
-        window.location.href = "./cliente.html";
+        window.location.href = "/servicios";
       }
     }) ?? null;
 }
@@ -4042,6 +5553,10 @@ init().catch((error) => {
 });
 
 window.addEventListener("beforeunload", () => {
-  realtimeSubscription?.unsubscribe?.();
+  if (typeof realtimeSubscription === "function") {
+    realtimeSubscription();
+  } else {
+    realtimeSubscription?.unsubscribe?.();
+  }
   authSubscription?.unsubscribe?.();
 });

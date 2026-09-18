@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "./supabase.js";
+import { getSupabaseClient } from "./supabase.js?v=2026.05.17.2";
 
 const GEOCODING_TIMEOUT_MS = 6500;
 const CACHE_MAX_SIZE = 100;
@@ -13,6 +13,54 @@ function normalizarBusqueda(texto) {
     .toLowerCase()
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function firstAddressValue(address, keys = []) {
+  if (!address || typeof address !== "object") return "";
+  for (const key of keys) {
+    const value = String(address[key] || "").trim();
+    if (value) return value;
+  }
+  return "";
+}
+
+function pushUniqueAddressPart(parts, value) {
+  const text = String(value || "").trim();
+  if (!text) return parts;
+  const normalized = normalizarBusqueda(text);
+  if (!parts.some((part) => normalizarBusqueda(part) === normalized)) {
+    parts.push(text);
+  }
+  return parts;
+}
+
+function shortAddressFromItem(item) {
+  const address = item?.address || {};
+  const road = firstAddressValue(address, ["road", "pedestrian", "residential", "street", "route"]);
+  const number = firstAddressValue(address, ["house_number"]);
+  const neighbourhood = firstAddressValue(address, ["neighbourhood", "suburb", "quarter", "city_district"]);
+  const locality = firstAddressValue(address, ["city", "town", "village", "municipality", "county"]);
+  const street = [road, number].filter(Boolean).join(" ").trim();
+  const compactParts = [];
+
+  pushUniqueAddressPart(compactParts, street);
+  pushUniqueAddressPart(compactParts, locality);
+  pushUniqueAddressPart(compactParts, neighbourhood);
+
+  const compact = compactParts.join(" - ");
+
+  if (compact) return compact;
+
+  const display = String(item?.display_name || item?.direccion || item?.address_text || "").trim();
+  const parts = display.split(",").map((part) => part.trim()).filter(Boolean);
+
+  if (!parts.length) return "";
+  if (parts.length <= 2) return display;
+
+  return parts
+    .filter((part) => !/^(argentina|provincia|departamento|municipio|pedania|pedan[ií]a)(\b| de\b)/i.test(part))
+    .slice(0, 3)
+    .join(" - ");
 }
 
 function setGeocodingCache(key, value) {
@@ -133,6 +181,7 @@ function normalizarReverseResult(item, source = "reverse") {
   return {
     display_name: displayName,
     direccion: displayName,
+    short_label: shortAddressFromItem(item) || displayName,
     lat,
     lon: lng,
     lng,
@@ -162,6 +211,28 @@ async function reverseGeocodeWithNominatim(lat, lng) {
   const data = await response.json();
 
   return normalizarReverseResult(data, "nominatim-reverse");
+}
+
+async function reverseGeocodeWithBackend(lat, lng) {
+  const supabase = getSupabaseClient();
+
+  if (!supabase?.functions?.invoke) return null;
+
+  const { data, error } = await withTimeout(
+    supabase.functions.invoke("geocodificar", {
+      body: {
+        mode: "reverse",
+        lat,
+        lng,
+        vertical: "services"
+      }
+    })
+  );
+
+  if (error || data?.exito === false) return null;
+
+  const first = Array.isArray(data?.data) ? data.data[0] : null;
+  return normalizarReverseResult(first, data?.source || "geocodificar-reverse");
 }
 
 export async function buscarDireccionServicio(query, options = {}) {
@@ -243,23 +314,37 @@ export async function resolverDireccionActualServicio(lat, lng, options = {}) {
   }
 
   try {
-    const fallback = await reverseGeocodeWithNominatim(safeLat, safeLng);
+    const backend = await reverseGeocodeWithBackend(safeLat, safeLng);
 
-    if (fallback) {
-      pushRecentServicePlace(fallback);
-      return fallback;
+    if (backend) {
+      pushRecentServicePlace(backend);
+      return backend;
     }
   } catch {
     // noop
   }
 
-  const fallbackLabel = `Ubicación actual (${safeLat.toFixed(5)}, ${safeLng.toFixed(
-    5
-  )})`;
+  const hasBackend = Boolean(getSupabaseClient()?.functions?.invoke);
+
+  if (!hasBackend || options?.allowDirectFallback === true) {
+    try {
+      const fallback = await reverseGeocodeWithNominatim(safeLat, safeLng);
+
+      if (fallback) {
+        pushRecentServicePlace(fallback);
+        return fallback;
+      }
+    } catch {
+      // noop
+    }
+  }
+
+  const fallbackLabel = "Ubicacion detectada cerca de tu punto actual";
 
   return {
     display_name: fallbackLabel,
     direccion: fallbackLabel,
+    short_label: fallbackLabel,
     lat: safeLat,
     lon: safeLng,
     lng: safeLng,

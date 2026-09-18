@@ -15,3 +15,10 @@ remote_snapshot.sql
 qa/*.png
 playwright-report/
 test-results/
+
+# dependencias locales del harness de QA (no se versionan)
+node_modules/
+package-lock.json
+qa-playwright/.qa-state.json
+
+test-results/

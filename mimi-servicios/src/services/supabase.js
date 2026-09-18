@@ -416,12 +416,62 @@ export async function signInWithGoogle(options = {}) {
   }
 
   if (data?.url) {
-    window.location.assign(data.url);
+    navigateToExternalAuth(data.url);
   } else {
     throw new Error("No pudimos generar la URL de Google.");
   }
 
   return data;
+}
+
+function navigateToExternalAuth(url) {
+  const target = String(url || "").trim();
+  let parsed = null;
+
+  try {
+    parsed = new URL(target);
+  } catch {
+    throw new Error("oauth_url_invalid");
+  }
+
+  if (parsed.protocol !== "https:") {
+    throw new Error("oauth_url_insecure");
+  }
+
+  let pageHidden = false;
+  const markHidden = () => {
+    pageHidden = true;
+  };
+
+  try {
+    window.addEventListener("pagehide", markHidden, { once: true });
+  } catch {
+    // noop
+  }
+
+  try {
+    const anchor = document.createElement("a");
+    anchor.href = target;
+    anchor.target = "_top";
+    anchor.rel = "noopener";
+    anchor.style.display = "none";
+    anchor.setAttribute("data-mimi-oauth-redirect", "google");
+    document.body.appendChild(anchor);
+    anchor.click();
+    window.setTimeout(() => anchor.remove(), 1000);
+  } catch (error) {
+    console.warn("[MIMI servicios auth] top-level OAuth navigation fallback:", error);
+  }
+
+  window.setTimeout(() => {
+    if (pageHidden) return;
+
+    try {
+      window.location.assign(target);
+    } catch {
+      window.location.href = target;
+    }
+  }, 250);
 }
 
 export async function signOut(mode = currentEntryMode()) {

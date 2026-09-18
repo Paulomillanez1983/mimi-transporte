@@ -59,6 +59,9 @@
         <button class="admin-desktop-tab" type="button" data-admin-mobile-view-target="clients" aria-pressed="false">
           Clientes
         </button>
+        <button class="admin-desktop-tab" type="button" data-admin-mobile-view-target="catalog" aria-pressed="false">
+          Catalogo
+        </button>
         <button class="admin-desktop-tab" type="button" data-admin-mobile-view-target="finance" aria-pressed="false">
           Finanzas
         </button>
@@ -659,6 +662,134 @@
   </section>
 </section>
 <section
+  id="adminServiceCatalogModule"
+  class="admin-service-catalog-section admin-mobile-panel admin-mobile-catalog"
+  aria-label="Catalogo Inteligente"
+>
+  <div class="section-head">
+    <div>
+      <h2>Catalogo Inteligente</h2>
+      <p>Foundation Service Intelligence en modo lectura: templates, versiones, preguntas, reglas, flags y servicios regulados</p>
+    </div>
+    <div class="support-head-actions">
+      <span id="catalogReadOnlyBadge" class="support-realtime-status" data-state="idle">Read-only</span>
+      <button id="catalogRefreshBtn" type="button" class="support-head-btn">
+        Recargar catalogo
+      </button>
+    </div>
+  </div>
+
+  <section class="hero-card admin-catalog-metrics" aria-label="Metricas de catalogo">
+    <div class="hero-stats">
+      <div class="hero-stat"><span>Templates</span><strong id="catalogMetricTemplates">0</strong></div>
+      <div class="hero-stat"><span>Regulados</span><strong id="catalogMetricRegulated">0</strong></div>
+      <div class="hero-stat"><span>Flags activos</span><strong id="catalogMetricFlagsOn">0</strong></div>
+      <div class="hero-stat"><span>Discovery</span><strong id="catalogMetricDiscovery">0</strong></div>
+    </div>
+  </section>
+
+  <section class="toolbar toolbar-pro admin-catalog-toolbar" aria-label="Filtros de catalogo inteligente">
+    <div class="toolbar-search">
+      <label for="catalogSearchInput" class="sr-only">Buscar template</label>
+      <input
+        id="catalogSearchInput"
+        type="text"
+        placeholder="Buscar por servicio, slug o familia"
+        autocomplete="off"
+        inputmode="search"
+        enterkeyhint="search"
+        spellcheck="false"
+      />
+    </div>
+
+    <div class="admin-catalog-filter-grid">
+      <label>
+        <span>Vertical</span>
+        <select id="catalogMacroFilter">
+          <option value="all">Todas</option>
+        </select>
+      </label>
+      <label>
+        <span>Familia</span>
+        <select id="catalogFamilyFilter">
+          <option value="all">Todas</option>
+        </select>
+      </label>
+      <label>
+        <span>Riesgo</span>
+        <select id="catalogRiskFilter">
+          <option value="all">Todos</option>
+          <option value="regulated">Regulados</option>
+          <option value="sensitive">Sensibles</option>
+          <option value="safety">Safety gate</option>
+        </select>
+      </label>
+      <label>
+        <span>Estado</span>
+        <select id="catalogStatusFilter">
+          <option value="all">Todos</option>
+          <option value="active">Activos</option>
+          <option value="inactive">Inactivos</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <section class="admin-catalog-workbench" aria-label="Explorador de catalogo inteligente">
+    <div>
+      <section
+        id="catalogTemplateList"
+        class="admin-catalog-list"
+        aria-live="polite"
+        aria-label="Listado de templates de servicio"
+      >
+        <div class="financial-empty">Cargando catalogo...</div>
+      </section>
+    </div>
+
+    <aside
+      id="catalogTemplateDetail"
+      class="admin-catalog-detail"
+      aria-live="polite"
+      aria-label="Detalle del template seleccionado"
+    >
+      <div class="financial-empty">Selecciona un template para ver detalle.</div>
+    </aside>
+  </section>
+
+  <section class="admin-catalog-panels" aria-label="Paneles complementarios de catalogo">
+    <article class="admin-catalog-panel">
+      <div class="financial-panel-head">
+        <div>
+          <h3>Feature flags</h3>
+          <span>Lectura solamente. No activar sin aprobacion de release.</span>
+        </div>
+      </div>
+      <div id="catalogFeatureFlagsList" class="admin-catalog-compact-list"></div>
+    </article>
+
+    <article class="admin-catalog-panel">
+      <div class="financial-panel-head">
+        <div>
+          <h3>Servicios regulados</h3>
+          <span>Credenciales, aprobacion, disclaimers y bloqueos de pricing.</span>
+        </div>
+      </div>
+      <div id="catalogRegulatedList" class="admin-catalog-compact-list"></div>
+    </article>
+
+    <article class="admin-catalog-panel">
+      <div class="financial-panel-head">
+        <div>
+          <h3>Discovery events</h3>
+          <span>Eventos futuros de rubros nuevos. Sin acciones en esta fase.</span>
+        </div>
+      </div>
+      <div id="catalogDiscoveryList" class="admin-catalog-compact-list"></div>
+    </article>
+  </section>
+</section>
+<section
   id="financialAdminModule"
   class="financial-section admin-mobile-panel admin-mobile-finance"
   aria-label="Finanzas y contabilidad"
@@ -905,6 +1036,10 @@
       <span class="admin-mobile-dock-icon">Cli</span>
       <span class="admin-mobile-dock-label">Clientes</span>
     </button>
+    <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="catalog" aria-pressed="false">
+      <span class="admin-mobile-dock-icon">Cat</span>
+      <span class="admin-mobile-dock-label">Catalogo</span>
+    </button>
     <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="finance" aria-pressed="false">
       <span class="admin-mobile-dock-icon">Fin</span>
       <span class="admin-mobile-dock-label">Finanzas</span>
@@ -1027,6 +1162,7 @@ window.getAdminAccessToken = async function getAdminAccessToken() {
 <script type="module" src="./admin-support.js?v=2026.05.15.enterprise.4"></script>
 <script type="module" src="./admin-services-providers.js?v=2026.05.15.6"></script>
 <script type="module" src="./admin-clients.js?v=2026.05.15.1"></script>
+<script type="module" src="./admin-service-catalog.js?v=2026.05.20.1"></script>
 <script type="module" src="./admin-finance.js?v=2026.05.16.1"></script>
 </body>
 </html>

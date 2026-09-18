@@ -17,49 +17,6 @@ const stateLabels = {
   PENDING: "Solicitud creada"
 };
 
-const CLIENT_SELF_CANCEL_STATUSES = new Set([
-  "SEARCHING",
-  "PENDING_PROVIDER_RESPONSE",
-  "PENDING",
-  "ACCEPTED",
-  "SCHEDULED",
-  "PROVIDER_EN_ROUTE"
-]);
-
-const PAYMENT_APPROVED_STATUSES = new Set(["APPROVED", "CAPTURED", "SETTLED"]);
-
-function paymentStatusCopy(payment = null) {
-  const status = String(payment?.status ?? "PENDING").toUpperCase();
-  if (["APPROVED", "CAPTURED", "SETTLED"].includes(status)) {
-    return {
-      label: "Pago confirmado",
-      note: "El pago fue aprobado por Mercado Pago."
-    };
-  }
-  if (["REJECTED", "CANCELLED", "FAILED"].includes(status)) {
-    return {
-      label: "Pago no completado",
-      note: "El pago no se completo. Podes volver a intentarlo desde MIMIGO."
-    };
-  }
-  if (payment?.sync_warning) {
-    return {
-      label: "Estamos verificando el pago",
-      note: "Consultamos Mercado Pago y seguimos mostrando el estado local hasta recibir confirmacion."
-    };
-  }
-  if (status === "CHECKOUT_CREATED") {
-    return {
-      label: "Pago requerido para confirmar",
-      note: "Abrilo en Mercado Pago y volve a MIMIGO para verificar la confirmacion."
-    };
-  }
-  return {
-    label: "Pago pendiente",
-    note: "Pago requerido para confirmar. El servicio se confirma cuando Mercado Pago informa aprobacion."
-  };
-}
-
 const categoryIcons = {
   SERVICIO_DOMESTICO: "SD",
   LIMPIEZA: "LI",
@@ -136,12 +93,15 @@ const guideRules = [
 const pricingModelLabels = {
   HOURLY: "Por hora",
   BASE_VISIT: "Visita base",
-  QUOTE: "A presupuestar",
+  QUOTE: "Cotizar antes de confirmar",
   FIXED: "Precio cerrado",
   UNIT: "Por sesión / unidad",
   SQUARE_METER: "Por m2",
   LINEAR_METER: "Por metro lineal"
 };
+
+const quotePricingLabel = "Cotizar antes de confirmar";
+const quotePricingHelp = "El prestador te enviará un presupuesto dentro de MIMIGO antes de confirmar.";
 
 const nonHourlyCategoryModels = {
   GOMERIA_MOVIL: "BASE_VISIT",
@@ -188,6 +148,22 @@ function currency(value, currencyCode = "ARS") {
     currency: currencyCode || "ARS",
     maximumFractionDigits: 0
   }).format(Number(value ?? 0));
+}
+
+function paymentStatusValue(payment) {
+  return String(payment?.status ?? "PENDING").toUpperCase();
+}
+
+function requestStatusValue(request) {
+  return String(request?.status || "PENDING").toUpperCase();
+}
+
+function paymentIsApproved(payment) {
+  return ["APPROVED", "CAPTURED", "SETTLED"].includes(paymentStatusValue(payment));
+}
+
+function requestIsFinal(request) {
+  return ["COMPLETED", "CANCELLED", "EXPIRED"].includes(requestStatusValue(request));
 }
 
 function formatDate(value) {
@@ -286,6 +262,36 @@ function providerDisplayName(provider) {
     firstNameFromText(provider.full_name) ||
     firstNameFromText(provider.name) ||
     "Prestador"
+  );
+}
+
+function providerFullNameForActiveService(state, request, fallback = "Prestador confirmado") {
+  const status = String(request?.status || "").toUpperCase();
+  const canShowFullName = [
+    "ACCEPTED",
+    "SCHEDULED",
+    "PROVIDER_EN_ROUTE",
+    "PROVIDER_ARRIVED",
+    "IN_PROGRESS",
+    "COMPLETED"
+  ].includes(status);
+  const profile = state.client?.insights?.providerProfile ?? {};
+  const metadata = profile.metadata_json || profile.metadata || {};
+  const fullName = String(
+    metadata.identity_document_full_name ||
+    metadata.full_name_detected ||
+    metadata.kyc_full_name ||
+    profile.full_name ||
+    ""
+  ).trim();
+
+  if (canShowFullName && fullName) return fullName;
+
+  return (
+    request?.providerName ||
+    state.client?.selectedProvider?.full_name ||
+    state.client?.selectedProvider?.public_name ||
+    fallback
   );
 }
 
@@ -431,16 +437,22 @@ function normalizePricingModel(value) {
   return String(value || "").trim().toUpperCase();
 }
 
+function providerRequiresQuote(provider = {}) {
+  const model = normalizePricingModel(provider.pricing_model || provider.pricingModel || provider.pricingMode || provider.pricing_mode);
+  const legacyLabel = String(provider.price_label || "").toLowerCase();
+  return model === "QUOTE" || provider.quote_required === true || legacyLabel.includes("coordinar");
+}
+
 function providerPriceLabel(provider) {
   const price = Number(provider.price ?? provider.total_price ?? provider.provider_price ?? 0);
   const hasPrice = Number.isFinite(price) && price > 0;
-
-  // Solo "A coordinar" si NO hay precio cargado.
-  // quote_required indica que el prestador prefiere coordinar antes de confirmar,
-  // pero si tiene un precio referencial cargado, lo mostramos.
-  if (!hasPrice) return "A coordinar";
-
   const model = normalizePricingModel(provider.pricing_model || provider.pricingMode || provider.pricing_mode);
+  const needsQuote = providerRequiresQuote(provider);
+
+  // Servicios con cotización deben comunicar cierre interno en MIMIGO, no coordinación externa.
+  if (needsQuote) return quotePricingLabel;
+  if (!hasPrice) return "Requiere presupuesto";
+
   const unit = String(provider.unit_name || "").trim();
 
   if (model === "SQUARE_METER") return `${currency(price, provider.currency)}/m2`;
@@ -558,6 +570,7 @@ function normalizeProvider(provider, index = 0) {
       provider.pricing_mode ||
       "Prestador MIMI Go",
     jobs: Number(provider.completed_services_count ?? provider.rating_count ?? 0),
+    requiresQuote: providerRequiresQuote(provider),
     x: [52, 38, 65, 47, 72, 30, 80, 22, 60][index % 9],
     y: [44, 56, 35, 62, 58, 42, 48, 30, 70][index % 9]
   };
@@ -657,11 +670,11 @@ function renderAuth(state) {
   const userSessionEmail = document.getElementById("userSessionEmail");
 
   const isAuthenticated = Boolean(state.session.userId);
-  const hasBackend = state.meta.backendMode === "supabase";
+  const hasBackend = state.meta.backendMode === "supabase" || Boolean(appConfig.supabaseUrl && appConfig.supabaseAnonKey);
   const displayName =
     state.session.userName ||
     state.session.userEmail?.split("@")[0] ||
-    "Paulo";
+    "Cliente";
 
   if (sessionChip) {
     sessionChip.textContent = isAuthenticated
@@ -752,10 +765,7 @@ function renderAccountDrawer(state) {
   }
 
   const status = stateLabels[request.status] ?? request.status ?? "Solicitud activa";
-  const providerName =
-    request.providerName ||
-    state.client.selectedProvider?.full_name ||
-    "Prestador pendiente";
+  const providerName = providerFullNameForActiveService(state, request, "Prestador pendiente");
   const address = compactServiceAddress(request.address_text || state.requestDraft.address || "Direccion pendiente");
 
   if (lastTitle) lastTitle.textContent = status;
@@ -766,10 +776,11 @@ function renderEntryState(state) {
   const enterButton = document.getElementById("enterServicesHub");
   if (!enterButton) return;
 
+  const hasBackend = state.meta.backendMode === "supabase" || Boolean(appConfig.supabaseUrl && appConfig.supabaseAnonKey);
   const appVisible =
     state.ui.appEntered ||
     Boolean(state.session.userId) ||
-    state.meta.backendMode !== "supabase";
+    !hasBackend;
 
   enterButton.hidden = appVisible;
 }
@@ -1006,6 +1017,7 @@ function renderProviderCard(provider, selectedId) {
         <span><b>${escapeHtml(String(provider.eta))} min</b>${escapeHtml(provider.distance.toFixed(1))} km</span>
         <span><small>Referencia</small><b>${escapeHtml(provider.priceLabel)}</b></span>
       </div>
+      ${provider.requiresQuote ? `<p class="provider-quote-note">${escapeHtml(quotePricingHelp)}</p>` : ""}
       ${providerStatusBadge(provider)}
       <button class="provider-card-action" type="button" data-provider-select="${escapeHtml(provider.provider_id)}">
         Solicitar
@@ -1031,6 +1043,7 @@ function renderProviderRow(provider, selectedId) {
           <i></i>
           <small>${escapeHtml(String(provider.jobs))} trabajos</small>
         </div>
+        ${provider.requiresQuote ? `<p class="provider-quote-note">${escapeHtml(quotePricingHelp)}</p>` : ""}
       </div>
       <div class="provider-row-end">
         <strong>${escapeHtml(provider.priceLabel)}</strong>
@@ -1062,6 +1075,8 @@ export function renderProvidersList(state) {
   const selectedCategory = selectedCategoryForState(state);
   const hasSearched = Boolean(state.meta.lastSearchAt);
   const selectedCategoryName = selectedCategory?.name || "la categoria elegida";
+  const hasBackend = state.meta.backendMode === "supabase" || Boolean(appConfig.supabaseUrl && appConfig.supabaseAnonKey);
+  const needsLogin = hasBackend && !state.session.userId;
 
   meta.textContent = providers.length
     ? `${providers.length} prestadores compatibles ordenados por ${providerSortLabels[sortMode] || "recomendado"}`
@@ -1095,8 +1110,8 @@ export function renderProvidersList(state) {
   if (carousel && !providers.length) {
     carousel.innerHTML = `
       <div class="client-empty-state is-inline">
-        <strong>${hasSearched ? "Sin disponibles ahora" : "Busca para ver cercanos"}</strong>
-        <span>${hasSearched ? `No encontramos prestadores activos para ${escapeHtml(selectedCategoryName)} en este momento.` : "Te vamos a mostrar ETA, precio y reputacion."}</span>
+        <strong>${needsLogin ? "Sesion requerida" : hasSearched ? "Sin disponibles ahora" : "Busca para ver cercanos"}</strong>
+        <span>${needsLogin ? "Mostramos prestadores reales solo con cuenta iniciada." : hasSearched ? `No encontramos prestadores activos para ${escapeHtml(selectedCategoryName)} en este momento.` : "Te vamos a mostrar ETA, precio y reputacion."}</span>
       </div>
     `;
   }
@@ -1113,8 +1128,9 @@ export function renderProvidersList(state) {
   if (!providers.length) {
     list.innerHTML = `
       <div class="client-empty-state">
-        <strong>${hasSearched ? "No encontramos prestadores disponibles" : "Elegi categoria y completa la direccion"}</strong>
-        <span>${hasSearched ? "Podes ajustar la necesidad, cambiar la zona o intentar mas tarde. Solo mostramos prestadores compatibles y disponibles." : "Cuando busques, aparecen opciones con precio, distancia y tiempo estimado."}</span>
+        <strong>${needsLogin ? "Inicia sesion para ver prestadores reales" : hasSearched ? "No encontramos prestadores disponibles" : "Elegi categoria y completa la direccion"}</strong>
+        <span>${needsLogin ? "Evitamos mostrar prestadores de demo cuando el backend real esta activo. Inicia sesion y volve a buscar." : hasSearched ? "Podes ajustar la necesidad, cambiar la zona o intentar mas tarde. Solo mostramos prestadores compatibles y disponibles." : "Cuando busques, aparecen opciones con precio, distancia y tiempo estimado."}</span>
+        ${needsLogin ? `<div class="client-empty-actions"><button class="btn-primary" type="button" data-auth-action="login">Continuar con Google</button></div>` : ""}
       </div>
     `;
   }
@@ -1132,6 +1148,13 @@ export function renderRequestSummary(state) {
 
   const request = state.client.activeRequest;
   const currentStatus = String(request?.status || "PENDING").toUpperCase();
+  const payment = state.client.insights?.paymentIntent;
+  const paymentStatus = paymentStatusValue(payment);
+  const paymentTotal = Number(payment?.total_amount ?? request?.total_price ?? request?.total_price_snapshot ?? 0);
+  const pendingPaymentDecision =
+    paymentTotal > 0 &&
+    !paymentIsApproved(payment) &&
+    !["CANCELLED", "REFUNDED", "PARTIALLY_REFUNDED"].includes(paymentStatus);
 
   chip.textContent = request
     ? stateLabels[currentStatus] ?? currentStatus
@@ -1149,38 +1172,16 @@ export function renderRequestSummary(state) {
     return;
   }
 
-  const providerName =
-    request.providerName ||
-    state.client.selectedProvider?.full_name ||
-    "Prestador confirmado";
+  const providerName = providerFullNameForActiveService(state, request);
   const flowSteps = requestFlowSteps(currentStatus);
   const rawAddress = request.address_text ?? state.requestDraft.address ?? "Pendiente";
   const compactAddress = compactServiceAddress(rawAddress);
-  const payment = state.client.insights?.paymentIntent ?? null;
-  const paymentStatus = String(payment?.status || "").toUpperCase();
-  const paymentApproved = PAYMENT_APPROVED_STATUSES.has(paymentStatus);
-  const paymentNeedsAction = Boolean(payment?.checkout_url) && !paymentApproved;
-  const canCancelRequest = CLIENT_SELF_CANCEL_STATUSES.has(currentStatus) && !paymentApproved;
-  const servicePin = state.client.insights?.servicePin?.pin ?? null;
-  const showServicePin = currentStatus === "PROVIDER_ARRIVED" && servicePin;
 
   summary.innerHTML = `
-    ${paymentNeedsAction ? `
-      <div class="summary-card payment-required-card">
-        <span class="eyebrow">Pago requerido para confirmar</span>
-        <strong>Completá el pago en Mercado Pago</strong>
-        <span class="muted">El prestador puede tomar la solicitud, pero el servicio avanza cuando Mercado Pago confirma el pago.</span>
-        <div class="summary-actions-inline">
-          <button class="btn-primary" type="button" data-payment-action="checkout">Ir a Mercado Pago</button>
-          ${payment?.id ? `<button class="btn-secondary" type="button" data-payment-action="refresh">Actualizar pago</button>` : ""}
-          ${canCancelRequest ? `<button class="btn-secondary" type="button" data-request-action="cancel">Cancelar solicitud</button>` : ""}
-        </div>
-      </div>
-    ` : ""}
-    ${showServicePin ? `
+    ${state.client.insights?.servicePin?.pin ? `
       <div class="summary-card service-pin-card">
         <span class="eyebrow">Código de inicio</span>
-        <strong class="service-pin-code">${escapeHtml(servicePin)}</strong>
+        <strong class="service-pin-code">${escapeHtml(state.client.insights.servicePin.pin)}</strong>
         <span class="muted">Compartilo únicamente cuando el prestador llegue a tu domicilio. El servicio empieza cuando el código se valida.</span>
       </div>
     ` : ""}
@@ -1229,12 +1230,16 @@ export function renderRequestSummary(state) {
     `)
     .join("");
 
+  const canCancelRequest =
+    !requestIsFinal(request) &&
+    (["SEARCHING", "PENDING_PROVIDER_RESPONSE", "PENDING"].includes(currentStatus) || pendingPaymentDecision);
+
   actions.innerHTML = [
     !["COMPLETED", "CANCELLED"].includes(currentStatus)
       ? `<button class="btn-secondary" data-request-action="refresh" type="button">Actualizar estado</button>`
       : "",
     canCancelRequest
-      ? `<button class="btn-secondary" data-request-action="cancel" type="button">Cancelar</button>`
+      ? `<button class="btn-secondary" data-request-action="cancel" type="button">Cancelar solicitud</button>`
       : "",
     ["PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "IN_PROGRESS"].includes(currentStatus)
       ? `<button class="btn-primary" data-open-chat="true" type="button">Abrir chat</button>`
@@ -1264,29 +1269,90 @@ function renderFinancialPanel(state) {
   }
 
   const total = payment?.total_amount ?? request.total_price ?? request.total_price_snapshot ?? 0;
+  const paymentRequired = Number(total) > 0;
   const paymentStatus = String(payment?.status ?? "PENDING").toUpperCase();
-  const copy = paymentStatusCopy(payment);
+  const paymentCopy = (() => {
+    if (!payment?.id && !paymentRequired) {
+      return {
+        label: "Sin pago requerido ahora",
+        helper: "Si el prestador necesita presupuestar, el pago aparece cuando haya una propuesta aceptada.",
+        tone: "pending"
+      };
+    }
+    if (!payment?.id && paymentRequired) {
+      return {
+        label: paymentStatus === "PAYMENT_SETUP_FAILED" ? "Pago no preparado" : "Pago pendiente de preparar",
+        helper: payment?.error_message || "Preparamos el checkout seguro antes de confirmar el servicio.",
+        tone: "danger",
+        canCreate: true
+      };
+    }
+    if (paymentStatus === "APPROVED" || paymentStatus === "CAPTURED") {
+      return {
+        label: "Pago confirmado",
+        helper: "Mercado Pago confirmó la operación.",
+        tone: "success"
+      };
+    }
+    if (paymentStatus === "REJECTED" || paymentStatus === "CANCELLED") {
+      return {
+        label: "Pago no completado",
+        helper: "Podes volver al checkout o cancelar la solicitud.",
+        tone: "danger",
+        canCreate: true
+      };
+    }
+    if (paymentStatus === "PAYMENT_SETUP_FAILED" || paymentStatus === "PAYMENT_INTENT_EMPTY") {
+      return {
+        label: "Pago no preparado",
+        helper: payment?.error_message || "No pudimos preparar Mercado Pago para esta solicitud.",
+        tone: "danger",
+        canCreate: true
+      };
+    }
+    if (paymentStatus === "PENDING" || paymentStatus === "CHECKOUT_CREATED") {
+      return {
+        label: paymentStatus === "CHECKOUT_CREATED" ? "Pago requerido para confirmar" : "Pago pendiente",
+        helper: payment?.sync_warning
+          ? "Estamos verificando el pago. Todavía no recibimos confirmación de Mercado Pago."
+          : "Abri el checkout o cancela la solicitud si no queres continuar.",
+        tone: "pending"
+      };
+    }
+    return {
+      label: paymentStatus,
+      helper: "Estamos verificando el pago.",
+      tone: "pending"
+    };
+  })();
+
+  const canCancelRequest =
+    !requestIsFinal(request) &&
+    paymentRequired &&
+    !paymentIsApproved(payment) &&
+    !["REFUNDED", "PARTIALLY_REFUNDED"].includes(paymentStatus);
 
   container.innerHTML = `
     <details class="summary-card payment-details-card">
       <summary>
         <span>
-          <strong>${escapeHtml(copy.label)}</strong>
-          <small>${escapeHtml(copy.note)}</small>
+          <strong>${escapeHtml(paymentCopy.label)}</strong>
+          <small>${escapeHtml(paymentCopy.helper)}</small>
         </span>
         <b>${currency(total)}</b>
       </summary>
       <div class="summary-metrics payment-metrics">
         <div class="metric"><span>Total a pagar</span><strong>${currency(total)}</strong></div>
         <div class="metric"><span>Moneda</span><strong>${escapeHtml(request.currency ?? payment?.currency ?? escrow?.currency ?? "ARS")}</strong></div>
-        <div class="metric"><span>Estado</span><strong>${escapeHtml(paymentStatus)}</strong></div>
+        <div class="metric"><span>Estado</span><strong>${escapeHtml(paymentCopy.label)}</strong></div>
       </div>
-      <p class="muted payment-note">${escapeHtml(copy.note)}</p>
+      <p class="muted payment-note">${paymentStatus === "APPROVED" ? "Pago confirmado por Mercado Pago. El servicio lo presta un proveedor independiente." : "El pago es requerido para confirmar la solicitud. Si no queres continuar, podes cancelar la solicitud antes de pagar."}</p>
       <div class="chip-row">
-        <span class="inline-chip">${escapeHtml(paymentStatus === "CHECKOUT_CREATED" ? "Pago preparado" : copy.label)}</span>
-        ${payment?.checkout_url ? `<button class="btn-primary" type="button" data-payment-action="checkout">Ir a Mercado Pago</button>` : ""}
+        <span class="inline-chip payment-chip-${escapeHtml(paymentCopy.tone)}">${escapeHtml(paymentCopy.label)}</span>
+        ${paymentCopy.canCreate ? `<button class="btn-primary" type="button" data-payment-action="create">Reintentar pago</button>` : ""}
+        ${payment?.checkout_url ? `<button class="btn-primary" type="button" data-payment-action="checkout">${payment?.is_test ? "Abrir checkout sandbox" : "Abrir checkout seguro"}</button>` : ""}
         ${payment?.id ? `<button class="btn-secondary" type="button" data-payment-action="refresh">Actualizar pago</button>` : ""}
-        ${CLIENT_SELF_CANCEL_STATUSES.has(String(request.status || "").toUpperCase()) && !PAYMENT_APPROVED_STATUSES.has(paymentStatus) ? `<button class="btn-secondary" type="button" data-request-action="cancel">Cancelar solicitud y pago</button>` : ""}
+        ${canCancelRequest ? `<button class="btn-secondary" type="button" data-payment-action="cancel">Cancelar solicitud</button>` : ""}
       </div>
     </details>
   `;
@@ -1438,6 +1504,26 @@ function renderStickyAction(state, normalizedProviders = null) {
   const button = document.getElementById("requestNearestButton");
   if (!button) return;
 
+  const activeRequestStatus = String(state.client.activeRequest?.status || "").toUpperCase();
+  const hasActiveRequest =
+    Boolean(state.client.activeRequest) &&
+    !["COMPLETED", "CANCELLED", "EXPIRED"].includes(activeRequestStatus);
+  const stickyBar = button.closest(".sticky-request-bar");
+
+  if (hasActiveRequest) {
+    stickyBar?.classList.remove("is-visible");
+    button.dataset.providerSelect = "";
+    button.disabled = true;
+    button.classList.remove("has-provider");
+    button.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+        <path d="m13 2-10 12h9l-1 8 10-12h-9l1-8Z"></path>
+      </svg>
+      Solicitar al mas cercano
+    `;
+    return;
+  }
+
   const providers =
     normalizedProviders ||
     (Array.isArray(state.client.providers)
@@ -1457,7 +1543,7 @@ function renderStickyAction(state, normalizedProviders = null) {
     null;
   const selected = providers.find((provider) => provider.provider_id === selectedId);
 
-  button.closest(".sticky-request-bar")?.classList.toggle(
+  stickyBar?.classList.toggle(
     "is-visible",
     Boolean(hasSearch && hasDraft && selected)
   );
@@ -1681,6 +1767,191 @@ function renderRequestControls(state) {
   });
 }
 
+function trustStatusLabel(value) {
+  const labels = {
+    level_0: "Cuenta nueva",
+    level_1: "Datos basicos validados",
+    level_2: "Confianza reforzada",
+    level_3: "Identidad verificada",
+    level_4: "Cliente altamente confiable",
+    not_started: "No iniciada",
+    requested: "Solicitada",
+    pending: "Pendiente",
+    submitted: "Enviada",
+    processing: "Procesando",
+    manual_review: "Revision manual",
+    approved: "Aprobada",
+    rejected: "Rechazada",
+    expired: "Vencida",
+    customer_trust_unavailable: "Backend no disponible",
+    sms_provider_not_configured: "OTP no configurado"
+  };
+  return labels[String(value || "").toLowerCase()] || String(value || "Pendiente");
+}
+
+function renderClientTrustCenter(state) {
+  const root = document.getElementById("clientTrustContent");
+  if (!root) return;
+
+  if (appConfig.securityFlags?.ENABLE_CUSTOMER_TRUST_CENTER === false) {
+    root.innerHTML = "";
+    return;
+  }
+
+  const hasBackend = state.meta.backendMode === "supabase" || Boolean(appConfig.supabaseUrl && appConfig.supabaseAnonKey);
+  if (hasBackend && !state.session?.userId) {
+    root.innerHTML = `
+      <div class="client-trust-shell">
+        <section class="client-trust-hero">
+          <div>
+            <span class="eyebrow">Centro de confianza</span>
+            <h2 id="clientTrustTitle">Inicia sesion para ver tu confianza</h2>
+            <p>El estado de telefono, identidad, riesgo y verificaciones se carga desde tu cuenta MIMI.</p>
+            <div class="client-trust-actions">
+              <button class="primary" type="button" data-auth-action="login">Continuar con Google</button>
+              <button class="secondary" type="button" data-action="support">Soporte</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    `;
+    return;
+  }
+
+  const trustUnavailable = state.client?.trustUnavailable || null;
+  if (trustUnavailable) {
+    root.innerHTML = `
+      <div class="client-trust-shell">
+        <section class="client-trust-hero client-trust-alert">
+          <div>
+            <span class="eyebrow">Centro de confianza</span>
+            <h2 id="clientTrustTitle">Estado de confianza no disponible</h2>
+            <p>No pudimos cargar el perfil de confianza desde el backend. Tu cuenta sigue protegida por sesion Google; reintenta o contacta soporte si necesitas verificar identidad.</p>
+            <div class="client-trust-actions">
+              <button class="primary" type="button" data-client-trust-action="refresh">Reintentar</button>
+              <button class="secondary" type="button" data-action="support">Soporte</button>
+            </div>
+          </div>
+          <aside class="client-trust-score">
+            <span>Motivo</span>
+            <strong>${escapeHtml(trustStatusLabel(trustUnavailable))}</strong>
+          </aside>
+        </section>
+      </div>
+    `;
+    return;
+  }
+
+  const profile = state.client?.trustProfile || {};
+  const requests = Array.isArray(state.client?.verificationRequests) ? state.client.verificationRequests : [];
+  const checks = Array.isArray(state.client?.identityChecks) ? state.client.identityChecks : [];
+  const events = Array.isArray(state.client?.verificationEvents) ? state.client.verificationEvents : [];
+  const riskSignals = Array.isArray(state.client?.riskSignals) ? state.client.riskSignals : [];
+  const trustLevel = profile.trust_level || "level_0";
+  const riskScore = Number(profile.risk_score ?? 0);
+  const reputationScore = Number(profile.reputation_score ?? 0);
+  const identityStatus = profile.identity_verification_status || "not_started";
+  const phoneVerified = Boolean(profile.phone_verified || state.session?.userPhoneVerified);
+  const phoneUnavailable = Boolean(state.client?.phoneVerificationUnavailable);
+  const openRequest = requests.find((item) =>
+    ["requested", "pending", "submitted", "processing", "manual_review"].includes(String(item.status || "").toLowerCase())
+  );
+  const latestCheck = checks[0] || null;
+  const riskTone = riskScore >= 70 ? "is-risk" : "is-good";
+  const requestReason = openRequest?.reason_required || "voluntary_trust_upgrade";
+
+  const timeline = [
+    ...events.map((event) => ({ title: event.event_type || "verification_event", meta: event.created_at })),
+    ...riskSignals.slice(0, 4).map((event) => ({ title: event.signal_type || "risk_signal", meta: event.created_at }))
+  ].slice(0, 8);
+
+  root.innerHTML = `
+    <div class="client-trust-shell">
+      <section class="client-trust-hero">
+        <div>
+          <span class="eyebrow">Centro de confianza</span>
+          <h2 id="clientTrustTitle">Tu identidad se verifica solo cuando hace falta</h2>
+          <p>Podes usar MIMI normalmente con email y telefono. DNI y selfie se solicitan solo por riesgo, operacion sensible o si queres elevar tu nivel de confianza.</p>
+          <div class="client-trust-badges" aria-label="Estado de confianza">
+            <div class="client-trust-badge ${phoneVerified ? "is-good" : ""}">
+              <strong>Telefono</strong>
+              <span>${phoneVerified ? "Verificado" : phoneUnavailable ? "Canal no disponible" : "Pendiente"}</span>
+            </div>
+            <div class="client-trust-badge ${String(identityStatus).toLowerCase() === "approved" ? "is-good" : ""}">
+              <strong>Identidad</strong>
+              <span>${escapeHtml(trustStatusLabel(identityStatus))}</span>
+            </div>
+            <div class="client-trust-badge ${riskTone}">
+              <strong>Riesgo</strong>
+              <span>${riskScore >= 70 ? "Alto" : "Controlado"}</span>
+            </div>
+          </div>
+        </div>
+        <aside class="client-trust-score">
+          <span>Trust level</span>
+          <strong>${escapeHtml(trustStatusLabel(trustLevel))}</strong>
+          <span>Risk score ${Number.isFinite(riskScore) ? riskScore : 0}/100</span>
+          <span>Reputacion ${Number.isFinite(reputationScore) ? reputationScore : 0}/100</span>
+        </aside>
+      </section>
+
+      <section class="client-trust-grid">
+        <article class="client-trust-panel">
+          <h3>Privacidad</h3>
+          <p>Tus documentos no se comparten con prestadores. Ellos solo ven badges como identidad verificada.</p>
+        </article>
+        <article class="client-trust-panel">
+          <h3>Verificacion actual</h3>
+          <p>${phoneUnavailable ? "La verificacion telefonica no esta disponible en el backend actual; soporte puede ayudar a validar la cuenta." : latestCheck ? `${escapeHtml(trustStatusLabel(latestCheck.status))} - ${escapeHtml(formatDate(latestCheck.created_at))}` : "Todavia no hay una verificacion fuerte cargada."}</p>
+        </article>
+        <article class="client-trust-panel">
+          <h3>Decision manual</h3>
+          <p>${escapeHtml(trustStatusLabel(profile.manual_review_status || "not_started"))}</p>
+        </article>
+      </section>
+
+      <section class="client-trust-upload" aria-label="Verificacion de identidad cliente">
+        <h3>Verificacion fuerte opcional o solicitada</h3>
+        <p>Usala solo si el sistema te la pide o si queres elevar confianza. Antes de enviar, revisamos consentimiento y evitamos repetir verificaciones innecesarias.</p>
+        <div class="client-trust-actions">
+          <button class="primary" type="button" data-client-trust-action="request_verification" data-reason="${escapeHtml(requestReason)}">Solicitar verificacion</button>
+          <button class="secondary" type="button" data-client-trust-action="refresh">Actualizar estado</button>
+        </div>
+        <div class="client-trust-upload-grid">
+          <label>
+            DNI frente
+            <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" data-customer-identity-input="dni_front" />
+          </label>
+          <label>
+            Selfie
+            <input type="file" accept="image/jpeg,image/png,image/webp" capture="user" data-customer-identity-input="selfie" />
+          </label>
+        </div>
+        <div class="client-trust-preview-grid" id="customerIdentityPreviewGrid" aria-live="polite">
+          <article id="customerIdentityPreviewDni" class="client-trust-preview is-empty">DNI frente pendiente</article>
+          <article id="customerIdentityPreviewSelfie" class="client-trust-preview is-empty">Selfie pendiente</article>
+        </div>
+        <label class="client-trust-consent">
+          <input type="checkbox" id="customerIdentityConsent" />
+          <span>Acepto que MIMI procese estas imagenes solo para verificar identidad y seguridad de la comunidad.</span>
+        </label>
+        <div class="client-trust-actions">
+          <button type="button" data-client-trust-action="submit_identity" data-reason="${escapeHtml(requestReason)}">Enviar a verificacion segura</button>
+        </div>
+      </section>
+
+      <section class="client-trust-timeline">
+        <h3>Actividad de confianza</h3>
+        ${
+          timeline.length
+            ? `<ul>${timeline.map((item) => `<li><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(formatDate(item.meta))}</p></li>`).join("")}</ul>`
+            : "<p>No hay eventos de verificacion o riesgo recientes.</p>"
+        }
+      </section>
+    </div>
+  `;
+}
+
 export function renderClientScreen(state) {
   renderStatusBanner(state);
   renderAuth(state);
@@ -1699,4 +1970,5 @@ export function renderClientScreen(state) {
   renderMapStatus(state);
   renderClientLiveNavigation(state);
   renderRequestControls(state);
+  renderClientTrustCenter(state);
 }
