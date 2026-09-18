@@ -223,11 +223,21 @@ function normalizeCode(value) {
  * `explicit` es lo que pueda venir cargado en la categoría (por ejemplo desde la base).
  */
 export function categoryPricingModel(explicit, code) {
+  // El mapa del rubro manda sobre el valor guardado en la categoria.
+  //
+  // CATEGORY_PRICING_MODELS sale de las plantillas reales de servicio ("como se cobra esto") y
+  // el valor guardado es un resto del clasificador viejo: en svc_categories dice HOURLY para
+  // Plomeria y Gasista, que no se cobran por hora — una destapacion se cobra por visita y una
+  // instalacion de gas se cotiza. Con el orden anterior esos dos rubros mostraban "Precio por
+  // hora" en el panel del prestador y en la busqueda del cliente.
+  // El valor guardado queda como ultimo recurso, para rubros que no estan en el mapa.
+  const delRubro = CATEGORY_PRICING_MODELS[normalizeCode(code)];
+  if (delRubro) return delRubro;
+
   const direct = normalizeCode(explicit);
   if (explicit && SUPPORTED_PRICING_MODELS.includes(direct)) return direct;
 
-  const fallback = CATEGORY_PRICING_MODELS[normalizeCode(code)];
-  return fallback ?? DEFAULT_PRICING_MODEL;
+  return DEFAULT_PRICING_MODEL;
 }
 
 /**
@@ -238,12 +248,47 @@ export function categoryPricingModel(explicit, code) {
  *   4. BASE_VISIT
  */
 export function resolvePricingModel({ offeringModel, templateModel, categoryCode, categoryModel } = {}) {
-  const candidatos = [offeringModel, templateModel, categoryModel];
-  for (const candidato of candidatos) {
-    const modelo = normalizeCode(candidato);
-    if (modelo && SUPPORTED_PRICING_MODELS.includes(modelo)) return modelo;
+  // Orden: lo que el prestador ya tiene guardado -> la plantilla del servicio que eligio -> el
+  // mapa del rubro -> el valor guardado en la categoria -> el respaldo general.
+  // El mapa va antes que el valor de la categoria por lo mismo que en categoryPricingModel.
+  const propio = normalizeCode(offeringModel);
+  if (propio && SUPPORTED_PRICING_MODELS.includes(propio)) return propio;
+
+  const plantilla = normalizeCode(templateModel);
+  if (plantilla && SUPPORTED_PRICING_MODELS.includes(plantilla)) return plantilla;
+
+  const delRubro = CATEGORY_PRICING_MODELS[normalizeCode(categoryCode)];
+  if (delRubro) return delRubro;
+
+  const guardado = normalizeCode(categoryModel);
+  if (guardado && SUPPORTED_PRICING_MODELS.includes(guardado)) return guardado;
+
+  return DEFAULT_PRICING_MODEL;
+}
+
+/**
+ * El modelo de precio con el que hay que mostrar una prestacion YA GUARDADA.
+ *
+ * El modelo guardado puede ser un resto del default viejo del panel: durante meses, cuando el
+ * rubro no traia modelo, el formulario ponia "por hora" solo. Asi quedaron guardadas prestaciones
+ * de plomeria y de gasista como "por hora" sin que el prestador haya cargado nunca un valor por
+ * hora. Eso es lo que hacia que el panel les mostrara "Precio por hora".
+ *
+ * Regla: el modelo guardado manda MIENTRAS tenga su precio cargado. Si su campo esta vacio y el
+ * rubro dice otra cosa, manda el rubro. Un prestador que cobra por hora de verdad, con su valor
+ * cargado, conserva su eleccion.
+ */
+export function resolveOfferingPricingModel(offering = {}, { categoryCode, categoryModel, templateModel } = {}) {
+  const guardado = normalizeCode(offering?.pricing_model ?? offering?.pricingModel);
+  const delRubro = CATEGORY_PRICING_MODELS[normalizeCode(categoryCode)] ?? null;
+
+  if (guardado && SUPPORTED_PRICING_MODELS.includes(guardado)) {
+    const campo = PRICE_FIELD_BY_MODEL[guardado] ?? null;
+    const tieneSuPrecio = campo ? Number(offering?.[campo]) > 0 : true;
+    if (tieneSuPrecio || !delRubro || guardado === delRubro) return guardado;
   }
-  return CATEGORY_PRICING_MODELS[normalizeCode(categoryCode)] ?? DEFAULT_PRICING_MODEL;
+
+  return resolvePricingModel({ templateModel, categoryCode, categoryModel });
 }
 
 /** ¿Este modelo obliga a que el prestador cargue un precio? */

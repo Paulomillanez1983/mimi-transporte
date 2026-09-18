@@ -5,8 +5,8 @@
 
 // Subirlo es lo que hace que el panel del prestador limpie sus caches y se recargue
 // (ver el bloque que compara con sessionStorage y borra mimi-go-partner-*).
-const MIMI_PROVIDER_BUILD = "2026.09.19.5";
-import { autoMountPriceBookEditor } from "./services/price-book.js?v=2026.09.19.5";
+const MIMI_PROVIDER_BUILD = "2026.09.19.6";
+import { autoMountPriceBookEditor } from "./services/price-book.js?v=2026.09.19.6";
 import { watchProviderUpdates } from "./services/provider-update.js?v=2026.09.19.3";
 // La forma de cobro y el campo de precio unico salen de aca: una sola fuente con el cliente.
 import {
@@ -18,7 +18,7 @@ import {
   PROVIDER_DEFAULT_UNIT_NAMES,
   PROVIDER_PRICE_HELP,
   PROVIDER_PRICE_PLACEHOLDERS
-} from "./services/pricing-models.js?v=2026.09.19.1";
+} from "./services/pricing-models.js?v=2026.09.19.6";
 
 /**
  * Los cuatro precios que existen en el formulario de alta, en el nombre que usa el formulario
@@ -206,7 +206,7 @@ import {
   renderProviderScreen,
   renderProviderGuidedTemplateSelection,
   renderProviderServicePreviewSheet
-} from "./ui/render-provider.js?v=2026.09.19.5";
+} from "./ui/render-provider.js?v=2026.09.19.6";
 import {
   clearAuthRedirectIntent,
   forceCleanSession,
@@ -7829,7 +7829,24 @@ applyProviderCategoryUiRules(form = document.getElementById("providerBusinessFor
     .map((mode) => `<option value="${mode}" ${mode === currentMode ? "selected" : ""}>${modeLabels[mode]}</option>`)
     .join("");
 
-  if (pricingModel && pricingModelSelect && !pricingModelSelect.dataset.touched) {
+  // La forma de cobro que el prestador ya tiene guardada no se pisa sola. Antes, cualquier
+  // llamada a esto la reemplazaba por la del rubro: cambiar la modalidad alcanzaba para que una
+  // prestacion que se cobra por hora pasara a mostrarse como visita base, sin que nadie lo pida y
+  // sin que el prestador se entere. El rubro manda solo si la prestacion es nueva, o si el
+  // prestador cambio de rubro a mano.
+  if (categorySelect.dataset.providerLastCategory === undefined) {
+    // Primera pasada: el rubro que ya tenia no cuenta como cambio.
+    categorySelect.dataset.providerLastCategory = categorySelect.value;
+  }
+  const cambioDeRubro = categorySelect.dataset.providerLastCategory !== categorySelect.value;
+  categorySelect.dataset.providerLastCategory = categorySelect.value;
+  const formaGuardada = pricingModelSelect?.dataset?.providerPricingSaved === "1";
+  if (
+    pricingModel &&
+    pricingModelSelect &&
+    !pricingModelSelect.dataset.touched &&
+    (!formaGuardada || cambioDeRubro)
+  ) {
     pricingModelSelect.value = pricingModel;
   }
 
