@@ -8,12 +8,12 @@
     "message": "Ahora podes adjuntar hasta 3 fotos del problema al pedido: se comprimen en tu telefono y el prestador ve exactamente que hay que arreglar."
   },
   "provider": {
-    "version": "2026.09.19.6",
+    "version": "2026.09.19.7",
     "min_supported_version": "2026.05.14.11",
     "critical": true,
     "force_update": false,
     "icon_revision": "mimigo-status-badge-v11",
-    "message": "Plomeria y gasista ya no piden un precio por hora: se cobran como corresponde al rubro."
+    "message": "El panel vuelve a abrir: faltaban dos imports y la pantalla no cargaba."
   },
   "admin": {
     "version": "2026.05.15.enterprise.5",

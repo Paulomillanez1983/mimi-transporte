@@ -8,6 +8,7 @@ import {
 // Ahora las dos leen de services/pricing-models.js.
 import {
   PRICE_FIELD_BY_MODEL,
+  PRICE_FIELD_COLUMNS,
   PRICE_FIELD_FORM_NAMES,
   PRICE_FIELD_LABELS,
   PRICING_MODEL_LABELS,
@@ -16,8 +17,9 @@ import {
   PROVIDER_PRICE_HELP as providerPriceHelp,
   PROVIDER_PRICE_PLACEHOLDERS as providerPricePlaceholders,
   categoryPricingModel as resolveCategoryPricingModel,
+  resolveOfferingPricingModel,
   resolvePricingModel
-} from "../services/pricing-models.js?v=2026.09.19.6";
+} from "../services/pricing-models.js?v=2026.09.19.7";
 
 // Las reglas de cancelación se cargan una sola vez por sesión de pantalla.
 let cancellationRulesPrimed = false;
