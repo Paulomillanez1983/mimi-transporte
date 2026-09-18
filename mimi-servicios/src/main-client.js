@@ -58,6 +58,11 @@ import {
   invalidateCancellationRulesCache,
   requestCancellationConfirmation
 } from "./services/cancellation-policy.js?v=2026.09.18.1";
+import { autoMountRequestPhotoPicker, uploadPendingRequestPhotos } from "./services/request-photos.js?v=2026.09.19.1";
+
+// La pantalla de fotos del problema se engancha sola cuando aparece el formulario del
+// pedido: asi un redibujado no la rompe y no hay que tocarlo desde el render.
+autoMountRequestPhotoPicker();
 import {
   getMimiPushToken,
   rememberPushTokenRegistration,
@@ -113,7 +118,7 @@ let locationAdjustDraft = null;
 // OJO: este valor y `app-version.json -> client.version` tienen que subir JUNTOS.
 // Si app-version.json queda por encima de este número, el cartel de "Actualizar"
 // aparece en cada apertura de la PWA y nunca se apaga.
-const MIMI_CLIENT_BUILD = "2026.09.18.3";
+const MIMI_CLIENT_BUILD = "2026.09.18.4";
 const MIMI_CLIENT_ICON_REVISION = "mimigo-visual-v10";
 const GPS_ACCURACY_TARGET_M = 30;
 const GPS_ACCURACY_REVIEW_M = 80;
@@ -3620,6 +3625,18 @@ async function handleProviderSelection(providerId) {
     priceLabel: pricing.price_label
   });
   console.log("[MIMI Solicitar] step 5 OK: request created", { request });
+  // Las fotos necesitan el id del pedido, por eso van despues de crearlo. No se espera
+  // el resultado para no demorar el flujo: si fallan, el pedido ya existe igual. El
+  // cliente ya vio las fotos y cuanto se comprimieron en el selector.
+  uploadPendingRequestPhotos(request?.id ?? request?.request_id ?? null)
+    .then((adjuntas) => {
+      if (adjuntas && adjuntas.uploaded && adjuntas.uploaded.length > 0) {
+        console.log("[MIMI Fotos] adjuntadas al pedido", adjuntas.uploaded.length);
+      } else if (adjuntas && adjuntas.failed && adjuntas.failed.length > 0) {
+        console.warn("[MIMI Fotos] no se pudieron adjuntar", adjuntas.failed);
+      }
+    })
+    .catch(() => {});
   recordCriticalRiskEvent("service_request_created", {
     actorRole: "client",
     source: "client_create_request",

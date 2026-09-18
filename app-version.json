@@ -1,11 +1,11 @@
 {
   "client": {
-    "version": "2026.09.18.3",
+    "version": "2026.09.18.4",
     "min_supported_version": "2026.05.13.8",
     "critical": false,
     "force_update": false,
     "icon_revision": "mimigo-visual-v10",
-    "message": "Se corrigen los rubros con modelo de precio equivocado (plomería y otros): el presupuesto se pide o se cotiza según el servicio, en vez de pedirte que adivines las horas."
+    "message": "Ahora podes adjuntar hasta 3 fotos del problema al pedido: se comprimen en tu telefono y el prestador ve exactamente que hay que arreglar."
   },
   "provider": {
     "version": "2026.09.18.5",
