@@ -19,7 +19,8 @@
     "qa:service-flow-regression": "node qa/service-flow-regression-static.js",
     "qa:provider-pricing-from-service": "node qa/provider-pricing-from-service-static.js",
     "qa:provider-pricing-from-service-dom": "node qa/provider-pricing-from-service-dom.js",
-    "qa:provider-price-mobile-layout": "node qa/provider-price-mobile-layout.js"
+    "qa:provider-price-mobile-layout": "node qa/provider-price-mobile-layout.js",
+    "qa:provider-price-save": "node qa/provider-price-save-e2e.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

@@ -5,7 +5,7 @@
 
 // Subirlo es lo que hace que el panel del prestador limpie sus caches y se recargue
 // (ver el bloque que compara con sessionStorage y borra mimi-go-partner-*).
-const MIMI_PROVIDER_BUILD = "2026.09.19.2";
+const MIMI_PROVIDER_BUILD = "2026.09.19.3";
 import { autoMountPriceBookEditor } from "./services/price-book.js?v=2026.09.19.4";
 import { watchProviderUpdates } from "./services/provider-update.js?v=2026.09.19.3";
 // La forma de cobro y el campo de precio unico salen de aca: una sola fuente con el cliente.
@@ -206,7 +206,7 @@ import {
   renderProviderScreen,
   renderProviderGuidedTemplateSelection,
   renderProviderServicePreviewSheet
-} from "./ui/render-provider.js?v=2026.09.19.2";
+} from "./ui/render-provider.js?v=2026.09.19.3";
 import {
   clearAuthRedirectIntent,
   forceCleanSession,
@@ -6253,40 +6253,20 @@ normalizeProviderOfferingPayload(offering = {}) {
     ...offering,
     pricingModel: String(offering.pricingModel || offering.pricing_model || "HOURLY").toUpperCase()
   };
-  const positiveValue = (...values) => {
-    for (const value of values) {
-      const parsed = Number(value);
-      if (Number.isFinite(parsed) && parsed > 0) return value;
-    }
-    return "";
-  };
-  const primaryAmount = positiveValue(
-    normalized.unitPrice,
-    normalized.pricePerHour,
-    normalized.fixedPrice,
-    normalized.baseVisitFee,
-    normalized.minimumCharge
-  );
 
-  if (!primaryAmount) return normalized;
-
-  if (normalized.pricingModel === "HOURLY" && !positiveValue(normalized.pricePerHour)) {
-    normalized.pricePerHour = primaryAmount;
-  } else if (normalized.pricingModel === "FIXED" && !positiveValue(normalized.fixedPrice)) {
-    normalized.fixedPrice = primaryAmount;
-  } else if (normalized.pricingModel === "BASE_VISIT" && !positiveValue(normalized.baseVisitFee)) {
-    normalized.baseVisitFee = primaryAmount;
-  } else if (
-    ["UNIT", "SQUARE_METER", "LINEAR_METER"].includes(normalized.pricingModel) &&
-    !positiveValue(normalized.unitPrice)
-  ) {
-    normalized.unitPrice = primaryAmount;
-  }
-
+  // Cotizar no depende de que haya un monto cargado. Esta marca estaba despues del corte por
+  // "no hay precio", asi que un servicio que se cotiza quedaba guardado SIN la marca: el cliente
+  // lo veia sin precio y sin forma de pedir presupuesto.
   if (normalized.pricingModel === "QUOTE") {
     normalized.quoteRequired = true;
   }
 
+  // Antes aca se tomaba el primero de los cuatro precios con valor y se copiaba al campo de la
+  // forma de cobro actual. Eso tapaba el problema del precio guardado en la columna equivocada,
+  // pero al costo de inventar: si el prestador borraba su precio y quedaba un monto viejo de otra
+  // forma de cobro, ese monto se publicaba como si lo hubiera escrito. Ahora el precio guardado
+  // se muestra en el formulario (ver providerStoredPrimaryPrice en render-provider) y lo que
+  // viaja es lo que el prestador vio y dejo en pantalla.
   return normalized;
 }
 
@@ -7919,7 +7899,9 @@ applyProviderCategoryUiRules(form = document.getElementById("providerBusinessFor
         ? form.querySelector(`input[type="hidden"][name="offering:0:${campoDeFormulario(campo)}"]`)
         : null;
 
-    if (campoAnterior && campoAnterior !== campo) {
+    const cambiaDeFormaDeCobro = Boolean(campoAnterior && campoAnterior !== campo);
+
+    if (cambiaDeFormaDeCobro) {
       const monto = input?.value ?? "";
       const nuevo = respaldoDe(campo);
       // Lo que ya tenia guardado para esa forma de cobro gana: es su tarifa para ese esquema y
@@ -7941,8 +7923,15 @@ applyProviderCategoryUiRules(form = document.getElementById("providerBusinessFor
       if (campo) {
         input.dataset.providerPriceFieldName = campo;
         input.setAttribute("name", `offering:0:${campoDeFormulario(campo)}`);
-        const respaldo = respaldoDe(campo);
-        if (respaldo) input.value = respaldo.value;
+        // El valor se recarga desde el respaldo SOLO cuando cambio la forma de cobro. Si no,
+        // esta funcion pisa lo que el prestador tiene en pantalla cada vez que se la vuelve a
+        // llamar (al cambiar la modalidad o la atencion tambien se pasa por aca): se le borraba
+        // el precio que acababa de escribir, y tambien el precio viejo que se le estaba mostrando
+        // por estar guardado en otra columna.
+        if (cambiaDeFormaDeCobro) {
+          const respaldo = respaldoDe(campo);
+          if (respaldo) input.value = respaldo.value;
+        }
         input.placeholder = PROVIDER_PRICE_PLACEHOLDERS[model] ?? "Ej: 15000";
         input.disabled = false;
       } else {

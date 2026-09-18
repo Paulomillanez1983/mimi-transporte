@@ -1433,6 +1433,29 @@ function renderPricing(pricing, detail) {
   `;
 }
 
+/**
+ * El precio que hay que mostrar en el campo visible.
+ *
+ * Los servicios viejos quedaron guardados con el monto en la columna equivocada: se les pidio un
+ * "precio aproximado" generico y el modelo despues resulto ser otro (una destapacion de plomeria
+ * con el precio en `unit_price` y la forma de cobro por visita). Si solo se leyera la columna de
+ * su forma de cobro, ese prestador abriria su servicio y veria el precio en blanco, con el
+ * riesgo de publicarlo sin precio.
+ *
+ * Se busca en las otras columnas y se MUESTRA. Se muestra a proposito: asi el prestador lo ve y
+ * al guardar queda en la columna que corresponde, en vez de copiarse por atras sin que nadie lo
+ * vea.
+ */
+function providerStoredPrimaryPrice(offering, primaryPriceField) {
+  if (!primaryPriceField || !offering) return "";
+  if (Number(offering[primaryPriceField]) > 0) return offering[primaryPriceField];
+  for (const columna of PRICE_FIELD_COLUMNS) {
+    if (columna === primaryPriceField) continue;
+    if (Number(offering[columna]) > 0) return offering[columna];
+  }
+  return "";
+}
+
 function renderPricingModelOptions(selected = "HOURLY") {
   const current = String(selected || "HOURLY").toUpperCase();
 
@@ -3279,7 +3302,7 @@ function renderProviderBusiness(state) {
   const primaryPriceField = PRICE_FIELD_BY_MODEL[pricingModel] ?? null;
   // La columna de la base y el nombre del campo del formulario no se llaman igual.
   const primaryPriceInputField = primaryPriceField ? PRICE_FIELD_FORM_NAMES[primaryPriceField] ?? primaryPriceField : "";
-  const primaryPriceValue = primaryPriceField ? (firstOffering?.[primaryPriceField] ?? "") : "";
+  const primaryPriceValue = providerStoredPrimaryPrice(firstOffering, primaryPriceField);
   const needsUnitName = ["UNIT", "SQUARE_METER", "LINEAR_METER"].includes(pricingModel);
   const serviceMode = firstOffering?.service_mode ?? defaults.serviceMode;
   const locationPolicy = firstOffering?.location_policy ?? defaults.locationPolicy;

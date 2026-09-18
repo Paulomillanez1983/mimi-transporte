@@ -8,12 +8,12 @@
     "message": "Ahora podes adjuntar hasta 3 fotos del problema al pedido: se comprimen en tu telefono y el prestador ve exactamente que hay que arreglar."
   },
   "provider": {
-    "version": "2026.09.19.2",
+    "version": "2026.09.19.3",
     "min_supported_version": "2026.05.14.11",
     "critical": true,
     "force_update": false,
     "icon_revision": "mimigo-status-badge-v11",
-    "message": "Ajustes de lectura en el telefono: la seccion de precio se ve mas clara y mas corta."
+    "message": "El precio que cargas ya no se borra solo, y los servicios que se cotizan quedan marcados para cotizar."
   },
   "admin": {
     "version": "2026.05.15.enterprise.5",
