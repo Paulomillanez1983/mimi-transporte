@@ -5,8 +5,8 @@
 
 // Subirlo es lo que hace que el panel del prestador limpie sus caches y se recargue
 // (ver el bloque que compara con sessionStorage y borra mimi-go-partner-*).
-const MIMI_PROVIDER_BUILD = "2026.09.19.7";
-import { autoMountPriceBookEditor } from "./services/price-book.js?v=2026.09.19.7";
+const MIMI_PROVIDER_BUILD = "2026.09.19.8";
+import { autoMountPriceBookEditor } from "./services/price-book.js?v=2026.09.19.8";
 import { watchProviderUpdates } from "./services/provider-update.js?v=2026.09.19.3";
 // La forma de cobro y el campo de precio unico salen de aca: una sola fuente con el cliente.
 import {
@@ -18,7 +18,7 @@ import {
   PROVIDER_DEFAULT_UNIT_NAMES,
   PROVIDER_PRICE_HELP,
   PROVIDER_PRICE_PLACEHOLDERS
-} from "./services/pricing-models.js?v=2026.09.19.7";
+} from "./services/pricing-models.js?v=2026.09.19.8";
 
 /**
  * Los cuatro precios que existen en el formulario de alta, en el nombre que usa el formulario
@@ -206,14 +206,19 @@ import {
   renderProviderScreen,
   renderProviderGuidedTemplateSelection,
   renderProviderServicePreviewSheet
-} from "./ui/render-provider.js?v=2026.09.19.7";
+} from "./ui/render-provider.js?v=2026.09.19.8";
 import {
   clearAuthRedirectIntent,
   forceCleanSession,
   getSupabaseClient,
   markProviderRegistrationIntent,
   signInWithGoogle
-} from "./services/supabase.js?v=2026.06.05.2";
+} from "./services/supabase.js?v=2026.05.17.2";
+// El especificador tiene que ser IDENTICO al del resto de los modulos (service-api, price-book,
+// cancellation-policy...). Con uno distinto, el navegador carga supabase.js dos veces: dos
+// clientes, dos GoTrueClient sobre la misma clave de sesion, y la sesion del prestador se cae
+// sola cada tanto. Cuando eso pasa, la app abre el overlay de login encima del panel y se come
+// todos los toques: el panel se ve, pero no responde a nada.
 import {
   getMimiPushToken,
   rememberPushTokenRegistration,
