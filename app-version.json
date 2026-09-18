@@ -8,12 +8,12 @@
     "message": "Catálogo de rubros con acentos + política de cancelación: ahora ves cuánto se descuenta y cuánto se te devuelve antes de cancelar."
   },
   "provider": {
-    "version": "2026.09.18.1",
+    "version": "2026.09.18.2",
     "min_supported_version": "2026.05.14.11",
     "critical": true,
     "force_update": false,
     "icon_revision": "mimigo-status-badge-v11",
-    "message": "El panel te avisa cuánto se te reconoce por el viaje si el cliente cancela, y que con el servicio en curso ya no se puede cancelar."
+    "message": "El dictado por voz vuelve a funcionar y ahora te dice qué pasó si falla: permiso, micrófono o conexión."
   },
   "admin": {
     "version": "2026.05.15.enterprise.5",

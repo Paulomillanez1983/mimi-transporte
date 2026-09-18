@@ -5,7 +5,7 @@
 
 // Subirlo es lo que hace que el panel del prestador limpie sus caches y se recargue
 // (ver el bloque que compara con sessionStorage y borra mimi-go-partner-*).
-const MIMI_PROVIDER_BUILD = "2026.09.18.1";
+const MIMI_PROVIDER_BUILD = "2026.09.18.2";
 const MIMI_PROVIDER_ICON_REVISION = "mimigo-status-badge-v11";
 const QUOTE_PRICING_LABEL = "Cotizar antes de confirmar";
 const MIMI_PROVIDER_NOTIFICATION_SYNC_MS = providerRuntimeNumber(
@@ -8449,47 +8449,118 @@ providerSuggestionReason(text, item = {}) {
 
 startProviderDictation(source = null) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  // El campo y el cartel se buscan DENTRO del mismo bloque del boton: existen dos variantes
+  // del formulario de alta (guiada y clasica) y las dos usan el mismo id="providerBusinessForm"
+  // y el mismo id="providerVoiceStatus". Con document.getElementById se escribia siempre en el
+  // primero del documento, que puede ser el bloque oculto: por eso parecia que el micro no hacia nada.
+  const section =
+    source?.closest?.("[data-provider-setup-step]") ??
+    source?.closest?.("form") ??
+    document;
   const form = source?.closest?.("form") ?? document.getElementById("providerBusinessForm");
-  const input = form?.querySelector?.("[name='providerAiPrompt']");
-  const status = document.getElementById("providerVoiceStatus");
+  const input =
+    section.querySelector?.("[name='providerAiPrompt']") ??
+    form?.querySelector?.("[name='providerAiPrompt']");
+  const status =
+    section.querySelector?.(".provider-voice-status") ??
+    document.querySelector(".provider-voice-status");
 
-  if (!SpeechRecognition || !input) {
-    if (status) {
-      status.hidden = false;
-      status.textContent = "Tu navegador no permite dictado por voz. Podés escribirlo.";
+  const say = (message) => {
+    if (!status) return;
+    status.hidden = !message;
+    status.textContent = message;
+  };
+
+  if (!input) {
+    say("No encontramos el campo de texto. Recargá la pantalla e intentá de nuevo.");
+    return;
+  }
+
+  if (!SpeechRecognition) {
+    // iOS en modo app instalada no expone el dictado del navegador. Es una limitación del
+    // sistema, no un permiso: conviene decirlo claro en vez de culpar al navegador en general.
+    say("Este navegador no tiene dictado por voz. Escribilo a mano: MIMI ordena el rubro igual.");
+    this.showToast("Este navegador no tiene dictado por voz.", "info");
+    return;
+  }
+
+  // Segundo toque = cortar.
+  if (this.providerDictation?.active) {
+    try {
+      this.providerDictation.recognition.stop();
+    } catch (error) {
+      /* ya estaba cerrado */
     }
-    this.showToast("Tu navegador no permite dictado por voz. Podés escribirlo.", "info");
     return;
   }
 
   const recognition = new SpeechRecognition();
   recognition.lang = "es-AR";
-  recognition.interimResults = false;
+  recognition.interimResults = true; // muestra el texto mientras hablas: si no, parece colgado
   recognition.maxAlternatives = 1;
+  recognition.continuous = false;
 
-  if (status) {
-    status.hidden = false;
-    status.textContent = "Escuchando...";
-  }
-  this.setButtonBusy(source, true, "Escuchando");
+  const baseValue = String(input.value ?? "").trim();
+  const state = { active: true, recognition, timeout: null };
+  this.providerDictation = state;
+
+  const finish = (message = "") => {
+    state.active = false;
+    if (state.timeout) clearTimeout(state.timeout);
+    this.setButtonBusy(source, false);
+    say(message);
+    if (this.providerDictation === state) this.providerDictation = null;
+  };
 
   recognition.onresult = (event) => {
-    const transcript = event.results?.[0]?.[0]?.transcript ?? "";
-    input.value = [input.value, transcript].filter(Boolean).join(" ").trim();
-    input.focus();
-    if (status) status.textContent = "Listo. Revisá el texto y tocá Sugerir.";
+    let finalText = "";
+    let interimText = "";
+    for (let index = 0; index < event.results.length; index += 1) {
+      const chunk = event.results[index][0]?.transcript ?? "";
+      if (event.results[index].isFinal) finalText += `${chunk} `;
+      else interimText += chunk;
+    }
+    input.value = [baseValue, `${finalText}${interimText}`.trim()].filter(Boolean).join(" ").trim();
+    if (finalText.trim()) say("Escuchamos. Revisá el texto y tocá Sugerir.");
   };
 
-  recognition.onerror = () => {
-    if (status) status.textContent = "No pudimos escuchar bien. Podés escribirlo.";
-    this.showToast("No pudimos escuchar bien. Podés escribirlo.", "warning");
+  // Cada error tiene su causa y su salida. Antes todos terminaban en el mismo mensaje
+  // generico, asi que era imposible saber si faltaba permiso, microfono o conexion.
+  recognition.onerror = (event) => {
+    const code = String(event?.error ?? "");
+    if (code === "no-speech") return finish("No escuchamos nada. Probá otra vez o escribilo.");
+    if (code === "aborted") return finish("");
+    if (code === "not-allowed" || code === "service-not-allowed") {
+      return finish("Falta el permiso del micrófono. Activalo para MIMI en los ajustes del navegador.");
+    }
+    if (code === "audio-capture") return finish("No encontramos un micrófono disponible.");
+    if (code === "network") return finish("El dictado necesita conexión y falló. Escribilo y seguimos.");
+    return finish("No pudimos escuchar bien. Podés escribirlo.");
   };
 
-  recognition.onend = () => {
-    this.setButtonBusy(source, false);
-  };
+  recognition.onend = () => finish("");
 
-  recognition.start();
+  say("Escuchando. Hablá y tocá el micrófono otra vez para cortar.");
+  this.setButtonBusy(source, true, "Escuchando");
+
+  try {
+    recognition.start();
+  } catch (error) {
+    finish("No pudimos abrir el micrófono. Escribilo a mano y seguimos.");
+    return;
+  }
+
+  // Si el navegador acepta el permiso pero nunca devuelve audio, avisamos en vez de dejar
+  // el boton girando para siempre.
+  state.timeout = setTimeout(() => {
+    if (!state.active) return;
+    try {
+      recognition.stop();
+    } catch (error) {
+      /* ignorar */
+    }
+    finish("El micrófono quedó abierto sin devolver texto. Escribilo y seguimos.");
+  }, 12000);
 }
 
 improveProviderDescription(source = null) {
