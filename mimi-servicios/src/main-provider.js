@@ -5,7 +5,7 @@
 
 // Subirlo es lo que hace que el panel del prestador limpie sus caches y se recargue
 // (ver el bloque que compara con sessionStorage y borra mimi-go-partner-*).
-const MIMI_PROVIDER_BUILD = "2026.09.18.3";
+const MIMI_PROVIDER_BUILD = "2026.09.18.4";
 const MIMI_PROVIDER_ICON_REVISION = "mimigo-status-badge-v11";
 const QUOTE_PRICING_LABEL = "Cotizar antes de confirmar";
 const MIMI_PROVIDER_NOTIFICATION_SYNC_MS = providerRuntimeNumber(
@@ -7491,6 +7491,47 @@ matchSelectOptionByText(select, value) {
  *
  * Devuelve "Ciudad, Provincia" si quedo resuelto, o "" si no se pudo deducir.
  */
+/**
+ * Guarda la zona declarada del prestador en la base.
+ *
+ * Por que hace falta: la app ya pedia el GPS y lo usaba en pantalla, pero la coordenada se
+ * perdia al recargar. Sin esto, un prestador de Arguello que no tiene la app abierta no
+ * recibe NUNCA la difusion de pedidos de su rubro, que es justamente para lo que sirve la
+ * zona declarada.
+ *
+ * No bloquea el flujo: si falla, el prestador igual queda con la ubicacion en pantalla.
+ * Las coordenadas se leen del propio formulario (los inputs ocultos que ya llena el GPS),
+ * asi no depende de variables del scope de quien la llama.
+ */
+async persistProviderBaseZone(form = null) {
+  try {
+    if (!form) return false;
+    const lat = Number(form.querySelector("[name='providerLocationLat']")?.value);
+    const lng = Number(form.querySelector("[name='providerLocationLng']")?.value);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+
+    const supabase = getSupabaseClient();
+    if (!supabase) return false;
+
+    const label = String(form.querySelector("[name='providerAddressText']")?.value || "").trim();
+
+    const { data, error } = await supabase.rpc("svc_set_provider_base_zone", {
+      p_lat: lat,
+      p_lng: lng,
+      p_label: label || null
+    });
+
+    if (error) {
+      console.warn("[MIMI Zona] no se pudo guardar la zona declarada", error);
+      return false;
+    }
+    return Boolean(data && data.ok);
+  } catch (error) {
+    console.warn("[MIMI Zona] error guardando la zona declarada", error);
+    return false;
+  }
+}
+
 reflectProviderDetectedZone(form) {
   if (!form) return "";
   const provinceSelect = form.querySelector("[name='providerProvince']");
@@ -7633,6 +7674,10 @@ async useProviderCurrentLocation(source = null) {
 
     this.applyProviderDetectedRegion(form, resolved || {});
     const detectedZone = this.reflectProviderDetectedZone(form);
+    // Ademas de mostrarla, se GUARDA: es lo que hace que le lleguen pedidos de su
+    // rubro aunque no tenga la app abierta. No se espera: si falla, el prestador igual
+    // queda con su ubicacion cargada y sigue con el alta.
+    this.persistProviderBaseZone(form).catch(() => {});
 
     const accuracyText = Number.isFinite(accuracy) ? ` Precision aprox. ${Math.round(accuracy)} m.` : "";
     setStatus(
