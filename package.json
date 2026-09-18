@@ -19,7 +19,7 @@
     "qa:service-flow-regression": "node qa/service-flow-regression-static.js"
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0",
+    "@playwright/test": "^1.63.0",
     "serve": "^14.2.5"
   }
 }
