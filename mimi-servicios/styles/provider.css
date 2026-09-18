@@ -23726,3 +23726,73 @@ body.provider-authenticated .offer-glass {
     min-height: 48px !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Seccion de precio del panel: forma de cobro resuelta y un solo campo de precio.
+   Agregado 2026-09-19.
+
+   Por que existe: esta parte del formulario usaba estilos inline y quedaba como un
+   cuerpo extrano adentro de la tarjeta. Medido en un telefono antes de esto:
+     - "Forma de cobro" 11px con opacidad .65 y la ayuda 12px con .75: al sol no se lee.
+     - La seccion medía ~1000px de alto en un viewport de 812px.
+     - Dos campos que el formulario marcaba como ocultos se seguian pintando (~90px cada uno).
+   Los colores de aca son solidos, como el resto del panel, y siguen sus radios y bordes.
+   --------------------------------------------------------------------------- */
+
+/* .input-group define display:grid, y esa regla le gana al [hidden] que trae el navegador.
+   Sin esto, los campos marcados como ocultos se siguen viendo: la unidad que no aplica y el
+   precio de un servicio que cotiza. client.css ya tiene esta misma regla en forma global;
+   aca se acota al panel para no tocar otros componentes de la pagina del prestador. */
+#providerBusinessPanel [hidden] {
+  display: none !important;
+}
+
+#providerBusinessPanel .provider-charge-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 10px;
+  align-items: baseline;
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+#providerBusinessPanel .provider-charge-summary > span {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+#providerBusinessPanel .provider-charge-summary > strong {
+  min-width: 0;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1.25;
+}
+
+#providerBusinessPanel .provider-charge-summary > small {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  color: #475569;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+#providerBusinessPanel .provider-charge-note,
+#providerBusinessPanel .provider-charge-override-help {
+  display: block;
+  margin: 10px 0 0;
+  color: #64748b;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+#providerBusinessPanel .provider-charge-override-help {
+  margin-top: 2px;
+}
+

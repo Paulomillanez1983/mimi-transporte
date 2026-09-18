@@ -21,6 +21,7 @@ const renderProvider = read("mimi-servicios/src/ui/render-provider.js");
 const mainProvider = read("mimi-servicios/src/main-provider.js");
 const pricingModels = read("mimi-servicios/src/services/pricing-models.js");
 const priceBook = read("mimi-servicios/src/services/price-book.js");
+const providerCss = read("mimi-servicios/styles/provider.css");
 const providerHtml = read("mimi-servicios/prestador.html");
 const swPartner = read("sw-partner.js");
 const appVersion = JSON.parse(read("app-version.json"));
@@ -248,6 +249,44 @@ check(
   renderProvider.includes("cuadro tarifario")
 );
 
+// ------------------------------------------------- 6b. el bloque se ve bien en un telefono
+const bloqueCobro = renderProvider.slice(
+  renderProvider.indexOf('<div class="provider-charge-summary">'),
+  renderProvider.indexOf('provider-charge-override-help')
+);
+check(
+  "el bloque de forma de cobro no usa estilos inline",
+  !bloqueCobro.includes("style=")
+);
+check(
+  "el bloque de forma de cobro usa las clases del panel",
+  renderProvider.includes('<p class="provider-charge-note">') &&
+    renderProvider.includes('<small class="provider-charge-override-help">')
+);
+check(
+  "el panel respeta el atributo hidden (no se ven campos que deberian estar ocultos)",
+  /#providerBusinessPanel\s*\[hidden\]\s*\{\s*display:\s*none\s*!important;/.test(providerCss)
+);
+check(
+  "las clases nuevas del bloque estan definidas en el css",
+  ["provider-charge-summary", "provider-charge-note", "provider-charge-override-help"].every((clase) =>
+    providerCss.includes(`.${clase}`)
+  )
+);
+const reglasCobro = providerCss.slice(providerCss.indexOf(".provider-charge-summary"));
+check(
+  "el texto del bloque usa colores solidos y no opacidad",
+  !/opacity:\s*0?\.\d+/.test(reglasCobro) && /color:\s*#475569/.test(reglasCobro)
+);
+check(
+  "el texto del bloque no baja de 12px",
+  (reglasCobro.match(/font-size:\s*([\d.]+)px/g) || []).every((f) => parseFloat(f.replace(/[^\d.]/g, "")) >= 11)
+);
+check(
+  "la grilla de precio sigue siendo una columna en el telefono",
+  /provider-primary-price-grid\s*\{[\s\S]{0,160}grid-template-columns:\s*1fr/.test(providerCss)
+);
+
 // ------------------------------------------------------------------ 7. versiones alineadas
 const build = (mainProvider.match(/const MIMI_PROVIDER_BUILD = "([^"]+)"/) || [])[1];
 const swVersion = (swPartner.match(/const APP_VERSION = "([^"]+)"/) || [])[1];
@@ -268,6 +307,12 @@ check(
   "el html del panel pide el build nuevo y no uno viejo",
   htmlVersion === build,
   `html=${htmlVersion} build=${build}`
+);
+const cssVersion = (providerHtml.match(/provider\.css\?v=([^"]+)"/) || [])[1];
+check(
+  "el css del panel sube con el build (si no, el arreglo visual no se ve)",
+  cssVersion === build,
+  `css=${cssVersion} build=${build}`
 );
 check(
   "el service worker del panel precachea el modulo de precios",

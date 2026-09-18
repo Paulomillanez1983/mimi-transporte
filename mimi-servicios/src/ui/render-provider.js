@@ -3616,10 +3616,10 @@ function renderProviderBusiness(state) {
 
           <!-- La forma de cobro dejo de ser un desplegable de taxonomia: se muestra resuelta.
                Abajo, dentro de "Cambiar forma de cobro", queda el atajo para el caso raro. -->
-          <div style="margin:10px 0 12px;padding:12px 14px;border-radius:12px;border:1px solid rgba(0,0,0,.12);background:#f7f9fc;">
-            <span style="display:block;font-size:11px;letter-spacing:.04em;text-transform:uppercase;opacity:.65;">Forma de cobro</span>
-            <strong data-provider-charge-label style="display:block;font-size:16px;margin-top:2px;">${escapeHtml(pricingModelLabels[pricingModel] ?? pricingModel)}</strong>
-            <small data-provider-charge-help style="display:block;font-size:12px;opacity:.75;margin-top:4px;">${escapeHtml(providerChargeHelp[pricingModel] ?? "")}</small>
+          <div class="provider-charge-summary">
+            <span>Forma de cobro</span>
+            <strong data-provider-charge-label>${escapeHtml(pricingModelLabels[pricingModel] ?? pricingModel)}</strong>
+            <small data-provider-charge-help>${escapeHtml(providerChargeHelp[pricingModel] ?? "")}</small>
           </div>
 
           <div class="provider-form-grid provider-compact-grid provider-primary-price-grid">
@@ -3643,7 +3643,7 @@ function renderProviderBusiness(state) {
             </label>
           </div>
 
-          <p style="font-size:12px;opacity:.75;margin:10px 0 0;">Tramos, recargos y "que incluye" los cargas en tu cuadro tarifario, apenas guardes el servicio.</p>
+          <p class="provider-charge-note">Tramos, recargos y "que incluye" los cargas en tu cuadro tarifario, apenas guardes el servicio.</p>
 
           <details class="provider-advanced-price-details">
             <summary>
@@ -3654,7 +3654,7 @@ function renderProviderBusiness(state) {
               <span>Forma de cobro</span>
               <select name="offering:0:pricingModel">${renderProviderChargeOptions(pricingModel)}</select>
             </label>
-            <small style="display:block;font-size:11px;opacity:.7;">Cambiala solo si cobras distinto de como se cobra este servicio.</small>
+            <small class="provider-charge-override-help">Cambiala solo si cobras distinto de como se cobra este servicio.</small>
           </details>
 
           <!-- Los cuatro precios viajan siempre. Solo uno es visible: el que corresponde a la
