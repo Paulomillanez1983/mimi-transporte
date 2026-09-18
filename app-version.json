@@ -8,12 +8,12 @@
     "message": "Se corrigen los rubros con modelo de precio equivocado (plomería y otros): el presupuesto se pide o se cotiza según el servicio, en vez de pedirte que adivines las horas."
   },
   "provider": {
-    "version": "2026.09.18.2",
+    "version": "2026.09.18.3",
     "min_supported_version": "2026.05.14.11",
     "critical": true,
     "force_update": false,
     "icon_revision": "mimigo-status-badge-v11",
-    "message": "El dictado por voz vuelve a funcionar y ahora te dice qué pasó si falla: permiso, micrófono o conexión."
+    "message": "Si usas el GPS, la app deduce tu ciudad y provincia sola: ya no te las vuelve a pedir."
   },
   "admin": {
     "version": "2026.05.15.enterprise.5",

@@ -5,7 +5,7 @@
 
 // Subirlo es lo que hace que el panel del prestador limpie sus caches y se recargue
 // (ver el bloque que compara con sessionStorage y borra mimi-go-partner-*).
-const MIMI_PROVIDER_BUILD = "2026.09.18.2";
+const MIMI_PROVIDER_BUILD = "2026.09.18.3";
 const MIMI_PROVIDER_ICON_REVISION = "mimigo-status-badge-v11";
 const QUOTE_PRICING_LABEL = "Cotizar antes de confirmar";
 const MIMI_PROVIDER_NOTIFICATION_SYNC_MS = providerRuntimeNumber(
@@ -7477,6 +7477,66 @@ matchSelectOptionByText(select, value) {
   }) || "";
 }
 
+/**
+ * Refleja en pantalla la zona que acaba de detectar el GPS.
+ *
+ * Por que hace falta: el paso "Provincia y ciudad" se dibuja con shouldOpenZoneStep, que
+ * mira el STATE del prestador, no el DOM. El GPS escribe en los <select>, pero eso no
+ * cambia el state ni dispara un re-render, asi que el paso seguia abierto y en "Pendiente"
+ * pidiendo una provincia que el prestador ya habia entregado con el GPS. Se veia como que
+ * la app pide la ubicacion dos veces.
+ *
+ * Aca se actualiza el resumen del paso y se lo cierra. No se toca el state a proposito:
+ * un re-render borraria lo que el prestador ya escribio en el formulario.
+ *
+ * Devuelve "Ciudad, Provincia" si quedo resuelto, o "" si no se pudo deducir.
+ */
+reflectProviderDetectedZone(form) {
+  if (!form) return "";
+  const provinceSelect = form.querySelector("[name='providerProvince']");
+  const citySelect = form.querySelector("[name='providerCity']");
+  if (!provinceSelect || !citySelect) return "";
+
+  const province = String(provinceSelect.value || "").trim();
+  const cityRaw = citySelect.value === "Otra localidad"
+    ? form.querySelector("[name='providerCityOther']")?.value || ""
+    : citySelect.value || "";
+  const city = String(cityRaw).trim();
+  if (!province || !city) return "";
+
+  const zoneStep = provinceSelect.closest("details.provider-location-editor-step") ||
+    provinceSelect.closest("details");
+  if (zoneStep) {
+    const summary = zoneStep.querySelector("summary");
+    const label = summary?.querySelector("small");
+    const badge = summary?.querySelector("em");
+    if (label) label.textContent = `${city}, ${province}`;
+    if (badge) {
+      badge.textContent = "Detectado por GPS";
+      badge.dataset.detected = "1";
+    }
+    zoneStep.open = false;
+  }
+
+  // El paso del domicilio tambien queda resuelto: el GPS ya escribio la direccion.
+  const addressInput = form.querySelector("[name='providerAddressText']");
+  const addressValue = String(addressInput?.value || "").trim();
+  if (addressValue) {
+    const addressStep = addressInput.closest("details.provider-location-editor-step") ||
+      addressInput.closest("details");
+    if (addressStep) {
+      const badge = addressStep.querySelector("summary em");
+      if (badge) {
+        badge.textContent = "Detectado por GPS";
+        badge.dataset.detected = "1";
+      }
+      addressStep.open = false;
+    }
+  }
+
+  return `${city}, ${province}`;
+}
+
 applyProviderDetectedRegion(form, result = {}) {
   const provinceSelect = form?.querySelector?.("[name='providerProvince']");
   const citySelect = form?.querySelector?.("[name='providerCity']");
@@ -7572,10 +7632,19 @@ async useProviderCurrentLocation(source = null) {
     if (sourceInput) sourceInput.value = resolved?.source || "browser_geolocation";
 
     this.applyProviderDetectedRegion(form, resolved || {});
+    const detectedZone = this.reflectProviderDetectedZone(form);
 
     const accuracyText = Number.isFinite(accuracy) ? ` Precision aprox. ${Math.round(accuracy)} m.` : "";
-    setStatus(`Listo: usamos esta ubicacion como base operativa.${accuracyText}`, "success");
-    this.showToast("Ubicacion actual cargada en tu domicilio base", "success");
+    setStatus(
+      detectedZone
+        ? `Listo: base operativa en ${detectedZone}. Ya no hace falta que cargues la provincia.${accuracyText}`
+        // No inventamos la zona: si el geocodificador no la pudo deducir se dice, y el paso
+        // queda abierto para que la elija. Dar por hecha una zona equivocada lo dejaria
+        // invisible para los clientes de su ciudad.
+        : `Ubicacion guardada, pero no pudimos deducir tu ciudad. Elegila abajo asi te encuentran.${accuracyText}`,
+      detectedZone ? "success" : "warning"
+    );
+    this.showToast(detectedZone ? `Zona detectada: ${detectedZone}` : "Ubicacion cargada. Falta confirmar tu ciudad.", detectedZone ? "success" : "info");
   } catch (error) {
     console.warn("[MIMI] provider current location failed", error);
     setStatus("No pudimos tomar tu ubicacion. Podes cargar el domicilio manualmente.", "error");
