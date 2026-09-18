@@ -128,6 +128,13 @@ export const PRICE_FIELD_BY_MODEL = {
  * Sin esta traduccion, el campo visible se llama distinto de lo que el colector lee y el precio
  * se pierde en silencio al guardar.
  */
+/**
+ * Las cuatro columnas de precio que existen en una prestacion. Sirven para reconocer los
+ * servicios viejos, que quedaron con el monto cargado en una columna distinta de la que su
+ * forma de cobro usa.
+ */
+export const PRICE_FIELD_COLUMNS = ["price_per_hour", "base_visit_fee", "fixed_price", "unit_price"];
+
 export const PRICE_FIELD_FORM_NAMES = {
   price_per_hour: "pricePerHour",
   base_visit_fee: "baseVisitFee",
