@@ -3697,6 +3697,22 @@ function renderProviderBusiness(state) {
               <input name="providerLocationLat" type="hidden" value="${escapeHtml(providerLocationLat)}">
               <input name="providerLocationLng" type="hidden" value="${escapeHtml(providerLocationLng)}">
               <input name="providerLocationAccuracy" type="hidden" value="${escapeHtml(providerLocationAccuracy)}">
+
+              <!-- Hasta donde esta dispuesto a viajar. Lo decide el prestador, como en Uber:
+                   si el pedido cae dentro de este radio le llega el aviso de que hay demanda
+                   en su zona, aunque no tenga la app abierta. Vacio = radio de la plataforma. -->
+              <div style="margin-top:10px;">
+                <label for="providerServiceRadius" style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Hasta d&oacute;nde viaj&aacute;s</label>
+                <select id="providerServiceRadius" name="providerServiceRadius" style="width:100%;padding:11px;border-radius:10px;border:1px solid rgba(0,0,0,.18);background:#fff;font-size:15px;">
+                  <option value="">Usar el de la plataforma (25 km)</option>
+                  <option value="10">Hasta 10 km</option>
+                  <option value="15">Hasta 15 km</option>
+                  <option value="25">Hasta 25 km</option>
+                  <option value="40">Hasta 40 km</option>
+                  <option value="60">Hasta 60 km</option>
+                </select>
+                <small style="display:block;font-size:11px;opacity:.7;margin-top:4px;">Los pedidos de tu rubro dentro de este radio te avisan aunque no est&eacute;s conectado.</small>
+              </div>
               <input name="providerLocationSource" type="hidden" value="${escapeHtml(providerLocationSource)}">
             </details>
 

@@ -5,7 +5,7 @@
 
 // Subirlo es lo que hace que el panel del prestador limpie sus caches y se recargue
 // (ver el bloque que compara con sessionStorage y borra mimi-go-partner-*).
-const MIMI_PROVIDER_BUILD = "2026.09.18.4";
+const MIMI_PROVIDER_BUILD = "2026.09.18.5";
 const MIMI_PROVIDER_ICON_REVISION = "mimigo-status-badge-v11";
 const QUOTE_PRICING_LABEL = "Cotizar antes de confirmar";
 const MIMI_PROVIDER_NOTIFICATION_SYNC_MS = providerRuntimeNumber(
@@ -7514,11 +7514,16 @@ async persistProviderBaseZone(form = null) {
     if (!supabase) return false;
 
     const label = String(form.querySelector("[name='providerAddressText']")?.value || "").trim();
+    // Hasta donde esta dispuesto a viajar. Si no eligio nada, la funcion conserva el valor
+    // que ya tenia (o usa el radio de la plataforma si nunca lo seteo).
+    const radioTexto = String(form.querySelector("[name='providerServiceRadius']")?.value || "").trim();
+    const radio = Number(radioTexto);
 
     const { data, error } = await supabase.rpc("svc_set_provider_base_zone", {
       p_lat: lat,
       p_lng: lng,
-      p_label: label || null
+      p_label: label || null,
+      p_radius_km: radioTexto && Number.isFinite(radio) && radio >= 1 ? radio : null
     });
 
     if (error) {
