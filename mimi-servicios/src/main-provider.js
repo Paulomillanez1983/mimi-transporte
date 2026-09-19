@@ -5,8 +5,8 @@
 
 // Subirlo es lo que hace que el panel del prestador limpie sus caches y se recargue
 // (ver el bloque que compara con sessionStorage y borra mimi-go-partner-*).
-const MIMI_PROVIDER_BUILD = "2026.09.19.11";
-import { autoMountPriceBookEditor } from "./services/price-book.js?v=2026.09.19.11";
+const MIMI_PROVIDER_BUILD = "2026.09.19.12";
+import { autoMountPriceBookEditor } from "./services/price-book.js?v=2026.09.19.12";
 import { watchProviderUpdates } from "./services/provider-update.js?v=2026.09.19.3";
 // La forma de cobro y el campo de precio unico salen de aca: una sola fuente con el cliente.
 import {
@@ -18,7 +18,7 @@ import {
   PROVIDER_DEFAULT_UNIT_NAMES,
   PROVIDER_PRICE_HELP,
   PROVIDER_PRICE_PLACEHOLDERS
-} from "./services/pricing-models.js?v=2026.09.19.11";
+} from "./services/pricing-models.js?v=2026.09.19.12";
 
 /**
  * Los cuatro precios que existen en el formulario de alta, en el nombre que usa el formulario
@@ -206,7 +206,7 @@ import {
   renderProviderScreen,
   renderProviderGuidedTemplateSelection,
   renderProviderServicePreviewSheet
-} from "./ui/render-provider.js?v=2026.09.19.11";
+} from "./ui/render-provider.js?v=2026.09.19.12";
 import {
   clearAuthRedirectIntent,
   forceCleanSession,
@@ -3152,6 +3152,13 @@ async openProviderPhoneTrustModal({ forceChange = false, existingProfile = null,
   let resendTimer = null;
   let resendCooldownRemaining = 0;
   const canClose = forceChange || !required;
+
+  // Si la verificacion es obligatoria, la cruz no cierra nada. Dejarla visible es una
+  // trampa: el prestador la toca, no pasa nada y parece que la app se tildo.
+  if (closeButton) {
+    closeButton.hidden = !canClose;
+    closeButton.style.display = canClose ? "" : "none";
+  }
 
   const normalize = (value) => String(value || "")
     .normalize("NFD")
@@ -10313,9 +10320,14 @@ renderOnlineButton() {
     this.restoreProviderOnlineButton();
   }
 
+  // El boton sirve para volver a estar disponible, asi que se muestra a todo el que no lo este.
+  //
+  // Antes pedia status === "OFFLINE" exacto, y eso dejaba afuera a un prestador cuyo estado quedo
+  // viejo en EN_ROUTE (su ultimo servicio fue hace meses y nadie lo volvio a OFFLINE): como
+  // tampoco tenia servicio activo, la condicion no se cumplia nunca y el boton no aparecia mas.
   const shouldShow =
     isAuthenticated &&
-    status === "OFFLINE" &&
+    status !== "ONLINE_IDLE" &&
     !hasActiveService &&
     !hasActiveOffer;
 

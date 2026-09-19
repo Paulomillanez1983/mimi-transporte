@@ -48,6 +48,12 @@ check(
 const main = fs.readFileSync(path.join(root, "mimi-servicios/src/main-provider.js"), "utf8");
 
 check(
+  "el boton de ponerse en linea no exige el estado OFFLINE exacto",
+  /status !== "ONLINE_IDLE" &&/.test(main) && !/status === "OFFLINE" &&/.test(main),
+  "un estado viejo en EN_ROUTE dejaba al prestador sin forma de ponerse en linea"
+);
+
+check(
   "el mapa se inicializa en el arranque, no solo al navegar o al volver del segundo plano",
   /ensureProviderMapLoaded\("boot"\)/.test(main),
   "el #map queda visible pero vacio en un arranque en frio"
