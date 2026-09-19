@@ -5,8 +5,8 @@
 
 // Subirlo es lo que hace que el panel del prestador limpie sus caches y se recargue
 // (ver el bloque que compara con sessionStorage y borra mimi-go-partner-*).
-const MIMI_PROVIDER_BUILD = "2026.09.19.10";
-import { autoMountPriceBookEditor } from "./services/price-book.js?v=2026.09.19.10";
+const MIMI_PROVIDER_BUILD = "2026.09.19.11";
+import { autoMountPriceBookEditor } from "./services/price-book.js?v=2026.09.19.11";
 import { watchProviderUpdates } from "./services/provider-update.js?v=2026.09.19.3";
 // La forma de cobro y el campo de precio unico salen de aca: una sola fuente con el cliente.
 import {
@@ -18,7 +18,7 @@ import {
   PROVIDER_DEFAULT_UNIT_NAMES,
   PROVIDER_PRICE_HELP,
   PROVIDER_PRICE_PLACEHOLDERS
-} from "./services/pricing-models.js?v=2026.09.19.10";
+} from "./services/pricing-models.js?v=2026.09.19.11";
 
 /**
  * Los cuatro precios que existen en el formulario de alta, en el nombre que usa el formulario
@@ -206,7 +206,7 @@ import {
   renderProviderScreen,
   renderProviderGuidedTemplateSelection,
   renderProviderServicePreviewSheet
-} from "./ui/render-provider.js?v=2026.09.19.10";
+} from "./ui/render-provider.js?v=2026.09.19.11";
 import {
   clearAuthRedirectIntent,
   forceCleanSession,
@@ -2912,6 +2912,17 @@ if (Array.isArray(categories) && categories.length) {
 
     this.scheduleProviderSecondaryBootResources(session);
     this.renderDrawerProfile();
+
+    // El mapa es el fondo del panel y hay que inicializarlo en el arranque.
+    //
+    // Hasta ahora solo se inicializaba desde el flujo de ubicacion, desde una navegacion o desde
+    // el evento "foreground" (volver del segundo plano). En un arranque en frio, que es lo que
+    // pasa cuando el prestador abre la app, ninguno de esos corre: el #map quedaba visible pero
+    // vacio, sin hijos, y el home se veia sin mapa. Pedir la ubicacion y dibujar el mapa son dos
+    // cosas distintas: el mapa se puede dibujar en una posicion por defecto y recentrarse despues.
+    this.ensureProviderMapLoaded("boot").catch((error) => {
+      console.warn("[MIMI] el mapa no se pudo inicializar en el arranque:", error?.message || error);
+    });
     this.hideProviderBootLoader();
 
     document.body.classList.remove("provider-auth-loading", "provider-auth-required");

@@ -19,7 +19,7 @@ import {
   categoryPricingModel as resolveCategoryPricingModel,
   resolveOfferingPricingModel,
   resolvePricingModel
-} from "../services/pricing-models.js?v=2026.09.19.10";
+} from "../services/pricing-models.js?v=2026.09.19.11";
 
 // Las reglas de cancelación se cargan una sola vez por sesión de pantalla.
 let cancellationRulesPrimed = false;
