@@ -8,12 +8,12 @@
     "message": "Ahora podes adjuntar hasta 3 fotos del problema al pedido: se comprimen en tu telefono y el prestador ve exactamente que hay que arreglar."
   },
   "provider": {
-    "version": "2026.09.19.12",
+    "version": "2026.09.19.13",
     "min_supported_version": "2026.05.14.11",
     "critical": true,
     "force_update": false,
     "icon_revision": "mimigo-status-badge-v11",
-    "message": "El boton de ponerse en linea vuelve a aparecer aunque el estado haya quedado viejo."
+    "message": "La app deja de llamar al CMS caido, que era el cartel rojo de Failed to fetch."
   },
   "admin": {
     "version": "2026.05.15.enterprise.5",

@@ -47,6 +47,14 @@ check(
 );
 const main = fs.readFileSync(path.join(root, "mimi-servicios/src/main-provider.js"), "utf8");
 
+const env = fs.readFileSync(path.join(root, "mimi-servicios/env.js"), "utf8");
+
+check(
+  "la app no llama al CMS caido",
+  /MIMI_POCKETBASE_ENABLED:\s*false/.test(env),
+  "cms.mimigo.com.ar responde 522 de Cloudflare: si se habilita vuelve el cartel 'Failed to fetch'"
+);
+
 check(
   "el boton de ponerse en linea no exige el estado OFFLINE exacto",
   /status !== "ONLINE_IDLE" &&/.test(main) && !/status === "OFFLINE" &&/.test(main),
