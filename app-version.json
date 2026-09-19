@@ -8,12 +8,12 @@
     "message": "Ahora podes adjuntar hasta 3 fotos del problema al pedido: se comprimen en tu telefono y el prestador ve exactamente que hay que arreglar."
   },
   "provider": {
-    "version": "2026.09.19.11",
+    "version": "2026.09.19.12",
     "min_supported_version": "2026.05.14.11",
     "critical": true,
     "force_update": false,
     "icon_revision": "mimigo-status-badge-v11",
-    "message": "El mapa del home se dibuja al abrir la app, sin depender de que llegue la ubicacion."
+    "message": "El boton de ponerse en linea vuelve a aparecer aunque el estado haya quedado viejo."
   },
   "admin": {
     "version": "2026.05.15.enterprise.5",
