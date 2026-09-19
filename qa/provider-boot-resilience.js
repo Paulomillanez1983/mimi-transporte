@@ -45,6 +45,14 @@ check(
   /const esTimeout = \/TIMEOUT\/i\.test\(String\(error\?\.message \?\? ""\)\);/.test(alrededor),
   "el reintento no distingue timeout de error"
 );
+const main = fs.readFileSync(path.join(root, "mimi-servicios/src/main-provider.js"), "utf8");
+
+check(
+  "el mapa se inicializa en el arranque, no solo al navegar o al volver del segundo plano",
+  /ensureProviderMapLoaded\("boot"\)/.test(main),
+  "el #map queda visible pero vacio en un arranque en frio"
+);
+
 check(
   "el error se propaga recien despues de los reintentos",
   /if \(providerLookupError\) throw providerLookupError;/.test(alrededor),

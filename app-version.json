@@ -8,12 +8,12 @@
     "message": "Ahora podes adjuntar hasta 3 fotos del problema al pedido: se comprimen en tu telefono y el prestador ve exactamente que hay que arreglar."
   },
   "provider": {
-    "version": "2026.09.19.10",
+    "version": "2026.09.19.11",
     "min_supported_version": "2026.05.14.11",
     "critical": true,
     "force_update": false,
     "icon_revision": "mimigo-status-badge-v11",
-    "message": "El panel ya no muestra el login por una demora de red: el lookup del prestador se reintenta antes de dar la sesion por perdida."
+    "message": "El mapa del home se dibuja al abrir la app, sin depender de que llegue la ubicacion."
   },
   "admin": {
     "version": "2026.05.15.enterprise.5",
