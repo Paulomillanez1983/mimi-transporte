@@ -63,6 +63,16 @@
       "permanent": false
     },
     {
+      "source": "/admin",
+      "destination": "/admin/admin-login",
+      "permanent": false
+    },
+    {
+      "source": "/admin/",
+      "destination": "/admin/admin-login",
+      "permanent": false
+    },
+    {
       "source": "/operadores",
       "destination": "/mimi-servicios/prestador.html",
       "permanent": false
@@ -271,6 +281,15 @@
     },
     {
       "source": "/login-chofer.html",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/admin/(.*)",
       "headers": [
         {
           "key": "X-Robots-Tag",
